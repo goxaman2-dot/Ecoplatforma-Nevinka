@@ -17,17 +17,18 @@ html {
   100% { left: 90%; opacity: 0; }
 }
 
-@keyframes flow-down {
-  0% { top: 0%; opacity: 0; }
-  20% { opacity: 1; }
-  80% { opacity: 1; }
-  100% { top: 90%; opacity: 0; }
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
 }
 
-.animate-flow-right {
-  animation: flow-right 2s linear infinite;
+.animate-dash {
+  stroke-dasharray: 10, 5;
+  animation: dash 1s linear infinite;
 }
 
-.animate-flow-down {
-  animation: flow-down 2s linear infinite;
+.animate-dash-reverse {
+  stroke-dasharray: 10, 5;
+  animation: dash 1s linear infinite reverse;
 }

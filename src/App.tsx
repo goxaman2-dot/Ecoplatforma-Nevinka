@@ -23,6 +23,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Gauge,
+  HelpCircle,
   Thermometer,
   Wind,
   Droplets,
@@ -96,8 +97,11 @@ export default function App() {
   // Simulation States (Sliders)
   const [synergyFactor, setSynergyFactor] = useState(75); // 0-100%
   const [resourceEfficiency, setResourceEfficiency] = useState(40); // 0-100%
+  const [turbineEff, setTurbineEff] = useState(80); // Er: 50, 65, 80, 95
+  const [heatExchanger, setHeatExchanger] = useState(80); // Ew: 50, 65, 80, 95
+  const [filterResource, setFilterResource] = useState(80); // Ef: 50, 65, 80, 95
   const [investment, setInvestment] = useState(15); // C index: 0-30
-  const [year, setYear] = useState(2025); // 2025-2035
+  const [year, setYear] = useState(2026); // 2026-2036
   const [kScenario, setKScenario] = useState(5); // k: 3 (Organic), 5 (Moderate), 8 (Coordinated)
   const [alpha, setAlpha] = useState(0.10); // alpha: 0.08 - 0.12
   const [distRegime, setDistRegime] = useState<'fiscal' | 'tech' | 'industrial'>('fiscal');
@@ -131,7 +135,7 @@ export default function App() {
     },
     {
       name: 'Корпорация развития Ставропольского края',
-      functions: 'Реинвестирует долю SD в новых резидентов ТОСЭР; обеспечивает правовую базу; Стратегия-2035',
+      functions: 'Реинвестирует долю SD в новых резидентов ТОСЭР; обеспечивает правовую базу; Стратегия-2036',
       contribution: 'Льготы ТОСЭР; нормативная база; административный ресурс',
       share: 12,
       amount: 3.0
@@ -145,14 +149,26 @@ export default function App() {
     }
   ];
 
-  // Calculate current metrics based on provided formulas
-  const metrics = useMemo(() => {
+  // Function to calculate metrics for any given state
+  const calculateMetrics = useCallback((params: {
+    resourceEfficiency: number,
+    turbineEff: number,
+    heatExchanger: number,
+    filterResource: number,
+    investment: number,
+    year: number,
+    kScenario: number,
+    alpha: number,
+    distRegime: 'fiscal' | 'tech' | 'industrial'
+  }) => {
+    const { resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime } = params;
+    
     // C_ind is investment in decimal (0-0.30)
     const c_ind = investment / 100;
     
     // k: institutional speed parameter (Formula 2)
-    // Time factor: k increases as institutional measures are implemented (2025-2035)
-    const timeProgress = (year - 2025) / 10; // 0 to 1
+    // Time factor: k increases as institutional measures are implemented (2026-2036)
+    const timeProgress = (year - 2026) / 10; // 0 to 1
     const k = kScenario + timeProgress * 2.5; // k grows over 10 years
     
     // Formula (2): phi = 1 - exp(-k * C_ind)
@@ -163,34 +179,47 @@ export default function App() {
     }
     const phi = phi_val * 100; // in percent for display
     
+    // Resource Efficiency Effect (E_it)
+    // Er (turbine) and Ew (heat exchanger) influence energy savings
+    const e_it_factor = (turbineEff / 100) * 0.6 + (heatExchanger / 100) * 0.4;
+    
+    // Ecological Effect (E_f)
+    // Ef (filter) influences fines and emissions
+    const e_f_factor = filterResource / 100;
+
     // Calibration Anchors for k=5:
     // phi(0.10) ≈ 0.39
     // phi(0.25) ≈ 0.71
     const anchor10 = 1 - Math.exp(-5 * 0.10);
     const anchor25 = 1 - Math.exp(-5 * 0.25);
-    
-    // Formula (12): Base potential Delta E (scales with resource efficiency)
-    const deltaE_base = 250 * (1 + (resourceEfficiency - 40) / 100);
+
+    // Formula (12): Base potential Delta E (scales with resource efficiency and new factors)
+    const deltaE_base = 250 * (1 + (resourceEfficiency - 40) / 100) * e_it_factor * (0.8 + 0.2 * e_f_factor);
     
     // Formula (14): Verified savings Delta E(t) = Delta E_base * phi
     const deltaE_t = deltaE_base * phi_val;
     
     // Constraint 2: Budget sufficiency
-    // C_liq(t): Planned costs for reclamation (phosphogypsum 18m tons, Kuban river)
-    const c_liq = 15.5 + (year - 2025) * 0.5; // Example: 15.5 to 20.5 mln rub
+    const c_liq = 15.5 + (year - 2026) * 0.5; // Example: 15.5 to 20.5 mln rub
     
     // Distribution Regimes
     const shares = {
-      fiscal: { budget: 0.40, operator: 0.25, suppliers: 0.15, corporation: 0.12, ecofund: 0.08, multiplier: 1.0 },
-      tech: { budget: 0.25, operator: 0.40, suppliers: 0.15, corporation: 0.12, ecofund: 0.08, multiplier: 1.12 },
-      industrial: { budget: 0.25, operator: 0.15, suppliers: 0.40, corporation: 0.12, ecofund: 0.08, multiplier: 1.18 }
+      fiscal: { budget: 0.40, operator: 0.25, suppliers: 0.15, corporation: 0.12, multiplier: 1.0 },
+      tech: { budget: 0.25, operator: 0.40, suppliers: 0.15, corporation: 0.12, multiplier: 1.12 },
+      industrial: { budget: 0.25, operator: 0.15, suppliers: 0.40, corporation: 0.12, multiplier: 1.18 }
     };
 
     const currentShares = shares[distRegime];
     
+    // Dynamic Ecofund share (depends on resource efficiency)
+    // This ensures SD and SD_E trends are not identical
+    const ecofundShare = 0.05 + (resourceEfficiency / 100) * 0.05; // 7% to 10%
+    
     // Formula (15): Symbiotic Dividend SD = alpha * Delta E(t) * Multiplier
-    // Regime 1 check: if investment < 5, SD is 0 (scattered participants)
-    let sd = alpha * deltaE_t * currentShares.multiplier;
+    // Add non-linear scale effect: higher synergy gives a small extra bonus
+    const scaleEffect = phi_val > 0.7 ? 1 + (phi_val - 0.7) * 0.2 : 1.0;
+    
+    let sd = alpha * deltaE_t * currentShares.multiplier * scaleEffect;
     if (investment < 5) {
       sd = 0;
     }
@@ -202,8 +231,8 @@ export default function App() {
       operator: sd * currentShares.operator,
       suppliers: sd * currentShares.suppliers,
       corporation: sd * currentShares.corporation,
-      ecofund: sd * currentShares.ecofund,
-      shares: currentShares
+      ecofund: sd * ecofundShare,
+      shares: { ...currentShares, ecofund: ecofundShare }
     };
 
     // Constraints check
@@ -213,13 +242,77 @@ export default function App() {
     };
 
     // U: Utility Function (Target)
-    const u = (phi * 0.6 + (sd / 9.75 * 100) * 0.4);
+    // Now includes an "Ecological Safety" component that depends on Ecofund size relative to costs
+    const ecoSafety = Math.min(1.2, sd_budget / (c_liq || 1));
+    const u = (phi * 0.5 + (sd / 9.75 * 100) * 0.3 + (ecoSafety * 20));
 
     return { 
       sd, phi, distribution, u, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
-      anchor10, anchor25, c_liq, sd_budget, constraints
+      anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety
     };
-  }, [resourceEfficiency, investment, year, kScenario, alpha, distRegime]);
+  }, []);
+
+  // Baseline metrics for 2026 with default settings
+  const baseline = useMemo(() => calculateMetrics({
+    resourceEfficiency: 40,
+    turbineEff: 80,
+    heatExchanger: 80,
+    filterResource: 80,
+    investment: 15,
+    year: 2026,
+    kScenario: 5,
+    alpha: 0.10,
+    distRegime: 'fiscal'
+  }), [calculateMetrics]);
+
+  // Calculate current metrics based on provided formulas
+  const metrics = useMemo(() => {
+    const current = calculateMetrics({
+      resourceEfficiency,
+      turbineEff,
+      heatExchanger,
+      filterResource,
+      investment,
+      year,
+      kScenario,
+      alpha,
+      distRegime
+    });
+
+    // Calculate trends relative to baseline
+    const calculateTrend = (currentVal: number, baselineVal: number) => {
+      if (baselineVal === 0) return currentVal > 0 ? "+100%" : "0.0%";
+      const diff = ((currentVal - baselineVal) / baselineVal) * 100;
+      return (diff >= 0 ? "+" : "") + diff.toFixed(1) + "%";
+    };
+
+    return {
+      ...current,
+      turbineEff,
+      heatExchanger,
+      filterResource,
+      trends: {
+        u: calculateTrend(current.u, baseline.u),
+        sd: calculateTrend(current.sd, baseline.sd),
+        phi: calculateTrend(current.phi, baseline.phi),
+        ecofund: calculateTrend(current.distribution.ecofund, baseline.distribution.ecofund)
+      }
+    };
+  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime, baseline]);
+
+  const getStatusColor = (val: number) => {
+    if (val <= 50) return "accent-red-500";
+    if (val <= 65) return "accent-orange-500";
+    if (val <= 80) return "accent-emerald-400";
+    return "accent-green-500";
+  };
+
+  const getIconColor = (val: number) => {
+    if (val <= 50) return "text-red-500";
+    if (val <= 65) return "text-orange-500";
+    if (val <= 80) return "text-emerald-400";
+    return "text-green-500";
+  };
 
   // Simulation Loop
   useEffect(() => {
@@ -255,6 +348,7 @@ export default function App() {
       c: '< 5%', 
       phi: '≈ 0', 
       desc: 'Участники разрознены; нет симбиоза; возникают только ОТХОДЫ; SD = 0.', 
+      tooltip: 'Низкая связность участников экоплатформы, C ≤ 5, симбиотический дивиденд практически отсутствует (SD ≈ 0)',
       sd: '0',
       color: 'text-red-500',
       bg: 'bg-red-500/10'
@@ -264,7 +358,8 @@ export default function App() {
       label: 'Переходный', 
       c: '5–15%', 
       phi: '0 < φ < 0.78', 
-      desc: 'Формируются симбиотические контракты; нелинейный рост SD [цель Фазы I, 2025–2028]', 
+      desc: 'Формируются симбиотические контракты; нелинейный рост SD [цель Фазы I, 2026–2029]', 
+      tooltip: 'Средняя связность, формирование симбиотических цепочек, 5 < C ≤ 15, нелинейный рост дивиденда',
       sd: '15–25',
       color: 'text-blue-500',
       bg: 'bg-blue-500/10'
@@ -274,7 +369,8 @@ export default function App() {
       label: 'Экосистемный', 
       c: '15–30%', 
       phi: '0.78–0.95', 
-      desc: 'Сеть сформирована; устойчивость без льгот ТОСЭР [цель 2031–2035]', 
+      desc: 'Сеть сформирована; устойчивость без льгот ТОСЭР [цель 2032–2036]', 
+      tooltip: 'Высокая связность (экосистема), C > 15, устойчивое развитие и максимальный синергетический эффект',
       sd: '75–125',
       color: 'text-emerald-500',
       bg: 'bg-emerald-500/10'
@@ -393,53 +489,92 @@ export default function App() {
               <div className="space-y-8">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-mono uppercase opacity-50">Горизонт прогноза (t)</label>
-                    <span className="text-[10px] font-bold font-mono text-emerald-500">{year} год</span>
+                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Горизонт прогноза (t)</label>
+                    <span className="text-lg font-bold font-mono text-emerald-500 tracking-wider">{year} год</span>
                   </div>
-                  <input 
-                    type="range" 
-                    min="2025" 
-                    max="2035" 
-                    step="1"
-                    value={year} 
-                    onChange={(e) => setYear(parseInt(e.target.value))}
-                    className="w-full h-1 bg-gray-500/20 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                  />
-                  <div className="flex justify-between text-[8px] font-mono opacity-40 uppercase">
-                    <span>2025</span>
-                    <span>2030</span>
-                    <span>2035</span>
+                  <div className="relative pt-2 pb-6">
+                    <input 
+                      type="range" 
+                      min="2026" 
+                      max="2036" 
+                      step="1"
+                      value={year} 
+                      onChange={(e) => setYear(parseInt(e.target.value))}
+                      className="w-full h-1 bg-gray-500/20 rounded-lg appearance-none cursor-pointer accent-emerald-500 relative z-10"
+                    />
+                    {/* Annual notches */}
+                    <div className="absolute top-2.5 left-0 w-full flex justify-between px-[2px] pointer-events-none">
+                      {Array.from({ length: 11 }).map((_, i) => (
+                        <div 
+                          key={i} 
+                          className={cn(
+                            "w-[1px] h-2 transition-colors duration-300",
+                            (2026 + i) <= year ? "bg-emerald-500/50" : "bg-gray-500/30"
+                          )} 
+                        />
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-[8px] font-mono opacity-40 uppercase mt-2">
+                      <span>2026</span>
+                      <span>2031</span>
+                      <span>2036</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-mono uppercase opacity-50">Институциональная среда (k)</label>
+                  <label className="text-xs font-bold uppercase tracking-widest opacity-50">Институциональная среда (k)</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { val: 3, label: 'Органическая', sub: 'Kalundborg' },
-                      { val: 5, label: 'Умеренная', sub: 'Nevinnomyssk' },
-                      { val: 8, label: 'Координируемая', sub: 'TEDA' }
+                      { 
+                        val: 3, 
+                        label: 'Органическая', 
+                        sub: 'Kalundborg',
+                        tooltip: 'Органическая среда — это слабокоординируемая среда, где симбиоз развивается преимущественно самопроизвольно, за счёт инициативы компаний и рыночных стимулов, без жёсткого управления.'
+                      },
+                      { 
+                        val: 5, 
+                        label: 'Умеренная', 
+                        sub: 'Nevinnomyssk',
+                        tooltip: 'Умеренная среда — это частично координируемая среда, где есть базовые правила и поддержка (льготы, сервисы экоплатформы), но значительная часть связей всё ещё формируется «снизу».'
+                      },
+                      { 
+                        val: 8, 
+                        label: 'Координируемая', 
+                        sub: 'TEDA',
+                        tooltip: 'Координируемая среда — это среда с сильной институциональной координацией, где экоплатформа и органы управления целенаправленно проектируют и поддерживают сети симбиоза, доводя связность до экосистемного режима'
+                      }
                     ].map((s) => (
-                      <button
-                        key={s.val}
-                        onClick={() => setKScenario(s.val)}
-                        className={cn(
-                          "py-2 px-1 text-[8px] font-bold uppercase tracking-tighter border transition-all duration-300 flex flex-col items-center",
-                          kScenario === s.val 
-                            ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]" : "bg-[#141414] text-[#E4E3E0] border-[#141414]")
-                            : (isDarkMode ? "border-[#E4E3E0]/20 hover:border-[#E4E3E0]/50" : "border-[#141414]/20 hover:border-[#141414]/50")
-                        )}
-                      >
-                        <span>{s.label}</span>
-                        <span className="opacity-50 font-normal mt-0.5">{s.sub}</span>
-                      </button>
+                      <div key={s.val} className="group relative">
+                        <button
+                          onClick={() => setKScenario(s.val)}
+                          className={cn(
+                            "w-full py-2 px-1 text-[8px] font-bold uppercase tracking-tighter border transition-all duration-300 flex flex-col items-center",
+                            kScenario === s.val 
+                              ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]" : "bg-[#141414] text-[#E4E3E0] border-[#141414]")
+                              : (isDarkMode ? "border-[#E4E3E0]/20 hover:border-[#E4E3E0]/50" : "border-[#141414]/20 hover:border-[#141414]/50")
+                          )}
+                        >
+                          <span>{s.label}</span>
+                          <span className="opacity-50 font-normal mt-0.5">{s.sub}</span>
+                        </button>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl pointer-events-none text-center">
+                          {s.tooltip}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
-                    <label className="text-[10px] font-mono uppercase opacity-50">Коэф. дивиденда (α)</label>
+                    <div className="flex items-center gap-1.5 group relative">
+                      <label className="text-xs font-bold uppercase tracking-widest opacity-50">Коэф. дивиденда (α)</label>
+                      <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                      <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                        Коэффициент дивиденда (α) — это доля симбиотического дивиденда, закреплённая за конкретной группой получателей (например, Экофонд, компании-резиденты, город), в рамках распределения общего SD по экобюджету назначения (вторая вкладка участники).
+                      </div>
+                    </div>
                     <span className="text-xs font-bold font-mono">{alpha.toFixed(3)}</span>
                   </div>
                   <input 
@@ -461,32 +596,42 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-mono uppercase opacity-50">Выбор режима (Пресеты)</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {regimes.map((r, idx) => (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        if (idx === 0) { setInvestment(2); setSynergyFactor(5); setResourceEfficiency(20); }
-                        if (idx === 1) { setInvestment(10); setSynergyFactor(45); setResourceEfficiency(55); }
-                        if (idx === 2) { setInvestment(25); setSynergyFactor(90); setResourceEfficiency(85); }
-                      }}
-                      className={cn(
-                        "py-2 text-[9px] font-bold uppercase tracking-tighter border transition-all duration-300",
-                        currentRegime === idx 
-                          ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]" : "bg-[#141414] text-[#E4E3E0] border-[#141414]")
-                          : (isDarkMode ? "border-[#E4E3E0]/20 hover:border-[#E4E3E0]/50" : "border-[#141414]/20 hover:border-[#141414]/50")
-                      )}
-                    >
-                      Режим {r.id}
-                    </button>
-                  ))}
-                </div>
+                  <label className="text-xs font-bold uppercase tracking-widest opacity-50">Выбор режима (Пресеты)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {regimes.map((r, idx) => (
+                      <div key={r.id} className="group relative">
+                        <button
+                          onClick={() => {
+                            if (idx === 0) { setInvestment(2); setSynergyFactor(5); setResourceEfficiency(20); }
+                            if (idx === 1) { setInvestment(10); setSynergyFactor(45); setResourceEfficiency(55); }
+                            if (idx === 2) { setInvestment(25); setSynergyFactor(90); setResourceEfficiency(85); }
+                          }}
+                          className={cn(
+                            "w-full py-2 text-[9px] font-bold uppercase tracking-tighter border transition-all duration-300",
+                            currentRegime === idx 
+                              ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]" : "bg-[#141414] text-[#E4E3E0] border-[#141414]")
+                              : (isDarkMode ? "border-[#E4E3E0]/20 hover:border-[#E4E3E0]/50" : "border-[#141414]/20 hover:border-[#141414]/50")
+                          )}
+                        >
+                          Режим {r.id}
+                        </button>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl pointer-events-none text-center">
+                          {r.tooltip}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
-                  <label className="text-[10px] font-mono uppercase opacity-50">Коэффициент синергии (φ)</label>
+                  <div className="flex items-center gap-1.5 group relative">
+                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Коэффициент синергии (φ)</label>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                      Коэффициент синергии (φ) — это интегральный показатель, отражающий долю реализованного симбиотического эффекта (полученного симбиотического дивиденда) от потенциально возможного эффекта в экосистеме кластера
+                    </div>
+                  </div>
                   <span className={cn("text-xs font-bold font-mono", metrics.phi === 0 ? "text-red-500" : "text-emerald-500")}>
                     {metrics.phi.toFixed(1)}%
                   </span>
@@ -504,7 +649,13 @@ export default function App() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
-                  <label className="text-[10px] font-mono uppercase opacity-50">Эффективность ресурсов (Er)</label>
+                  <div className="flex items-center gap-1.5 group relative">
+                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Эффективность ресурсов (Er)</label>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                      Эффективность ресурсов (Er) — это показатель, отражающий, насколько полно и результативно используются материальные и энергетические ресурсы кластера в результате симбиоза (с учётом предотвращённых потерь и экономии)
+                    </div>
+                  </div>
                   <span className="text-xs font-bold font-mono">{resourceEfficiency}%</span>
                 </div>
                 <input 
@@ -521,7 +672,13 @@ export default function App() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
-                  <label className="text-[10px] font-mono uppercase opacity-50">Индекс инвестиций (C)</label>
+                  <div className="flex items-center gap-1.5 group relative">
+                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Индекс инвестиций (C)</label>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                      Индекс инвестиций I — это нормированный показатель, отражающий долю фактически привлечённых инвестиций в экоплатформу от целевого объёма инвестиций за период
+                    </div>
+                  </div>
                   <span className="text-xs font-bold font-mono">{investment}</span>
                 </div>
                 <input 
@@ -553,13 +710,19 @@ export default function App() {
 
           <section className={cn(
             "p-5 space-y-4 transition-colors duration-300",
-            isDarkMode ? "bg-[#E4E3E0] text-[#141414]" : "bg-[#141414] text-[#E4E3E0]"
+            "bg-[#0f172a] text-[#E4E3E0]"
           )}>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-50">Система ограничений</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest opacity-50">Система ограничений</h3>
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono uppercase">1. Синерг. плотность (C ≥ 15%)</span>
+                  <div className="flex items-center gap-1.5 group relative">
+                    <span className="text-[10px] font-bold uppercase tracking-widest">1. Синерг. плотность (C ≥ 15%)</span>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                      C≥15% — это уровень связности экосистемы, при котором не менее 15% потенциально возможных симбиотических связей между участниками кластера фактически реализованы (начало экосистемного режима).
+                    </div>
+                  </div>
                   {metrics.constraints.density ? (
                     <CheckCircle2 size={14} className="text-emerald-500" />
                   ) : (
@@ -576,7 +739,13 @@ export default function App() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono uppercase">2. Бюджет (SD_б ≥ C_ликв)</span>
+                  <div className="flex items-center gap-1.5 group relative">
+                    <span className="text-[10px] font-bold uppercase tracking-widest">2. Бюджет (SD_б ≥ C_ликв)</span>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                      SD_б ≥ C_ликв — это условие, что объём симбиотического дивиденда в бюджете назначения не меньше стоимости ликвидации (или предотвращения) экологического ущерба кластера, то есть экобюджет способен покрыть критические экориски территории.
+                    </div>
+                  </div>
                   {metrics.constraints.budget ? (
                     <CheckCircle2 size={14} className="text-emerald-500" />
                   ) : (
@@ -599,21 +768,83 @@ export default function App() {
 
           <section className={cn(
             "p-5 space-y-4 transition-colors duration-300",
-            isDarkMode ? "bg-[#E4E3E0] text-[#141414]" : "bg-[#141414] text-[#E4E3E0]"
+            "bg-[#064e3b] text-[#E4E3E0]"
           )}>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-50">Диагностика системы</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 size={14} className={isDarkMode ? "text-emerald-600" : "text-emerald-400"} />
-                <span className="text-[10px] font-mono uppercase">Эффективность турбины: 94.2%</span>
+            <div className="flex items-center gap-1.5 group relative">
+              <h3 className="text-xs font-bold uppercase tracking-widest opacity-50">Устойчивость экосистемы</h3>
+              <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+              <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                Устойчивость экосистемы — это экран мониторинга, который в реальном времени показывает техническое состояние ключевого оборудования кластера (турбина, теплообменник, фильтр выбросов и др.) на основе датчиков и IoT-систем.
               </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle2 size={14} className={isDarkMode ? "text-emerald-600" : "text-emerald-400"} />
-                <span className="text-[10px] font-mono uppercase">Теплообменник: Активен</span>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2 group relative">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={14} className={getIconColor(turbineEff)} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest cursor-help">Эффективность турбины (Er): {turbineEff}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="50" max="95" step="15"
+                  value={turbineEff} 
+                  onChange={(e) => setTurbineEff(Number(e.target.value))}
+                  className={cn("w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer", getStatusColor(turbineEff))}
+                />
+                <div className="flex justify-between text-[7px] font-mono opacity-40">
+                  <span>50%</span>
+                  <span>65%</span>
+                  <span>80%</span>
+                  <span>95%</span>
+                </div>
+                <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                  Эффективность турбины — это текущий КПД турбины, показывающий, какую долю подведённой энергии она превращает в полезную работу; значение берётся из потока телеметрии оборудования, подключённого к экоплатформе.
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <AlertCircle size={14} className={isDarkMode ? "text-orange-600" : "text-orange-400"} />
-                <span className="text-[10px] font-mono uppercase">Фильтр выбросов: Ресурс 82%</span>
+
+              <div className="space-y-2 group relative">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={14} className={getIconColor(heatExchanger)} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest cursor-help">Теплообменник (Ew): {heatExchanger}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="50" max="95" step="15"
+                  value={heatExchanger} 
+                  onChange={(e) => setHeatExchanger(Number(e.target.value))}
+                  className={cn("w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer", getStatusColor(heatExchanger))}
+                />
+                <div className="flex justify-between text-[7px] font-mono opacity-40">
+                  <span>50%</span>
+                  <span>65%</span>
+                  <span>80%</span>
+                  <span>95%</span>
+                </div>
+                <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                  Теплообменник — это узел, который сейчас работает в штатном режиме и задействован в контуре теплосети; статус поступает из системы оперативного дистекчерского управления и IoT-датчиков.
+                </div>
+              </div>
+
+              <div className="space-y-2 group relative">
+                <div className="flex items-center gap-3">
+                  <AlertCircle size={14} className={getIconColor(filterResource)} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest cursor-help">Фильтр выбросов (Ef): {filterResource}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="50" max="95" step="15"
+                  value={filterResource} 
+                  onChange={(e) => setFilterResource(Number(e.target.value))}
+                  className={cn("w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer", getStatusColor(filterResource))}
+                />
+                <div className="flex justify-between text-[7px] font-mono opacity-40">
+                  <span>50%</span>
+                  <span>65%</span>
+                  <span>80%</span>
+                  <span>95%</span>
+                </div>
+                <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                  Фильтр выбросов — это показатель расчётного срока службы или пропускной способности до регламентной замены/обслуживания; рассчитывается по наработке, загрузке и данным датчиков экоплатформы.
+                </div>
               </div>
             </div>
           </section>
@@ -627,32 +858,54 @@ export default function App() {
               label="Целевая функция (U)" 
               value={metrics.u.toFixed(2)} 
               icon={<Gauge size={16} />} 
-              trend="+2.4%"
+              trend={metrics.trends.u}
               isDarkMode={isDarkMode}
+              formula="max SD(t) = α * ΔE(t) = α * Σi Ei(t) * φ(Cинд(t))"
+              trendLarge={true}
+              tooltip="Целевая функция U — это интегральный показатель полезности экоплатформы, который экоплатформа максимизирует, одновременно учитывая четыре ключевых фактора: синергетическую плотность C, индекс инвестиций I, эффективность ресурсов V (через Er, Ew, Ef) и уровень цифрового управления M."
             />
             <KPICard 
               label="Симбиотический Дивиденд (SD)" 
               value={metrics.sd.toFixed(2)} 
               unit="млн.руб"
               icon={<TrendingUp size={16} />} 
-              trend="+1.8%"
+              trend={metrics.trends.sd}
               isDarkMode={isDarkMode}
+              formula={
+                <span>
+                  SD<sub className="text-[10px] -bottom-0.5 relative">t</sub> = α · ΔE(t) · M<sub className="text-[10px] -bottom-0.5 relative">regime</sub>
+                </span>
+              }
+              trendLarge={true}
             />
             <KPICard 
               label="Функция синергии (φ)" 
               value={metrics.phi.toFixed(1)} 
               unit="%"
               icon={<Zap size={16} />} 
-              trend="+5.2%"
+              trend={metrics.trends.phi}
               isDarkMode={isDarkMode}
+              tooltip="Коэффициент синергии (φ) — это интегральный показатель, отражающий долю реализованного симбиотического эффекта (полученного симбиотического дивиденда) от потенциально возможного эффекта в экосистеме кластера"
+              formula={
+                <span>
+                  φ = 1 - e<sup className="text-[10px] -top-1 relative">-k·C</sup>, &nbsp;&nbsp; k ≈ 5
+                </span>
+              }
+              trendLarge={true}
             />
             <KPICard 
               label="Экофонд (SD_e)" 
               value={metrics.distribution.ecofund.toFixed(2)} 
               unit="млн.руб"
               icon={<Leaf size={16} />} 
-              trend="+0.9%"
+              trend={metrics.trends.ecofund}
               isDarkMode={isDarkMode}
+              formula={
+                <span>
+                  SD<sub className="text-[10px] -bottom-0.5 relative">e,t</sub> = α<sub className="text-[10px] -bottom-0.5 relative">e</sub>(Er) · SD<sub className="text-[10px] -bottom-0.5 relative">t</sub>, &nbsp; α<sub className="text-[10px] -bottom-0.5 relative">e</sub> ≈ 0.08
+                </span>
+              }
+              trendLarge={true}
             />
           </div>
 
@@ -670,9 +923,13 @@ export default function App() {
                   <p className="text-[9px] font-mono opacity-50 uppercase mt-1">Ориентированные потоки ресурсов (Er), отходов (Ew) и финансов (Ef)</p>
                 </div>
                 <div className="flex gap-6">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 group relative">
                     <div className="w-3 h-[2px] bg-red-500" />
                     <span className="text-[10px] font-mono uppercase">Ресурсы (Er)</span>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
+                      Эффективность ресурсов (Er) — это показатель, отражающий, насколько полно и результативно используются материальные и энергетические ресурсы кластера в результате симбиоза (с учётом предотвращённых потерь и экономии)
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-[2px] border-b border-dashed border-blue-500" />
@@ -865,7 +1122,7 @@ export default function App() {
                 <DistributionItem label={<>Оператор платформы (<span className="is-number">25</span>%)</>} value={metrics.distribution.operator} color="bg-emerald-500" isDarkMode={isDarkMode} />
                 <DistributionItem label={<>Поставщики ресурсов (<span className="is-number">15</span>%)</>} value={metrics.distribution.suppliers} color="bg-indigo-500" isDarkMode={isDarkMode} />
                 <DistributionItem label={<>Корпорация развития (<span className="is-number">12</span>%)</>} value={metrics.distribution.corporation} color="bg-orange-500" isDarkMode={isDarkMode} />
-                <DistributionItem label={<>Экофонд (<span className="is-number">8</span>%)</>} value={metrics.distribution.ecofund} color="bg-rose-500" isDarkMode={isDarkMode} />
+                <DistributionItem label={<>Экофонд (<span className="is-number">{(metrics.distribution.shares.ecofund * 100).toFixed(0)}</span>%)</>} value={metrics.distribution.ecofund} color="bg-rose-500" isDarkMode={isDarkMode} />
               </div>
               <div className="mt-6 pt-4 border-t border-dashed border-gray-500/30">
                 <div className="flex justify-between items-center">
@@ -884,6 +1141,7 @@ export default function App() {
               title="Целевая функция полезности U(t)" 
               subtitle="Динамический отклик эффективности системы"
               isDarkMode={isDarkMode}
+              tooltip="Целевая функция U — это интегральный показатель полезности экоплатформы, который экоплатформа максимизирует, одновременно учитывая четыре ключевых фактора: синергетическую плотность C, индекс инвестиций I, эффективность ресурсов V (через Er, Ew, Ef) и уровень цифрового управления M."
             >
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={history}>
@@ -1050,12 +1308,12 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Вериф. экономия (14)</div>
-                <div className="text-xs font-bold font-mono">ΔE(t) = ΔE · φ = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
+                <div className="text-xs font-bold font-mono">ΔE(t) = Σi Ei(t) * φ(Cинд(t)) = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
                 <p className="text-[9px] opacity-70 italic leading-tight">Экономия, скорректированная на синергетическую реализуемость.</p>
               </div>
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Симб. дивиденд (15)</div>
-                <div className="text-xs font-bold font-mono">SD = α · ΔE(t) = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
+                <div className="text-xs font-bold font-mono">SD(t) = α * ΔE(t) = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
                 <p className="text-[9px] opacity-70 italic leading-tight">Распределяемый доход при α={metrics.alpha}.</p>
               </div>
             </div>
@@ -1234,38 +1492,68 @@ export default function App() {
   );
 }
 
-function KPICard({ label, value, unit, icon, trend, isDarkMode }: { label: string, value: string, unit?: string, icon: React.ReactNode, trend: string, isDarkMode: boolean }) {
+function KPICard({ label, value, unit, icon, trend, isDarkMode, formula, trendLarge, tooltip }: { label: string, value: string, unit?: string, icon: React.ReactNode, trend: string, isDarkMode: boolean, formula?: React.ReactNode, trendLarge?: boolean, tooltip?: string }) {
   return (
     <div className={cn(
-      "border p-4 space-y-3 transition-all duration-300 hover:-translate-y-1",
+      "border p-4 space-y-3 transition-all duration-300 hover:-translate-y-1 relative group",
       isDarkMode ? "bg-[#1A1A1A] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
     )}>
       <div className="flex items-center justify-between opacity-50">
-        <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+        <div className="flex items-center gap-1.5 group/tooltip relative">
+          <span className="text-xs font-bold uppercase tracking-widest">{label}</span>
+          {tooltip && (
+            <>
+              <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+              <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover/tooltip:visible z-50 shadow-xl normal-case tracking-normal">
+                {tooltip}
+              </div>
+            </>
+          )}
+        </div>
         {icon}
       </div>
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-bold tracking-tighter">
-          <span className="is-number">{value}</span>
-        </span>
-        {unit && <span className="text-[10px] font-mono uppercase opacity-50">{unit}</span>}
-      </div>
-      <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-tighter text-emerald-600">
-        <TrendingUp size={10} />
-        <span className="is-number">{trend}</span>
+      {formula && (
+        <div className="text-xl font-serif italic opacity-100 text-emerald-600 leading-none py-1">
+          {formula}
+        </div>
+      )}
+      <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-bold tracking-tighter">
+            <span className="is-number">{value}</span>
+          </span>
+          {unit && <span className="text-[10px] font-mono uppercase opacity-50">{unit}</span>}
+        </div>
+        <div className={cn(
+          "flex items-center gap-1 font-bold uppercase tracking-tighter text-emerald-600",
+          trendLarge ? "text-base" : "text-[9px]"
+        )}>
+          <TrendingUp size={trendLarge ? 14 : 10} />
+          <span className="is-number">({trend})</span>
+        </div>
       </div>
     </div>
   );
 }
 
-function ChartContainer({ title, subtitle, children, isDarkMode }: { title: string, subtitle: string, children: React.ReactNode, isDarkMode: boolean }) {
+function ChartContainer({ title, subtitle, children, isDarkMode, tooltip }: { title: string, subtitle: string, children: React.ReactNode, isDarkMode: boolean, tooltip?: string }) {
   return (
     <div className={cn(
       "border p-6 space-y-4 transition-colors duration-300",
       isDarkMode ? "bg-[#1A1A1A] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
     )}>
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest">{title}</h3>
+        <div className="flex items-center gap-1.5 group/tooltip relative">
+          <h3 className="text-xs font-bold uppercase tracking-widest">{title}</h3>
+          {tooltip && (
+            <>
+              <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+              <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover/tooltip:visible z-50 shadow-xl normal-case tracking-normal">
+                {tooltip}
+              </div>
+            </>
+          )}
+        </div>
         <p className="text-[10px] font-mono uppercase opacity-50">{subtitle}</p>
       </div>
       <div className="pt-4">

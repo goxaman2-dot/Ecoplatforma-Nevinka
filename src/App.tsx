@@ -38,7 +38,8 @@ import {
   ArrowDownLeft,
   ArrowUpLeft,
   Coins,
-  Factory
+  Factory,
+  Shield
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -102,7 +103,7 @@ export default function App() {
   const [filterResource, setFilterResource] = useState(80); // Ef: 50, 65, 80, 95
   const [investment, setInvestment] = useState(15); // C index: 0-30
   const [year, setYear] = useState(2026); // 2026-2036
-  const [kScenario, setKScenario] = useState(5); // k: 3 (Organic), 5 (Moderate), 8 (Coordinated)
+  const [kScenario, setKScenario] = useState(5); // k: 3 (Органическая), 5 (Умеренная), 7 (Координируемая)
   const [alpha, setAlpha] = useState(0.10); // alpha: 0.08 - 0.12
   const [distRegime, setDistRegime] = useState<'fiscal' | 'tech' | 'industrial'>('fiscal');
 
@@ -135,7 +136,7 @@ export default function App() {
     },
     {
       name: 'Корпорация развития Ставропольского края',
-      functions: 'Реинвестирует долю SD в новых резидентов ТОСЭР; обеспечивает правовую базу; Стратегия-2036',
+      functions: 'Реинвестирует долю SD в новых резидентов ТОСЭР; обеспечивает правовую базу; Стратегия-2035',
       contribution: 'Льготы ТОСЭР; нормативная база; административный ресурс',
       share: 12,
       amount: 3.0
@@ -211,20 +212,19 @@ export default function App() {
 
     const currentShares = shares[distRegime];
     
-    // Dynamic Ecofund share (depends on resource efficiency)
-    // This ensures SD and SD_E trends are not identical
-    const ecofundShare = 0.05 + (resourceEfficiency / 100) * 0.05; // 7% to 10%
-    
+    // Ecofund share: фиксированные 8% согласно Таблице 1 статьи (формула 6.2)
+    const ecofundShare = 0.08;
+
     // Formula (15): Symbiotic Dividend SD = alpha * Delta E(t) * Multiplier
-    // Add non-linear scale effect: higher synergy gives a small extra bonus
-    const scaleEffect = phi_val > 0.7 ? 1 + (phi_val - 0.7) * 0.2 : 1.0;
-    
-    let sd = alpha * deltaE_t * currentShares.multiplier * scaleEffect;
+    let sd = alpha * deltaE_t * currentShares.multiplier;
     if (investment < 5) {
       sd = 0;
     }
     
-    const sd_budget = sd * currentShares.budget;
+    // Нелинейная функция доли бюджета β(C_инд) = β₀·φ + β₁·(1−φ)
+    // β₀ = 0.45 (экосистемный режим), β₁ = 0.25 (низкая связность) — формула (11)
+    const beta = 0.45 * phi_val + 0.25 * (1 - phi_val);
+    const sd_budget = sd * beta;
     
     const distribution = {
       budget: sd_budget,
@@ -246,9 +246,13 @@ export default function App() {
     const ecoSafety = Math.min(1.2, sd_budget / (c_liq || 1));
     const u = (phi * 0.5 + (sd / 9.75 * 100) * 0.3 + (ecoSafety * 20));
 
-    return { 
+    // Индекс Устойчивости Экоплатформы (ИУ)
+    // ИУ = (φ·0.35 + EcoSafety/1.2·0.30 + E_it·0.20 + E_f·0.15) · 100
+    const iu = (phi_val * 0.35 + (ecoSafety / 1.2) * 0.30 + e_it_factor * 0.20 + e_f_factor * 0.15) * 100;
+
+    return {
       sd, phi, distribution, u, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
-      anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety
+      anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety, iu
     };
   }, []);
 
@@ -295,7 +299,9 @@ export default function App() {
         u: calculateTrend(current.u, baseline.u),
         sd: calculateTrend(current.sd, baseline.sd),
         phi: calculateTrend(current.phi, baseline.phi),
-        ecofund: calculateTrend(current.distribution.ecofund, baseline.distribution.ecofund)
+        ecofund: calculateTrend(current.distribution.ecofund, baseline.distribution.ecofund),
+        iu: calculateTrend(current.iu, baseline.iu),
+        deltaE: calculateTrend(current.deltaE_t, baseline.deltaE_t)
       }
     };
   }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime, baseline]);
@@ -324,6 +330,7 @@ export default function App() {
           sdt: metrics.sd * 10 + (Math.random() - 0.5) * 1,
           er: metrics.phi,
           ef: metrics.sd,
+          iu: metrics.iu + (Math.random() - 0.5) * 0.5,
         };
         const next = [...prev, newPoint];
         if (next.length > 20) return next.slice(1);
@@ -369,7 +376,7 @@ export default function App() {
       label: 'Экосистемный', 
       c: '15–30%', 
       phi: '0.78–0.95', 
-      desc: 'Сеть сформирована; устойчивость без льгот ТОСЭР [цель 2032–2036]', 
+      desc: 'Сеть сформирована; устойчивость без льгот ТОСЭР [цель 2031–2035]', 
       tooltip: 'Высокая связность (экосистема), C > 15, устойчивое развитие и максимальный синергетический эффект',
       sd: '75–125',
       color: 'text-emerald-500',
@@ -539,8 +546,8 @@ export default function App() {
                         tooltip: 'Умеренная среда — это частично координируемая среда, где есть базовые правила и поддержка (льготы, сервисы экоплатформы), но значительная часть связей всё ещё формируется «снизу».'
                       },
                       { 
-                        val: 8, 
-                        label: 'Координируемая', 
+                        val: 7,
+                        label: 'Координируемая',
                         sub: 'TEDA',
                         tooltip: 'Координируемая среда — это среда с сильной институциональной координацией, где экоплатформа и органы управления целенаправленно проектируют и поддерживают сети симбиоза, доводя связность до экосистемного режима'
                       }
@@ -851,63 +858,152 @@ export default function App() {
         </aside>
 
         {/* Main Dashboard Area */}
-        <div className="col-span-12 lg:col-span-9 space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <KPICard 
-              label="Целевая функция (U)" 
-              value={metrics.u.toFixed(2)} 
-              icon={<Gauge size={16} />} 
-              trend={metrics.trends.u}
-              isDarkMode={isDarkMode}
-              formula="max SD(t) = α * ΔE(t) = α * Σi Ei(t) * φ(Cинд(t))"
-              trendLarge={true}
-              tooltip="Целевая функция U — это интегральный показатель полезности экоплатформы, который экоплатформа максимизирует, одновременно учитывая четыре ключевых фактора: синергетическую плотность C, индекс инвестиций I, эффективность ресурсов V (через Er, Ew, Ef) и уровень цифрового управления M."
-            />
-            <KPICard 
-              label="Симбиотический Дивиденд (SD)" 
-              value={metrics.sd.toFixed(2)} 
-              unit="млн.руб"
-              icon={<TrendingUp size={16} />} 
-              trend={metrics.trends.sd}
-              isDarkMode={isDarkMode}
-              formula={
-                <span>
-                  SD<sub className="text-[10px] -bottom-0.5 relative">t</sub> = α · ΔE(t) · M<sub className="text-[10px] -bottom-0.5 relative">regime</sub>
-                </span>
-              }
-              trendLarge={true}
-            />
-            <KPICard 
-              label="Функция синергии (φ)" 
-              value={metrics.phi.toFixed(1)} 
-              unit="%"
-              icon={<Zap size={16} />} 
-              trend={metrics.trends.phi}
-              isDarkMode={isDarkMode}
-              tooltip="Коэффициент синергии (φ) — это интегральный показатель, отражающий долю реализованного симбиотического эффекта (полученного симбиотического дивиденда) от потенциально возможного эффекта в экосистеме кластера"
-              formula={
-                <span>
-                  φ = 1 - e<sup className="text-[10px] -top-1 relative">-k·C</sup>, &nbsp;&nbsp; k ≈ 5
-                </span>
-              }
-              trendLarge={true}
-            />
-            <KPICard 
-              label="Экофонд (SD_e)" 
-              value={metrics.distribution.ecofund.toFixed(2)} 
-              unit="млн.руб"
-              icon={<Leaf size={16} />} 
-              trend={metrics.trends.ecofund}
-              isDarkMode={isDarkMode}
-              formula={
-                <span>
-                  SD<sub className="text-[10px] -bottom-0.5 relative">e,t</sub> = α<sub className="text-[10px] -bottom-0.5 relative">e</sub>(Er) · SD<sub className="text-[10px] -bottom-0.5 relative">t</sub>, &nbsp; α<sub className="text-[10px] -bottom-0.5 relative">e</sub> ≈ 0.08
-                </span>
-              }
-              trendLarge={true}
-            />
-          </div>
+        <div className="col-span-12 lg:col-span-9">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            {/* ═══ ЛЕВАЯ КОЛОНКА: Научная цепочка показателей φ→ΔE→SD→U→SD_e→ИУ ═══ */}
+            <div className="lg:col-span-4 flex flex-col gap-3">
+
+              {/* Заголовок цепочки */}
+              <div className={cn("px-3 py-2 border-l-2 border-emerald-500", isDarkMode ? "bg-emerald-500/5" : "bg-emerald-50")}>
+                <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">Причинно-следственная цепочка</p>
+                <p className="text-[9px] font-mono opacity-40">φ → ΔE → SD → U → ИУ</p>
+              </div>
+
+              {/* 1. φ — Синергия (механизм) */}
+              <KPICard
+                label="① Синергия (φ)"
+                value={metrics.phi.toFixed(1)}
+                unit="%"
+                icon={<Zap size={16} />}
+                trend={metrics.trends.phi}
+                isDarkMode={isDarkMode}
+                tooltip="Коэффициент синергии (φ) — доля реализованного симбиотического эффекта от потенциально возможного. Ключевой нелинейный механизм модели."
+                formula={<span>φ = 1 - e<sup className="text-[10px] -top-1 relative">-k·C</sup>, &nbsp; k ≈ {metrics.k.toFixed(1)}</span>}
+                trendLarge={true}
+              />
+
+              {/* Стрелка */}
+              <div className="flex items-center gap-2 px-2 opacity-30">
+                <div className="flex-1 h-[1px] bg-emerald-500" />
+                <ArrowRight size={10} className="text-emerald-500" />
+              </div>
+
+              {/* 2. ΔE(t) — Верифицированная экономия */}
+              <KPICard
+                label="② Экономия ΔE(t)"
+                value={metrics.deltaE_t.toFixed(1)}
+                unit="млн.руб/год"
+                icon={<Thermometer size={16} />}
+                trend={metrics.trends.deltaE}
+                isDarkMode={isDarkMode}
+                tooltip="Верифицированная экономия от симбиоза. ΔE(t) = ΔE_base · φ(C_инд). Базовый потенциал: тепло ГРЭС + вторсырьё ЭПП + CO₂ Азота + снижение штрафов."
+                formula={<span>ΔE(t) = Σ<sub className="text-[10px]">i</sub> E<sub className="text-[10px]">i</sub>(t) · φ(C<sub className="text-[10px]">инд</sub>)</span>}
+                trendLarge={true}
+              />
+
+              {/* Стрелка */}
+              <div className="flex items-center gap-2 px-2 opacity-30">
+                <div className="flex-1 h-[1px] bg-emerald-500" />
+                <ArrowRight size={10} className="text-emerald-500" />
+              </div>
+
+              {/* 3. SD — Симбиотический дивиденд */}
+              <KPICard
+                label="③ Дивиденд SD(t)"
+                value={metrics.sd.toFixed(2)}
+                unit="млн.руб"
+                icon={<TrendingUp size={16} />}
+                trend={metrics.trends.sd}
+                isDarkMode={isDarkMode}
+                formula={<span>SD<sub className="text-[10px]">t</sub> = α · ΔE(t) · M<sub className="text-[10px]">режим</sub></span>}
+                trendLarge={true}
+              />
+
+              {/* Стрелка */}
+              <div className="flex items-center gap-2 px-2 opacity-30">
+                <div className="flex-1 h-[1px] bg-emerald-500" />
+                <ArrowRight size={10} className="text-emerald-500" />
+              </div>
+
+              {/* 4. U — Целевая функция */}
+              <KPICard
+                label="④ Целевая функция U"
+                value={metrics.u.toFixed(2)}
+                icon={<Gauge size={16} />}
+                trend={metrics.trends.u}
+                isDarkMode={isDarkMode}
+                formula="max U = φ·0.5 + SD·0.3 + EcoSafety·0.2"
+                trendLarge={true}
+                tooltip="Интегральный показатель полезности экоплатформы. Объединяет синергию, дивиденд и экобезопасность."
+              />
+
+              {/* Стрелка */}
+              <div className="flex items-center gap-2 px-2 opacity-30">
+                <div className="flex-1 h-[1px] bg-emerald-500" />
+                <ArrowRight size={10} className="text-emerald-500" />
+              </div>
+
+              {/* 5. SD_e — Экофонд */}
+              <KPICard
+                label="⑤ Экофонд SD_e"
+                value={metrics.distribution.ecofund.toFixed(2)}
+                unit="млн.руб"
+                icon={<Leaf size={16} />}
+                trend={metrics.trends.ecofund}
+                isDarkMode={isDarkMode}
+                formula={<span>SD<sub className="text-[10px]">e</sub> = 0.08 · SD<sub className="text-[10px]">t</sub></span>}
+                trendLarge={true}
+              />
+
+              {/* Стрелка */}
+              <div className="flex items-center gap-2 px-2 opacity-30">
+                <div className="flex-1 h-[1px] bg-emerald-500" />
+                <ArrowRight size={10} className="text-emerald-500" />
+              </div>
+
+              {/* 6. ИУ — Индекс Устойчивости (финальный интегратор) */}
+              <div className={cn(
+                "border p-4 space-y-3 transition-all duration-300 hover:-translate-y-1 relative group",
+                isDarkMode ? "bg-[#1A1A1A] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
+              )}>
+                <div className="flex items-center justify-between opacity-50">
+                  <div className="flex items-center gap-1.5 group/tooltip relative">
+                    <span className="text-xs font-bold uppercase tracking-widest">⑥ Индекс Устойчивости (ИУ)</span>
+                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
+                    <div className="absolute bottom-full left-0 mb-2 w-72 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover/tooltip:visible z-50 shadow-xl">
+                      ИУ = φ·0.35 + (EcoSafety/1.2)·0.30 + E_it·0.20 + E_f·0.15 — интегральный индекс: &lt;45 Критический, 45–70 Умеренный, 70–85 Устойчивый, &gt;85 Стабильно устойчивый.
+                    </div>
+                  </div>
+                  <Shield size={16} className={metrics.iu >= 85 ? "text-cyan-400" : metrics.iu >= 70 ? "text-emerald-500" : metrics.iu >= 45 ? "text-orange-400" : "text-red-500"} />
+                </div>
+                <div className="text-xl font-serif italic text-emerald-600 leading-none py-1 opacity-100">
+                  ИУ = φ·0.35 + ES·0.30 + E_it·0.20 + E_f·0.15
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={cn("text-2xl font-bold tracking-tighter", metrics.iu >= 85 ? "text-cyan-400" : metrics.iu >= 70 ? "text-emerald-500" : metrics.iu >= 45 ? "text-orange-400" : "text-red-500")}>
+                    {metrics.iu.toFixed(1)}
+                  </span>
+                  <span className="text-[10px] font-mono uppercase opacity-50">/ 100</span>
+                  <span className={cn("flex items-center gap-1 font-bold uppercase tracking-tighter text-emerald-600 text-base")}>
+                    <TrendingUp size={14} />({metrics.trends.iu})
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-gray-500/20 rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full transition-all duration-700 rounded-full", metrics.iu >= 85 ? "bg-cyan-400" : metrics.iu >= 70 ? "bg-emerald-500" : metrics.iu >= 45 ? "bg-orange-400" : "bg-red-500")}
+                    style={{ width: `${Math.min(100, metrics.iu)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[7px] font-mono opacity-30">
+                  <span>Критич.</span><span>Умерен.</span><span>Устойч.</span><span className="text-cyan-400">Стабильно</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* ═══ ПРАВАЯ ЧАСТЬ: Графики и визуализации ═══ */}
+            <div className="lg:col-span-8 space-y-6">
 
           {/* Top Row: Process Visualization & Distribution */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -1324,6 +1420,8 @@ export default function App() {
           </div>
         </div>
           </div>
+        </div>
+        </div>
         ) : (
           <div className="space-y-6">
             <div className={cn(
@@ -1336,6 +1434,18 @@ export default function App() {
                     <Users size={24} /> Участники экоплатформы
                   </h2>
                   <p className="text-[10px] font-mono opacity-50 uppercase mt-1">Распределение симбиотического дивиденда и функциональные роли</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[9px] font-mono uppercase opacity-50">Год:</span>
+                    <span className="text-[11px] font-bold font-mono text-emerald-500">{year}</span>
+                    <input
+                      type="range"
+                      min="2026" max="2036" step="1"
+                      value={year}
+                      onChange={(e) => setYear(Number(e.target.value))}
+                      className="w-32 h-1 appearance-none cursor-pointer accent-emerald-500"
+                    />
+                    <span className="text-[9px] font-mono opacity-30">2026–2036</span>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   {[
@@ -1379,7 +1489,8 @@ export default function App() {
                       <th className="pb-4 pr-6 w-1/3">Функции</th>
                       <th className="pb-4 pr-6">Что вносит</th>
                       <th className="pb-4 pr-6 text-right">Доля SD, %</th>
-                      <th className="pb-4 text-right">Сумма*, млн руб./год</th>
+                      <th className="pb-4 pr-6 text-right">Сумма SD*, млн руб./год</th>
+                      <th className="pb-4 text-right text-red-400">Долг перед экоплатформой, млн руб.</th>
                     </tr>
                   </thead>
                   <tbody className="text-[11px] leading-relaxed">
@@ -1410,8 +1521,18 @@ export default function App() {
                           <td className="py-5 pr-6 text-right font-mono">
                             <span className="is-number">{currentShare.toFixed(0)}</span>%
                           </td>
-                          <td className="py-5 text-right font-bold text-emerald-500 font-mono">
+                          <td className="py-5 pr-6 text-right font-bold text-emerald-500 font-mono">
                             <span className="is-number">{(metrics.sd * currentShare / 100).toFixed(2)}</span>
+                          </td>
+                          <td className="py-5 text-right font-mono">
+                            {(() => {
+                              const received = metrics.sd * currentShare / 100;
+                              const potential = metrics.deltaE_base * (currentShare / 100) * metrics.alpha;
+                              const debt = Math.max(0, potential - received);
+                              return debt > 0.01
+                                ? <span className="text-red-400">−{debt.toFixed(2)}</span>
+                                : <span className="text-emerald-500 opacity-60">0.00</span>;
+                            })()}
                           </td>
                         </tr>
                       );
@@ -1421,8 +1542,11 @@ export default function App() {
                       <td className="py-6 text-right font-mono text-xs">
                         <span className="is-number">100</span>%
                       </td>
-                      <td className="py-6 text-right font-mono text-xs text-emerald-500">
+                      <td className="py-6 pr-6 text-right font-mono text-xs text-emerald-500">
                         <span className="is-number">{metrics.sd.toFixed(2)}</span>
+                      </td>
+                      <td className="py-6 text-right font-mono text-xs text-red-400">
+                        <span className="is-number">{Math.max(0, metrics.deltaE_base * metrics.alpha - metrics.sd).toFixed(2)}</span>
                       </td>
                     </tr>
                   </tbody>

@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { AvatarGRES, AvatarAzot, AvatarEPP, AvatarResidents, AvatarOperator, AvatarBudget, AvatarPlatform } from './avatars';
 
 // Utility for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -115,7 +116,7 @@ export default function App() {
   const participants = [
     {
       name: 'Бюджет дестинации ★ (Невинномысск)',
-      functions: 'Получает 40% SD; финансирует экофонд, рекультивацию фосфогипса, инфраструктуру; заказывает независимый аудит ΔE через СКФУ',
+      functions: 'Получает долю β(C_инд) = 25–45% SD (формула 11); финансирует экофонд, рекультивацию фосфогипса, инфраструктуру; заказывает независимый аудит ΔE через СКФУ',
       contribution: 'Политическая воля; госмониторинг; данные о накопленном ущербе',
       share: 40,
       amount: 10.0
@@ -225,14 +226,28 @@ export default function App() {
     // β₀ = 0.45 (экосистемный режим), β₁ = 0.25 (низкая связность) — формула (11)
     const beta = 0.45 * phi_val + 0.25 * (1 - phi_val);
     const sd_budget = sd * beta;
-    
+
+    // Доли бюджета (β) и экофонда (8%) заданы формулами (11) и (6.2);
+    // остаток 1 − β − 0.08 делится между оператором, поставщиками и корпорацией
+    // в пропорциях выбранного режима, поэтому сумма долей всегда равна 100% SD
+    const restWeight = currentShares.operator + currentShares.suppliers + currentShares.corporation;
+    const rest = Math.max(0, 1 - beta - ecofundShare);
+    const effShares = {
+      budget: beta,
+      operator: rest * currentShares.operator / restWeight,
+      suppliers: rest * currentShares.suppliers / restWeight,
+      corporation: rest * currentShares.corporation / restWeight,
+      ecofund: ecofundShare,
+      multiplier: currentShares.multiplier
+    };
+
     const distribution = {
       budget: sd_budget,
-      operator: sd * currentShares.operator,
-      suppliers: sd * currentShares.suppliers,
-      corporation: sd * currentShares.corporation,
+      operator: sd * effShares.operator,
+      suppliers: sd * effShares.suppliers,
+      corporation: sd * effShares.corporation,
       ecofund: sd * ecofundShare,
-      shares: { ...currentShares, ecofund: ecofundShare }
+      shares: effShares
     };
 
     // Constraints check
@@ -348,6 +363,24 @@ export default function App() {
     return 2; // Экосистемный
   }, [investment, metrics.phi]);
 
+  // Диапазоны φ и SD в таблице режимов считаются той же моделью на границах C_инд
+  // (5%, 15%, 30%) при текущих настройках, а не задаются вручную
+  const regimeBounds = useMemo(() => {
+    const at = (c: number) => calculateMetrics({
+      resourceEfficiency, turbineEff, heatExchanger, filterResource,
+      investment: c, year, kScenario, alpha, distRegime
+    });
+    const m5 = at(5), m15 = at(15), m30 = at(30);
+    const f2 = (x: number) => x.toFixed(2);
+    const f1 = (x: number) => x.toFixed(1);
+    return {
+      phi2: `${f2(m5.phi / 100)}–${f2(m15.phi / 100)}`,
+      phi3: `${f2(m15.phi / 100)}–${f2(m30.phi / 100)}`,
+      sd2: `${f1(m5.sd)}–${f1(m15.sd)}`,
+      sd3: `${f1(m15.sd)}–${f1(m30.sd)}`
+    };
+  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, year, kScenario, alpha, distRegime]);
+
   const regimes = [
     { 
       id: 1, 
@@ -355,7 +388,7 @@ export default function App() {
       c: '< 5%', 
       phi: '≈ 0', 
       desc: 'Участники разрознены; нет симбиоза; возникают только ОТХОДЫ; SD = 0.', 
-      tooltip: 'Низкая связность участников экоплатформы, C ≤ 5, симбиотический дивиденд практически отсутствует (SD ≈ 0)',
+      tooltip: 'Низкая связность участников экоплатформы, C < 5, симбиотический дивиденд практически отсутствует (SD ≈ 0)',
       sd: '0',
       color: 'text-red-500',
       bg: 'bg-red-500/10'
@@ -364,10 +397,10 @@ export default function App() {
       id: 2, 
       label: 'Переходный', 
       c: '5–15%', 
-      phi: '0 < φ < 0.78', 
+      phi: regimeBounds.phi2, 
       desc: 'Формируются симбиотические контракты; нелинейный рост SD [цель Фазы I, 2026–2029]', 
-      tooltip: 'Средняя связность, формирование симбиотических цепочек, 5 < C ≤ 15, нелинейный рост дивиденда',
-      sd: '15–25',
+      tooltip: 'Средняя связность, формирование симбиотических цепочек, 5 ≤ C ≤ 15, нелинейный рост дивиденда',
+      sd: regimeBounds.sd2,
       color: 'text-blue-500',
       bg: 'bg-blue-500/10'
     },
@@ -375,10 +408,10 @@ export default function App() {
       id: 3, 
       label: 'Экосистемный', 
       c: '15–30%', 
-      phi: '0.78–0.95', 
+      phi: regimeBounds.phi3, 
       desc: 'Сеть сформирована; устойчивость без льгот ТОСЭР [цель 2031–2035]', 
       tooltip: 'Высокая связность (экосистема), C > 15, устойчивое развитие и максимальный синергетический эффект',
-      sd: '75–125',
+      sd: regimeBounds.sd3,
       color: 'text-emerald-500',
       bg: 'bg-emerald-500/10'
     }
@@ -1046,6 +1079,7 @@ export default function App() {
                 <div className="absolute z-20">
                   <ProcessNode 
                     icon={<Leaf />} 
+                    avatar={<AvatarPlatform />}
                     label="ЭКОПЛАТФОРМА" 
                     sub="г. Невинномысск" 
                     active={true} 
@@ -1056,9 +1090,10 @@ export default function App() {
 
                 {/* Nodes V */}
                 {/* Top Left: ГРЭС */}
-                <div className="absolute top-10 left-10">
+                <div className="absolute top-8 left-8 z-10">
                   <ProcessNode 
                     icon={<Zap />} 
+                    avatar={<AvatarGRES />}
                     label="ГРЭС" 
                     sub={metrics.sd === 0 ? "Отходы" : "Тепло, пар"} 
                     active={synergyFactor > 20 || metrics.sd === 0} 
@@ -1066,9 +1101,10 @@ export default function App() {
                   />
                 </div>
                 {/* Top Right: АЗОТ */}
-                <div className="absolute top-10 right-10">
+                <div className="absolute top-8 right-8 z-10">
                   <ProcessNode 
                     icon={<Factory />} 
+                    avatar={<AvatarAzot />}
                     label="АЗОТ" 
                     sub={metrics.sd === 0 ? "Отходы" : "CO2, тепло"} 
                     active={synergyFactor > 30 || metrics.sd === 0} 
@@ -1076,9 +1112,10 @@ export default function App() {
                   />
                 </div>
                 {/* Bottom Left: ЭПП */}
-                <div className="absolute bottom-10 left-10">
+                <div className="absolute bottom-8 left-8 z-10">
                   <ProcessNode 
                     icon={<Recycle />} 
+                    avatar={<AvatarEPP />}
                     label="ЭПП" 
                     sub={metrics.sd === 0 ? "Отходы" : "Вторсырьё"} 
                     active={resourceEfficiency > 40 || metrics.sd === 0} 
@@ -1086,9 +1123,10 @@ export default function App() {
                   />
                 </div>
                 {/* Bottom Right: РЕЗИДЕНТЫ */}
-                <div className="absolute bottom-10 right-10">
+                <div className="absolute bottom-8 right-8 z-10">
                   <ProcessNode 
                     icon={<Users />} 
+                    avatar={<AvatarResidents />}
                     label="РЕЗИДЕНТЫ" 
                     sub={metrics.sd === 0 ? "Разрозненность" : "Потребители"} 
                     active={metrics.sd > 5 || metrics.sd === 0} 
@@ -1096,9 +1134,10 @@ export default function App() {
                   />
                 </div>
                 {/* Left: ОПЕРАТОР */}
-                <div className="absolute top-1/2 -translate-y-1/2 left-4">
+                <div className="absolute top-1/2 -translate-y-1/2 left-3 z-10">
                   <ProcessNode 
                     icon={<Cpu />} 
+                    avatar={<AvatarOperator />}
                     label="ОПЕРАТОР" 
                     sub={metrics.sd === 0 ? "Бездействие" : "AI-Матчинг"} 
                     active={metrics.sd > 0} 
@@ -1106,18 +1145,19 @@ export default function App() {
                   />
                 </div>
                 {/* Right: БЮДЖЕТ */}
-                <div className="absolute top-1/2 -translate-y-1/2 right-4">
+                <div className="absolute top-1/2 -translate-y-1/2 right-3 z-10">
                   <ProcessNode 
                     icon={<Coins />} 
+                    avatar={<AvatarBudget />}
                     label="БЮДЖЕТ" 
-                    sub={metrics.sd === 0 ? "Дефицит" : "Дестинация"} 
+                    sub={metrics.sd === 0 ? "Дефицит" : "Ef: дивиденд SD"} 
                     active={metrics.sd > 2} 
                     isDarkMode={isDarkMode} 
                   />
                 </div>
 
                 {/* Edges E (Arrows) */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <svg className="absolute inset-0 z-0 w-full h-full pointer-events-none overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
                   {/* Flows INTO Platform (Resources & Waste) */}
                   {/* ГРЭС -> Platform */}
                   <FlowEdge 
@@ -1190,22 +1230,19 @@ export default function App() {
                 </svg>
 
                 {/* Labels for flows */}
-                <div className="absolute top-1/4 left-1/4 -translate-x-1/2 text-[8px] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
+                <div className="absolute z-20 top-[33%] left-[30%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[8px] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
                   {metrics.sd === 0 ? "Ew: Отходы" : "Er: Тепло"}
                 </div>
-                <div className="absolute top-1/4 right-1/4 translate-x-1/2 text-[8px] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
+                <div className="absolute z-20 top-[33%] right-[30%] translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[8px] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
                   {metrics.sd === 0 ? "Ew: Отходы" : "Er: CO2"}
                 </div>
-                <div className="absolute bottom-1/4 left-1/4 -translate-x-1/2 text-[8px] font-bold uppercase text-[#3b82f6] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
+                <div className="absolute z-20 bottom-[33%] left-[30%] -translate-x-1/2 translate-y-1/2 whitespace-nowrap text-[8px] font-bold uppercase text-[#3b82f6] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
                   {metrics.sd === 0 ? "Ew: Отходы" : "Ew: Вторсырьё"}
                 </div>
-                <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 text-[8px] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
+                <div className="absolute z-20 bottom-[33%] right-[30%] translate-x-1/2 translate-y-1/2 whitespace-nowrap text-[8px] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
                   {metrics.sd === 0 ? "Ew: Отходы" : "Er: Ресурсы"}
                 </div>
-                {metrics.sd > 0 && (
-                  <div className="absolute top-1/2 right-[20%] -translate-y-6 text-[8px] font-bold uppercase text-[#10b981] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">Ef: Дивиденд</div>
-                )}
-              </div>
+                              </div>
             </div>
 
             <div className={cn(
@@ -1214,10 +1251,10 @@ export default function App() {
             )}>
               <h3 className="text-xs font-bold uppercase tracking-widest mb-6">Распределение SD</h3>
               <div className="space-y-4">
-                <DistributionItem label={<>Бюджет дестинации (<span className="is-number">40</span>%)</>} value={metrics.distribution.budget} color="bg-blue-500" isDarkMode={isDarkMode} />
-                <DistributionItem label={<>Оператор платформы (<span className="is-number">25</span>%)</>} value={metrics.distribution.operator} color="bg-emerald-500" isDarkMode={isDarkMode} />
-                <DistributionItem label={<>Поставщики ресурсов (<span className="is-number">15</span>%)</>} value={metrics.distribution.suppliers} color="bg-indigo-500" isDarkMode={isDarkMode} />
-                <DistributionItem label={<>Корпорация развития (<span className="is-number">12</span>%)</>} value={metrics.distribution.corporation} color="bg-orange-500" isDarkMode={isDarkMode} />
+                <DistributionItem label={<>Бюджет дестинации (<span className="is-number">{(metrics.distribution.shares.budget * 100).toFixed(1)}</span>%)</>} value={metrics.distribution.budget} color="bg-blue-500" isDarkMode={isDarkMode} />
+                <DistributionItem label={<>Оператор платформы (<span className="is-number">{(metrics.distribution.shares.operator * 100).toFixed(1)}</span>%)</>} value={metrics.distribution.operator} color="bg-emerald-500" isDarkMode={isDarkMode} />
+                <DistributionItem label={<>Поставщики ресурсов (<span className="is-number">{(metrics.distribution.shares.suppliers * 100).toFixed(1)}</span>%)</>} value={metrics.distribution.suppliers} color="bg-indigo-500" isDarkMode={isDarkMode} />
+                <DistributionItem label={<>Корпорация развития (<span className="is-number">{(metrics.distribution.shares.corporation * 100).toFixed(1)}</span>%)</>} value={metrics.distribution.corporation} color="bg-orange-500" isDarkMode={isDarkMode} />
                 <DistributionItem label={<>Экофонд (<span className="is-number">{(metrics.distribution.shares.ecofund * 100).toFixed(0)}</span>%)</>} value={metrics.distribution.ecofund} color="bg-rose-500" isDarkMode={isDarkMode} />
               </div>
               <div className="mt-6 pt-4 border-t border-dashed border-gray-500/30">
@@ -1409,8 +1446,8 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Симб. дивиденд (15)</div>
-                <div className="text-xs font-bold font-mono">SD(t) = α * ΔE(t) = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
-                <p className="text-[9px] opacity-70 italic leading-tight">Распределяемый доход при α={metrics.alpha}.</p>
+                <div className="text-xs font-bold font-mono">SD(t) = α · ΔE(t) · M<sub>режим</sub> = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
+                <p className="text-[9px] opacity-70 italic leading-tight">Распределяемый доход при α={metrics.alpha}, M={metrics.distribution.shares.multiplier}.</p>
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-dashed border-gray-500/30">
@@ -1519,7 +1556,7 @@ export default function App() {
                             {p.contribution}
                           </td>
                           <td className="py-5 pr-6 text-right font-mono">
-                            <span className="is-number">{currentShare.toFixed(0)}</span>%
+                            <span className="is-number">{currentShare.toFixed(1)}</span>%
                           </td>
                           <td className="py-5 pr-6 text-right font-bold text-emerald-500 font-mono">
                             <span className="is-number">{(metrics.sd * currentShare / 100).toFixed(2)}</span>
@@ -1565,7 +1602,7 @@ export default function App() {
               )}>
                 <h4 className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-50">Стратегический приоритет</h4>
                 <p className="text-xs leading-relaxed">
-                  Основной фокус распределения SD направлен на <span className="font-bold">Бюджет дестинации (40%)</span>, 
+                  Основной фокус распределения SD направлен на <span className="font-bold">Бюджет дестинации (β = {(metrics.distribution.shares.budget * 100).toFixed(1)}%)</span>, 
                   что обеспечивает легитимность платформы и финансирование критической инфраструктуры.
                 </p>
               </div>
@@ -1775,20 +1812,35 @@ function FlowVertical({ color, thickness, active, isDarkMode }: { color: string,
   );
 }
 
-function ProcessNode({ icon, label, sub, active, isDarkMode, highlight }: { icon: React.ReactNode, label: string, sub?: React.ReactNode, active: boolean, isDarkMode: boolean, highlight?: boolean }) {
+function ProcessNode({ icon, avatar, label, sub, active, isDarkMode, highlight }: { icon: React.ReactNode, avatar?: React.ReactElement, label: string, sub?: React.ReactNode, active: boolean, isDarkMode: boolean, highlight?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-1 z-10">
+      {avatar ? (
+        <div className={cn(
+          "transition-all duration-500 overflow-hidden rounded-lg shadow-md border-2",
+          highlight ? "w-16 h-16 sm:w-20 sm:h-20" : "w-11 h-11 sm:w-14 sm:h-14",
+          isDarkMode ? "border-[#E4E3E0]/70" : "border-[#141414]",
+          active ? "opacity-100" : "grayscale opacity-40",
+          highlight && "ring-4 ring-emerald-500/40 ring-offset-2 ring-offset-transparent"
+        )}>
+          {React.cloneElement(avatar, { className: "w-full h-full block" })}
+        </div>
+      ) : (
+        <div className={cn(
+          "transition-all duration-500 border flex items-center justify-center",
+          highlight ? "w-20 h-20" : "w-12 h-12",
+          active 
+            ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414]" : "bg-[#141414] text-[#E4E3E0]") 
+            : (isDarkMode ? "bg-[#141414] text-[#E4E3E0] border-[#E4E3E0]/20 opacity-30" : "bg-white text-[#141414] border-[#141414] opacity-30"),
+          highlight && "ring-4 ring-emerald-500/30 ring-offset-2 ring-offset-transparent"
+        )}>
+          {React.cloneElement(icon as React.ReactElement, { size: highlight ? 32 : 20 })}
+        </div>
+      )}
       <div className={cn(
-        "transition-all duration-500 border flex items-center justify-center",
-        highlight ? "w-20 h-20" : "w-12 h-12",
-        active 
-          ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414]" : "bg-[#141414] text-[#E4E3E0]") 
-          : (isDarkMode ? "bg-[#141414] text-[#E4E3E0] border-[#E4E3E0]/20 opacity-30" : "bg-white text-[#141414] border-[#141414] opacity-30"),
-        highlight && "ring-4 ring-emerald-500/30 ring-offset-2 ring-offset-transparent"
+        "flex flex-col items-center px-1 rounded",
+        isDarkMode ? "bg-[#1A1A1A]/80" : "bg-white/80"
       )}>
-        {React.cloneElement(icon as React.ReactElement, { size: highlight ? 32 : 20 })}
-      </div>
-      <div className="flex flex-col items-center">
         <span className={cn(
           "font-bold uppercase tracking-widest text-center", 
           highlight ? "text-[10px]" : "text-[9px]",

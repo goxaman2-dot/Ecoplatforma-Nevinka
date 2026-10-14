@@ -83,6 +83,95 @@ interface DataPoint {
   ef: number;
 }
 
+// ─── Калибровка § 3.1 (редакция 14.10.2026), таблица 3.7 «Перенос в симулятор» ───
+// Класс качества: A — нормативный или наблюдаемый факт, B — перенос по аналогам, C — допущение.
+const CALIB = {
+  capAz: 1160,        // Cap_Аз, тыс. т NH3/год (1000–1350), C
+  eFull: 1.88,        // полный CO2 на т мощности, т (1,79–2,10), B; было 2,16
+  eProc: 1.125,       // процессный CO2 на т мощности, т (1,01–1,32), B; было 1,27; 1160·1,125 = 1305
+  urea: 500,          // U, выпуск карбамида, тыс. т (300–700), C
+  ureaCO2: 0.733,     // 44/60 ≈ 0,733 т CO2 в тонне карбамида
+  rN2O: 0.3732,       // медиана r_k (квартили 0,18; 0,37; 0,70), формула (3.5)
+  an: 1200,           // AN, выпуск аммиачной селитры, тыс. т (1000–1400), C
+  hno3PerAN: 63 / 80, // 0,7875 т HNO3 на т селитры
+  efN2O: 8.5,         // EF, кг N2O на т HNO3 (8–9), Öko-Institut (2023)
+  gwpN2O: 298,
+  climateTrace: 1444, // модельная оценка Climate TRACE, тыс. т CO2-экв.
+  q0: 32,             // Q_0, базовые продажи пищевой CO2, тыс. т/год, A (с декабря 2018 г.)
+  mu: 0,              // μ (CBAM): переданный CO2 не вычитается из встроенных выбросов, A
+  piA: 0.05,          // π_A (0,028–0,094), B
+  sigmaDelta: 0.22,   // σ_Δ — годовые изменения процессного CO2 у аналогов (для π_A), B
+  sigmaEps: 0.073,    // σ_ε — остатки модели (3.2), шум имитации, B
+  lambdaBar: 0.5,     // λ̄ — предел продаж якорю, доля выручки инвестпроекта (ТОР), A
+  anchorShapley: 0.25 // доля «Азота» в векторе Шепли при s = 0,3 (§ 2.5.3)
+};
+
+// γ_t — индекс активности аналогов (модель 3.2); 2024–2026 приняты равными 1
+const GAMMA_T: Record<number, number> = {
+  2017: 0.922, 2018: 0.953, 2019: 0.954, 2020: 1.015, 2021: 0.953,
+  2022: 0.970, 2023: 1.000, 2024: 1.000, 2025: 1.000, 2026: 1.000
+};
+
+// Продажи пищевой CO2 по годам: до декабря 2018 г. их не было
+const foodCO2 = (y: number) => (y < 2018 ? 0 : y === 2018 ? CALIB.q0 / 12 : CALIB.q0);
+
+interface AnchorParams {
+  capAz: number; eFull: number; eProc: number; urea: number;
+  an: number; efN2O: number; n2oAbated: boolean; downDays: number;
+}
+
+// Формулы (3.3)–(3.7): уровень выбросов «Азота» и ряды 2017–2026 гг.
+function calcAnchor(p: AnchorParams) {
+  const co2EPA = p.capAz * p.eFull;                                   // (3.3)
+  const ureaBound = CALIB.ureaCO2 * p.urea;
+  const co2IPCC = co2EPA - ureaBound;                                 // (3.4)
+  const n2oA = p.capAz * p.eProc * CALIB.rN2O;                        // (3.5)
+  const n2oB = p.an * CALIB.hno3PerAN * p.efN2O * CALIB.gwpN2O / 1000; // (3.6)
+  const n2o = p.n2oAbated ? n2oA : n2oB;
+  const proc = p.capAz * p.eProc;
+  const freeCO2 = proc - ureaBound - CALIB.q0;
+  const total = co2IPCC + n2o;
+  const ctRatio = total / CALIB.climateTrace;
+  const series = Object.keys(GAMMA_T).map(Number).map((y) => {
+    // (3.7): Ê_t = Ê_2023 · exp(γ_t − γ_2023) · (1 − d_t/365); d_t задаётся для 2025–2026 гг.
+    const g = GAMMA_T[y] * (y >= 2025 ? 1 - p.downDays / 365 : 1);
+    return {
+      year: String(y),
+      co2: co2IPCC * g,
+      n2oB: n2oB * g,
+      n2oA: n2oA * g,
+      proc: proc * g,
+      free: proc * g - ureaBound * g - foodCO2(y)
+    };
+  });
+  return { co2EPA, co2IPCC, ureaBound, n2oA, n2oB, n2o, proc, freeCO2, total, ctRatio, series,
+    foodUse: CALIB.q0 / freeCO2 };
+}
+
+const MiniSlider = ({ label, value, min, max, step, onChange, fmt, cls, note }: {
+  label: React.ReactNode; value: number; min: number; max: number; step: number;
+  onChange: (v: number) => void; fmt: (v: number) => string; cls?: string; note?: string;
+}) => (
+  <div className="space-y-1">
+    <div className="flex justify-between items-end gap-2">
+      <span className="text-[10px] font-bold tracking-wide opacity-70">{label}</span>
+      <span className="text-[10px] font-bold font-mono whitespace-nowrap">{fmt(value)}</span>
+    </div>
+    <input type="range" min={min} max={max} step={step} value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className={cn("w-full h-1 appearance-none cursor-pointer bg-gray-500/20 accent-emerald-500", cls)} />
+    {note && <div className="text-[8px] font-mono opacity-40">{note}</div>}
+  </div>
+);
+
+const ru = (x: number, d = 0) => x.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// Нормальная случайная величина (Бокса — Мюллера) для шума σ_ε
+const gauss = () => {
+  const u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+};
+
 export default function App() {
   // Theme State with persistence and system preference
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -107,6 +196,20 @@ export default function App() {
   const [kScenario, setKScenario] = useState(5); // k: 3 (Органическая), 5 (Умеренная), 7 (Координируемая)
   const [alpha, setAlpha] = useState(0.10); // alpha: 0.08 - 0.12
   const [distRegime, setDistRegime] = useState<'fiscal' | 'tech' | 'industrial'>('fiscal');
+
+  // Перенос § 3.1: поток CO2 сверх Q_0, риск якоря, внешний источник бюджета
+  const [dQ, setDQ] = useState(12);              // Q_1 − Q_0, тыс. т/год (табл. 2.5: 8–15)
+  const [switchShare, setSwitchShare] = useState(0); // доля поставок резидентам за счёт переключения покупателей
+  const [downDays, setDownDays] = useState(0);   // d_t, дни простоя «Азота» (0–60)
+  const [piA, setPiA] = useState(CALIB.piA);     // π_A
+  const [bExt, setBExt] = useState(0);           // B_внеш, млн руб./год
+  const [anchor, setAnchor] = useState<AnchorParams>({
+    capAz: CALIB.capAz, eFull: CALIB.eFull, eProc: CALIB.eProc, urea: CALIB.urea,
+    an: CALIB.an, efN2O: CALIB.efN2O, n2oAbated: false, downDays: 0
+  });
+  const [marginJ, setMarginJ] = useState(0.25);  // m_j для (3.13)
+  const [fcJ, setFcJ] = useState(0.15);          // FC_j / R_j^пр
+  const anchorCalc = useMemo(() => calcAnchor({ ...anchor, downDays }), [anchor, downDays]);
 
   // Derived States
   const [history, setHistory] = useState<DataPoint[]>([]);
@@ -161,9 +264,19 @@ export default function App() {
     year: number,
     kScenario: number,
     alpha: number,
-    distRegime: 'fiscal' | 'tech' | 'industrial'
+    distRegime: 'fiscal' | 'tech' | 'industrial',
+    dQ?: number,
+    switchShare?: number,
+    downDays?: number,
+    piA?: number,
+    bExt?: number
   }) => {
     const { resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime } = params;
+    const dQ = params.dQ ?? 12;
+    const switchShare = params.switchShare ?? 0;
+    const downDays = params.downDays ?? 0;
+    const piA = params.piA ?? CALIB.piA;
+    const bExt = params.bExt ?? 0;
     
     // C_ind is investment in decimal (0-0.30)
     const c_ind = investment / 100;
@@ -195,14 +308,37 @@ export default function App() {
     const anchor10 = 1 - Math.exp(-5 * 0.10);
     const anchor25 = 1 - Math.exp(-5 * 0.25);
 
-    // Formula (12): Base potential Delta E (scales with resource efficiency and new factors)
-    const deltaE_base = 250 * (1 + (resourceEfficiency - 40) / 100) * e_it_factor * (0.8 + 0.2 * e_f_factor);
-    
+    // ΔE_base — ЧИСТЫЙ дополнительный эффект по формулам (2.7)–(2.9), табл. 2.6, млн руб./год.
+    // Прежнее значение 250 соответствовало валовой экономии и заменено (табл. 3.7).
+    // Ползунки Er/Ew масштабируют тепловой поток, «Эффективность ресурсов» — вторсырьё,
+    // фильтр Ef — сокращение платы за НВОС; при значениях по умолчанию ΔE_base = 117,4.
+    const ANN15 = 0.1315, ANN7 = 0.2054;
+    const downFactor = year === 2026 ? 1 - downDays / 365 : 1; // d_t: простой «Азота» в 2026 г.
+    const heatGross = 438 * 0.5 * (360 - 50) / 1000 * (e_it_factor / 0.8);
+    const heatNet = heatGross - 300 * ANN15;
+    // (3.9): ΔE_CO2 = (Q_1 − Q_0)·(p_альт − c) − A_CO2; засчитывается только прирост сверх Q_0 = 32 тыс. т,
+    // переключение прежних покупателей прироста не даёт
+    const co2Gross = dQ * (8000 - 2000) / 1000 * (1 - switchShare) * downFactor;
+    const co2Capex = dQ > 0 ? 100 * ANN15 : 0;
+    // (3.10): углеродная часть μ·q·p_C; для всех каналов CO2 Невинномысска μ = 0 (CBAM)
+    const co2Carbon = CALIB.mu * dQ * 0;
+    const co2Net = co2Gross - co2Capex + co2Carbon;
+    const recycleNet = 30 * 2000 / 1000 * (1 + (resourceEfficiency - 40) / 100);
+    const nvosNet = 60 * 663.2 / 1000 * (e_f_factor / 0.8);
+    const platformCost = 120 * ANN7 + 30 + 15;
+    const deltaE_base = heatNet + co2Net + recycleNet + nvosNet - platformCost;
+    const flows = { heatGross, heatNet, co2Gross, co2Capex, co2Carbon, co2Net, recycleNet, nvosNet, platformCost };
+
     // Formula (14): Verified savings Delta E(t) = Delta E_base * phi
     const deltaE_t = deltaE_base * phi_val;
-    
-    // Constraint 2: Budget sufficiency
-    const c_liq = 15.5 + (year - 2026) * 0.5; // Example: 15.5 to 20.5 mln rub
+    // Ожидаемый эффект с учётом риска остановки якоря (3.10)–(3.11) § 3.2: во время остановки
+    // выпадает валовой поток CO2, аннуитет вложений сохраняется
+    const deltaE_exp = (deltaE_base - piA * co2Gross) * phi_val;
+    const anchorShare = CALIB.anchorShapley * deltaE_base;
+    const anchorShareRisk = (1 - piA) * anchorShare;
+
+    // Constraint 2: Budget sufficiency; SD_б + B_внеш ≥ C_ликв
+    const c_liq = 15.5 + (year - 2026) * 0.5; // 15,5–20,5 млн руб., класс C
     
     // Distribution Regimes
     const shares = {
@@ -217,7 +353,8 @@ export default function App() {
     const ecofundShare = 0.08;
 
     // Formula (15): Symbiotic Dividend SD = alpha * Delta E(t) * Multiplier
-    let sd = alpha * deltaE_t * currentShares.multiplier;
+    // Отрицательный чистый эффект дивиденда не образует
+    let sd = Math.max(0, alpha * deltaE_t * currentShares.multiplier);
     if (investment < 5) {
       sd = 0;
     }
@@ -253,12 +390,12 @@ export default function App() {
     // Constraints check
     const constraints = {
       density: investment >= 15, // C_ind >= 15%
-      budget: sd_budget >= c_liq
+      budget: sd_budget + bExt >= c_liq
     };
 
     // U: Utility Function (Target)
-    // Now includes an "Ecological Safety" component that depends on Ecofund size relative to costs
-    const ecoSafety = Math.min(1.2, sd_budget / (c_liq || 1));
+    // Экологическая безопасность: покрытие C_ликв дивидендом бюджета и внешним источником B_внеш
+    const ecoSafety = Math.min(1.2, (sd_budget + bExt) / (c_liq || 1));
     const u = (phi * 0.5 + (sd / 9.75 * 100) * 0.3 + (ecoSafety * 20));
 
     // Индекс Устойчивости Экоплатформы (ИУ)
@@ -267,7 +404,8 @@ export default function App() {
 
     return {
       sd, phi, distribution, u, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
-      anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety, iu
+      anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety, iu,
+      flows, deltaE_exp, anchorShare, anchorShareRisk, bExt, piA
     };
   }, []);
 
@@ -295,7 +433,8 @@ export default function App() {
       year,
       kScenario,
       alpha,
-      distRegime
+      distRegime,
+      dQ, switchShare, downDays, piA, bExt
     });
 
     // Calculate trends relative to baseline
@@ -319,7 +458,7 @@ export default function App() {
         deltaE: calculateTrend(current.deltaE_t, baseline.deltaE_t)
       }
     };
-  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime, baseline]);
+  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt, baseline]);
 
   const getStatusColor = (val: number) => {
     if (val <= 50) return "accent-red-500";
@@ -341,8 +480,9 @@ export default function App() {
       setHistory((prev) => {
         const newPoint = {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          u: metrics.u + (Math.random() - 0.5) * 2,
-          sdt: metrics.sd * 10 + (Math.random() - 0.5) * 1,
+          // Шум имитации задаётся σ_ε = 0,073 (остатки модели 3.2), а не σ_Δ
+          u: metrics.u * (1 + CALIB.sigmaEps * 0.3 * gauss()),
+          sdt: metrics.sd * 10 * (1 + CALIB.sigmaEps * gauss()),
           er: metrics.phi,
           ef: metrics.sd,
           iu: metrics.iu + (Math.random() - 0.5) * 0.5,
@@ -368,7 +508,7 @@ export default function App() {
   const regimeBounds = useMemo(() => {
     const at = (c: number) => calculateMetrics({
       resourceEfficiency, turbineEff, heatExchanger, filterResource,
-      investment: c, year, kScenario, alpha, distRegime
+      investment: c, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt
     });
     const m5 = at(5), m15 = at(15), m30 = at(30);
     const f2 = (x: number) => x.toFixed(2);
@@ -379,7 +519,7 @@ export default function App() {
       sd2: `${f1(m5.sd)}–${f1(m15.sd)}`,
       sd3: `${f1(m15.sd)}–${f1(m30.sd)}`
     };
-  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, year, kScenario, alpha, distRegime]);
+  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt]);
 
   const regimes = [
     { 
@@ -780,10 +920,10 @@ export default function App() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 group relative">
-                    <span className="text-[10px] font-bold uppercase tracking-widest">2. Бюджет (SD_б ≥ C_ликв)</span>
+                    <span className="text-[10px] font-bold tracking-wide">2. БЮДЖЕТ (SD_б + B_внеш ≥ C_ликв)</span>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                      SD_б ≥ C_ликв — это условие, что объём симбиотического дивиденда в бюджете назначения не меньше стоимости ликвидации (или предотвращения) экологического ущерба кластера, то есть экобюджет способен покрыть критические экориски территории.
+                      SD_б + B_внеш ≥ C_ликв — условие, что дивиденд в бюджете назначения вместе с внешним источником (B_внеш: целевые средства бюджета, экологические платежи, грант) покрывает стоимость ликвидации накопленного ущерба. Одним SD_б оно не выполняется ни в одном сценарии главы 2 (3,6–3,9 против 15,5 млн руб.).
                     </div>
                   </div>
                   {metrics.constraints.budget ? (
@@ -794,14 +934,25 @@ export default function App() {
                 </div>
                 <div className="flex justify-between text-[8px] font-mono opacity-60">
                   <span>SD_б: {metrics.sd_budget.toFixed(2)}</span>
+                  <span>B_внеш: {metrics.bExt.toFixed(1)}</span>
                   <span>C_ликв: {metrics.c_liq.toFixed(2)}</span>
                 </div>
                 <div className="h-1 w-full bg-gray-500/20 rounded-full overflow-hidden">
                   <div 
                     className={cn("h-full transition-all duration-500", metrics.constraints.budget ? "bg-emerald-500" : "bg-red-500")}
-                    style={{ width: `${Math.min(100, (metrics.sd_budget / metrics.c_liq) * 100)}%` }}
+                    style={{ width: `${Math.min(100, ((metrics.sd_budget + metrics.bExt) / metrics.c_liq) * 100)}%` }}
                   />
                 </div>
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-[9px] font-mono opacity-70">Внешний источник B_внеш</span>
+                  <span className="text-[10px] font-bold font-mono">{bExt.toFixed(1)} млн руб.</span>
+                </div>
+                <input type="range" min="0" max="20" step="0.5" value={bExt}
+                  onChange={(e) => setBExt(Number(e.target.value))}
+                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                <p className="text-[8px] font-mono opacity-50 leading-tight">
+                  Дефицит без B_внеш: {Math.max(0, metrics.c_liq - metrics.sd_budget).toFixed(2)} млн руб.
+                </p>
               </div>
             </div>
           </section>
@@ -930,7 +1081,7 @@ export default function App() {
                 icon={<Thermometer size={16} />}
                 trend={metrics.trends.deltaE}
                 isDarkMode={isDarkMode}
-                tooltip="Верифицированная экономия от симбиоза. ΔE(t) = ΔE_base · φ(C_инд). Базовый потенциал: тепло ГРЭС + вторсырьё ЭПП + CO₂ Азота + снижение штрафов."
+                tooltip="Верифицированная экономия от симбиоза. ΔE(t) = ΔE_base · φ(C_инд). ΔE_base — чистый эффект (табл. 2.6, 117,4 млн руб. по умолчанию): тепло ГРЭС + CO₂ «Азота» сверх 32 тыс. т + вторсырьё ЭПП + плата за НВОС − аннуитеты и затраты платформы."
                 formula={<span>ΔE(t) = Σ<sub className="text-[10px]">i</sub> E<sub className="text-[10px]">i</sub>(t) · φ(C<sub className="text-[10px]">инд</sub>)</span>}
                 trendLarge={true}
               />
@@ -1415,8 +1566,8 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Базовая экономия (12)</div>
-                <div className="text-xs font-bold font-mono">ΔE = Σ E_i = <span className="is-number">{metrics.deltaE_base.toFixed(1)}</span></div>
-                <p className="text-[9px] opacity-70 italic leading-tight">Суммарная экономия без учета синергетических эффектов.</p>
+                <div className="text-xs font-bold font-mono">ΔE_base = Σ(ΔE_i − A_i) − Z_пл = <span className="is-number">{metrics.deltaE_base.toFixed(1)}</span></div>
+                <p className="text-[9px] opacity-70 italic leading-tight">Чистый эффект по потокам (табл. 2.6) за вычетом аннуитетов и затрат платформы; заменяет валовые 250 млн руб.</p>
               </div>
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Коэф. синергии (13)</div>
@@ -1453,6 +1604,195 @@ export default function App() {
             <div className="mt-6 pt-4 border-t border-dashed border-gray-500/30">
               <div className="text-[9px] font-mono opacity-50 uppercase mb-2">Калибровка параметра k (16)</div>
               <div className="text-[10px] font-mono italic">k_i = −ln(1 − φ_i) / C_инд,i</div>
+            </div>
+          </div>
+
+          {/* Якорь: калибровка § 3.1 и перенос в симулятор (табл. 3.7) */}
+          <div className={cn(
+            "border p-6 transition-colors duration-300 space-y-6",
+            isDarkMode ? "bg-[#1A1A1A] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
+          )}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-dashed border-gray-500/30 pb-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                <Factory size={14} /> Якорь: АО «Невинномысский Азот» — калибровка § 3.1
+              </h3>
+              <span className="text-[9px] font-mono opacity-50 uppercase">Классы данных: A — факт/норма · B — аналоги · C — допущение</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Входные параметры якоря */}
+              <div className="space-y-3">
+                <div className="text-[9px] font-mono opacity-50 uppercase">Входные параметры</div>
+                <MiniSlider label="Cap_Аз, мощность NH₃ (C)" value={anchor.capAz} min={1000} max={1350} step={10}
+                  onChange={(v) => setAnchor({ ...anchor, capAz: v })} fmt={(v) => `${ru(v)} тыс. т`} />
+                <MiniSlider label="Полный CO₂ на т мощности (B)" value={anchor.eFull} min={1.79} max={2.10} step={0.01}
+                  onChange={(v) => setAnchor({ ...anchor, eFull: v })} fmt={(v) => `${ru(v, 2)} т`} note="медиана 5 заводов CF, 2022–2023" />
+                <MiniSlider label="Процессный CO₂ на т мощности (B)" value={anchor.eProc} min={1.01} max={1.32} step={0.005}
+                  onChange={(v) => setAnchor({ ...anchor, eProc: v })} fmt={(v) => `${ru(v, 3)} т`} />
+                <MiniSlider label="U, выпуск карбамида (C)" value={anchor.urea} min={300} max={700} step={10}
+                  onChange={(v) => setAnchor({ ...anchor, urea: v })} fmt={(v) => `${ru(v)} тыс. т`} note="запросить у предприятия" />
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">N₂O: очистка на агрегатах HNO₃</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{ v: true, l: 'Есть · вариант A' }, { v: false, l: 'Нет · вариант B' }].map((o) => (
+                      <button key={String(o.v)} onClick={() => setAnchor({ ...anchor, n2oAbated: o.v })}
+                        className={cn("py-1.5 text-[9px] font-bold uppercase border transition-all",
+                          anchor.n2oAbated === o.v
+                            ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]" : "bg-[#141414] text-[#E4E3E0] border-[#141414]")
+                            : "border-gray-500/30 opacity-70")}>{o.l}</button>
+                    ))}
+                  </div>
+                </div>
+                {!anchor.n2oAbated && (<>
+                  <MiniSlider label="AN, выпуск селитры (C)" value={anchor.an} min={1000} max={1400} step={20}
+                    onChange={(v) => setAnchor({ ...anchor, an: v })} fmt={(v) => `${ru(v)} тыс. т`} />
+                  <MiniSlider label="EF, кг N₂O на т HNO₃" value={anchor.efN2O} min={8} max={9} step={0.1}
+                    onChange={(v) => setAnchor({ ...anchor, efN2O: v })} fmt={(v) => ru(v, 1)} note="Öko-Institut (2023)" />
+                </>)}
+                <MiniSlider label="d_t, дни простоя 2025–2026 (C)" value={downDays} min={0} max={60} step={1}
+                  onChange={setDownDays} fmt={(v) => `${v} дн. (−${ru(v / 365 * 100, 1)} %)`} note="влияет на ряды и на поток CO₂ в 2026 г." />
+                <MiniSlider label="π_A, доля периода без поставок якоря (B)" value={piA} min={0.028} max={0.094} step={0.001}
+                  onChange={setPiA} fmt={(v) => ru(v, 3)} />
+              </div>
+
+              {/* Оценка выбросов, табл. 3.2 */}
+              <div className="space-y-2">
+                <div className="text-[9px] font-mono opacity-50 uppercase">Оценка выбросов, тыс. т (табл. 3.2)</div>
+                <table className="w-full text-[10px] font-mono">
+                  <tbody>
+                    {[
+                      ['CO₂ в границе EPA (3.3)', anchorCalc.co2EPA],
+                      ['− CO₂, связанный в карбамиде', -anchorCalc.ureaBound],
+                      ['CO₂ в атмосферу, МГЭИК (3.4)', anchorCalc.co2IPCC],
+                      ['N₂O при очистке, CO₂-экв. (3.5)', anchorCalc.n2oA],
+                      ['N₂O без очистки, CO₂-экв. (3.6)', anchorCalc.n2oB],
+                      ['Процессный CO₂', anchorCalc.proc],
+                      ['Свободный технологический CO₂', anchorCalc.freeCO2],
+                      ['Итого CO₂ + N₂O (выбранный вар.)', anchorCalc.total],
+                    ].map(([l, v], i) => (
+                      <tr key={i} className={cn("border-b border-gray-500/10", i === 7 && "font-bold")}>
+                        <td className="py-1 pr-2 opacity-80">{l as string}</td>
+                        <td className="py-1 text-right">{ru(v as number)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="grid grid-cols-2 gap-2 pt-2 text-[9px] font-mono">
+                  <div className="p-2 border border-gray-500/20">
+                    <div className="opacity-60">Отношение к Climate TRACE</div>
+                    <div className="text-sm font-bold">{ru(anchorCalc.ctRatio, 2)}</div>
+                    <div className="opacity-50">диапазон аналогов 0,83–2,8</div>
+                  </div>
+                  <div className="p-2 border border-gray-500/20">
+                    <div className="opacity-60">Пищевая CO₂ / свободный поток</div>
+                    <div className="text-sm font-bold">{ru(anchorCalc.foodUse * 100, 1)} %</div>
+                    <div className="opacity-50">Q₀ = 32 тыс. т (A)</div>
+                  </div>
+                  <div className="p-2 border border-gray-500/20">
+                    <div className="opacity-60">σ_Δ — риск π_A</div>
+                    <div className="text-sm font-bold">{ru(CALIB.sigmaDelta, 2)}</div>
+                    <div className="opacity-50">годовые изменения, аналоги</div>
+                  </div>
+                  <div className="p-2 border border-gray-500/20">
+                    <div className="opacity-60">σ_ε — шум имитации</div>
+                    <div className="text-sm font-bold">{ru(CALIB.sigmaEps, 3)}</div>
+                    <div className="opacity-50">остатки модели (3.2)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ряды 2017–2026, табл. 3.3 */}
+              <div className="space-y-2">
+                <div className="text-[9px] font-mono opacity-60">РЯДЫ 2017–2026, тыс. т (3.7), по γ_t аналогов</div>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={anchorCalc.series} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#88888833" />
+                      <XAxis dataKey="year" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} />
+                      <Tooltip formatter={(v: any) => ru(Number(v))} contentStyle={{ fontSize: 10 }} />
+                      <Line type="monotone" dataKey="co2" name="CO₂, МГЭИК" stroke="#64748b" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey={anchor.n2oAbated ? 'n2oA' : 'n2oB'} name="N₂O, CO₂-экв." stroke="#e11d48" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="proc" name="Процессный CO₂" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="free" name="Свободный CO₂" stroke="#10b981" strokeWidth={2} strokeDasharray="4 3" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap gap-3 text-[8px] font-mono uppercase opacity-70">
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-slate-500" />CO₂ МГЭИК</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-rose-600" />N₂O</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-sky-500" />Процессный</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-500" />Свободный</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-gray-500/30">
+              {/* Разложение ΔE_base */}
+              <div className="lg:col-span-2 space-y-2">
+                <div className="text-[9px] font-mono opacity-50 uppercase">Состав ΔE_base, млн руб./год (табл. 2.6; формулы 3.9–3.10)</div>
+                <table className="w-full text-[10px] font-mono">
+                  <thead>
+                    <tr className="opacity-50 text-left border-b border-gray-500/20">
+                      <th className="py-1 font-normal">Поток</th><th className="py-1 font-normal text-right">Валовая</th>
+                      <th className="py-1 font-normal text-right">Аннуитет</th><th className="py-1 font-normal text-right">Чистый</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ['Тепло ГРЭС', metrics.flows.heatGross, metrics.flows.heatGross - metrics.flows.heatNet, metrics.flows.heatNet],
+                      [`CO₂ «Азота» сверх Q₀ (μ = ${CALIB.mu})`, metrics.flows.co2Gross, metrics.flows.co2Capex, metrics.flows.co2Net],
+                      ['Вторичное сырьё ЭПП', metrics.flows.recycleNet, 0, metrics.flows.recycleNet],
+                      ['Плата за НВОС', metrics.flows.nvosNet, 0, metrics.flows.nvosNet],
+                      ['Платформа: аннуитет, эксплуатация, сделки', 0, metrics.flows.platformCost, -metrics.flows.platformCost],
+                    ].map(([l, g, a, n], i) => (
+                      <tr key={i} className="border-b border-gray-500/10">
+                        <td className="py-1 pr-2 opacity-80">{l as string}</td>
+                        <td className="py-1 text-right">{(g as number) ? ru(g as number, 1) : '—'}</td>
+                        <td className="py-1 text-right">{(a as number) ? ru(a as number, 1) : '—'}</td>
+                        <td className="py-1 text-right">{ru(n as number, 1)}</td>
+                      </tr>
+                    ))}
+                    <tr className="font-bold">
+                      <td className="py-1">ΔE_base</td><td /><td /><td className="py-1 text-right">{ru(metrics.deltaE_base, 1)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <MiniSlider label="Q₁ − Q₀, прирост продаж CO₂" value={dQ} min={0} max={30} step={1}
+                    onChange={setDQ} fmt={(v) => `${v} тыс. т`} note="табл. 2.5: 8–15 тыс. т" />
+                  <MiniSlider label="Доля поставок за счёт переключения" value={switchShare} min={0} max={1} step={0.05}
+                    onChange={setSwitchShare} fmt={(v) => `${ru(v * 100)} %`} note="при 50 % ΔE_base снижается до 81,4" />
+                </div>
+              </div>
+
+              {/* Риск якоря и предел ТОР */}
+              <div className="space-y-3 text-[10px] font-mono">
+                <div className="text-[9px] opacity-50 uppercase">Риск остановки якоря (§ 3.2)</div>
+                <div className="flex justify-between"><span className="opacity-70">ΔE(t) при работающем якоре</span><span>{ru(metrics.deltaE_t, 1)}</span></div>
+                <div className="flex justify-between"><span className="opacity-70 pr-2">ΔE(t) ожидаемый, π_A = {ru(piA, 3)}</span><span className="font-bold">{ru(metrics.deltaE_exp, 1)}</span></div>
+                <div className="flex justify-between"><span className="opacity-70">Доля «Азота» по Шепли, 25 %</span><span>{ru(metrics.anchorShare, 1)}</span></div>
+                <div className="flex justify-between"><span className="opacity-70">То же с поправкой (1 − π_A)</span><span className="font-bold">{ru(metrics.anchorShareRisk, 1)}</span></div>
+                <div className="pt-3 border-t border-dashed border-gray-500/30 space-y-2">
+                  <div className="text-[9px] opacity-50 uppercase">Критическая доля продаж якорю (3.13)</div>
+                  <MiniSlider label="m_j, маржинальный доход" value={marginJ} min={0.1} max={0.6} step={0.01}
+                    onChange={setMarginJ} fmt={(v) => ru(v, 2)} />
+                  <MiniSlider label="FC_j / R_j, постоянные затраты" value={fcJ} min={0.02} max={0.3} step={0.01}
+                    onChange={setFcJ} fmt={(v) => ru(v, 2)} />
+                  {(() => {
+                    const lam = Math.max(0, 1 - fcJ / marginJ);
+                    const ok = lam >= CALIB.lambdaBar;
+                    return (
+                      <div className={cn("p-2 border", ok ? "border-emerald-500/40 bg-emerald-500/5" : "border-rose-500/40 bg-rose-500/5")}>
+                        λ*_j = 1 − FC/(m·R) = <b>{ru(lam, 2)}</b> {ok ? '≥' : '<'} λ̄ = {ru(CALIB.lambdaBar, 1)}
+                        <div className="text-[9px] opacity-70 mt-1">
+                          {ok ? 'Предел ТОР 50 % жёстче, чем требует устойчивость резидента.' : 'Предел ТОР 50 % мягок: при остановке якоря резидент не покроет постоянные затраты.'}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
         </div>

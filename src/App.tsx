@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import BilevelPanel from './BilevelPanel';
 import { AvatarGRES, AvatarAzot, AvatarEPP, AvatarResidents, AvatarOperator, AvatarBudget, AvatarPlatform } from './avatars';
 
 // Utility for tailwind classes
@@ -137,6 +138,8 @@ function calcAnchor(p: AnchorParams) {
     const g = GAMMA_T[y] * (y >= 2025 ? 1 - p.downDays / 365 : 1);
     return {
       year: String(y),
+      gamma: g,
+      co2EPA: co2EPA * g,
       co2: co2IPCC * g,
       n2oB: n2oB * g,
       n2oA: n2oA * g,
@@ -207,14 +210,14 @@ export default function App() {
     capAz: CALIB.capAz, eFull: CALIB.eFull, eProc: CALIB.eProc, urea: CALIB.urea,
     an: CALIB.an, efN2O: CALIB.efN2O, n2oAbated: false, downDays: 0
   });
-  const [marginJ, setMarginJ] = useState(0.25);  // m_j для (3.13)
+  const [marginJ, setMarginJ] = useState(0.25);  // m_j для (3.27)
   const [fcJ, setFcJ] = useState(0.15);          // FC_j / R_j^пр
   const anchorCalc = useMemo(() => calcAnchor({ ...anchor, downDays }), [anchor, downDays]);
 
   // Derived States
   const [history, setHistory] = useState<DataPoint[]>([]);
   const [isConnected, setIsConnected] = useState(true);
-  const [activeTab, setActiveTab] = useState<'simulation' | 'participants'>('simulation');
+  const [activeTab, setActiveTab] = useState<'simulation' | 'participants' | 'bilevel'>('simulation');
 
   const participants = [
     {
@@ -316,11 +319,11 @@ export default function App() {
     const downFactor = year === 2026 ? 1 - downDays / 365 : 1; // d_t: простой «Азота» в 2026 г.
     const heatGross = 438 * 0.5 * (360 - 50) / 1000 * (e_it_factor / 0.8);
     const heatNet = heatGross - 300 * ANN15;
-    // (3.9): ΔE_CO2 = (Q_1 − Q_0)·(p_альт − c) − A_CO2; засчитывается только прирост сверх Q_0 = 32 тыс. т,
+    // (3.11): ΔE_CO2 = (Q_1 − Q_0)·(p_альт − c) − A_CO2; засчитывается только прирост сверх Q_0 = 32 тыс. т,
     // переключение прежних покупателей прироста не даёт
     const co2Gross = dQ * (8000 - 2000) / 1000 * (1 - switchShare) * downFactor;
     const co2Capex = dQ > 0 ? 100 * ANN15 : 0;
-    // (3.10): углеродная часть μ·q·p_C; для всех каналов CO2 Невинномысска μ = 0 (CBAM)
+    // (3.12): углеродная часть μ·q·p_C; для всех каналов CO2 Невинномысска μ = 0 (CBAM)
     const co2Carbon = CALIB.mu * dQ * 0;
     const co2Net = co2Gross - co2Capex + co2Carbon;
     const recycleNet = 30 * 2000 / 1000 * (1 + (resourceEfficiency - 40) / 100);
@@ -331,7 +334,7 @@ export default function App() {
 
     // Formula (14): Verified savings Delta E(t) = Delta E_base * phi
     const deltaE_t = deltaE_base * phi_val;
-    // Ожидаемый эффект с учётом риска остановки якоря (3.10)–(3.11) § 3.2: во время остановки
+    // Ожидаемый эффект с учётом риска остановки якоря (3.24)–(3.25) § 3.2: во время остановки
     // выпадает валовой поток CO2, аннуитет вложений сохраняется
     const deltaE_exp = (deltaE_base - piA * co2Gross) * phi_val;
     const anchorShare = CALIB.anchorShapley * deltaE_base;
@@ -612,6 +615,17 @@ export default function App() {
           >
             Участники
           </button>
+          <button 
+            onClick={() => setActiveTab('bilevel')}
+            className={cn(
+              "px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 border-b-2",
+              activeTab === 'bilevel' 
+                ? (isDarkMode ? "border-[#E4E3E0] text-[#E4E3E0]" : "border-[#141414] text-[#141414]")
+                : "border-transparent opacity-50 hover:opacity-100"
+            )}
+          >
+            Двухуровневая модель
+          </button>
         </nav>
         
         <div className="flex items-center gap-6">
@@ -649,7 +663,23 @@ export default function App() {
       </header>
 
       <main className="p-6">
-        {activeTab === 'simulation' ? (
+        {activeTab === 'bilevel' ? (
+          <BilevelPanel
+            isDarkMode={isDarkMode}
+            alpha={alpha}
+            deltaEBase={metrics.deltaE_base}
+            k={metrics.k}
+            regime={distRegime}
+            bExt={bExt}
+            setBExt={setBExt}
+            cLiq={metrics.c_liq}
+            capAz={anchor.capAz}
+            eFull={anchor.eFull}
+            series={anchorCalc.series}
+            dQco2={dQ}
+            n2oAbated={anchor.n2oAbated}
+          />
+        ) : activeTab === 'simulation' ? (
           <div className="grid grid-cols-12 gap-6">
             {/* Sidebar Controls */}
             <aside className="col-span-12 lg:col-span-3 space-y-6">
@@ -1730,7 +1760,7 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-gray-500/30">
               {/* Разложение ΔE_base */}
               <div className="lg:col-span-2 space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Состав ΔE_base, млн руб./год (табл. 2.6; формулы 3.9–3.10)</div>
+                <div className="text-[9px] font-mono opacity-50 uppercase">Состав ΔE_base, млн руб./год (табл. 2.6; формулы 3.11–3.12)</div>
                 <table className="w-full text-[10px] font-mono">
                   <thead>
                     <tr className="opacity-50 text-left border-b border-gray-500/20">
@@ -1772,9 +1802,9 @@ export default function App() {
                 <div className="flex justify-between"><span className="opacity-70">ΔE(t) при работающем якоре</span><span>{ru(metrics.deltaE_t, 1)}</span></div>
                 <div className="flex justify-between"><span className="opacity-70 pr-2">ΔE(t) ожидаемый, π_A = {ru(piA, 3)}</span><span className="font-bold">{ru(metrics.deltaE_exp, 1)}</span></div>
                 <div className="flex justify-between"><span className="opacity-70">Доля «Азота» по Шепли, 25 %</span><span>{ru(metrics.anchorShare, 1)}</span></div>
-                <div className="flex justify-between"><span className="opacity-70">То же с поправкой (1 − π_A)</span><span className="font-bold">{ru(metrics.anchorShareRisk, 1)}</span></div>
+                <div className="flex justify-between"><span className="opacity-70">То же с поправкой (1 − π_A), (3.25)</span><span className="font-bold">{ru(metrics.anchorShareRisk, 1)}</span></div>
                 <div className="pt-3 border-t border-dashed border-gray-500/30 space-y-2">
-                  <div className="text-[9px] opacity-50 uppercase">Критическая доля продаж якорю (3.13)</div>
+                  <div className="text-[9px] opacity-50 uppercase">Критическая доля продаж якорю (3.27)</div>
                   <MiniSlider label="m_j, маржинальный доход" value={marginJ} min={0.1} max={0.6} step={0.01}
                     onChange={setMarginJ} fmt={(v) => ru(v, 2)} />
                   <MiniSlider label="FC_j / R_j, постоянные затраты" value={fcJ} min={0.02} max={0.3} step={0.01}

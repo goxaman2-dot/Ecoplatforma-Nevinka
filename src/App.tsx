@@ -39,12 +39,14 @@ import {
   ArrowUpLeft,
   Coins,
   Factory,
-  Shield
+  Shield,
+  BookOpen
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import BilevelPanel from './BilevelPanel';
 import BeneficiaryPanel from './BeneficiaryPanel';
+import HelpPanel from './HelpPanel';
 import { AvatarGRES, AvatarAzot, AvatarEPP, AvatarResidents, AvatarOperator, AvatarBudget, AvatarPlatform } from './avatars';
 
 // Utility for tailwind classes
@@ -152,11 +154,11 @@ function calcAnchor(p: AnchorParams) {
     foodUse: CALIB.q0 / freeCO2 };
 }
 
-const MiniSlider = ({ label, value, min, max, step, onChange, fmt, cls, note }: {
+const MiniSlider = ({ label, value, min, max, step, onChange, fmt, cls, note, term }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; fmt: (v: number) => string; cls?: string; note?: string;
+  onChange: (v: number) => void; fmt: (v: number) => string; cls?: string; note?: string; term?: string;
 }) => (
-  <div className="space-y-1">
+  <div className="space-y-1" data-term={term}>
     <div className="flex justify-between items-end gap-2">
       <span className="text-[10px] font-bold tracking-wide opacity-70">{label}</span>
       <span className="text-[10px] font-bold font-mono whitespace-nowrap">{fmt(value)}</span>
@@ -218,6 +220,7 @@ export default function App() {
   // Derived States
   const [history, setHistory] = useState<DataPoint[]>([]);
   const [isConnected, setIsConnected] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
   const [activeTab, setActiveTab] = useState<'simulation' | 'participants' | 'bilevel' | 'benef'>('simulation');
 
   const participants = [
@@ -577,6 +580,7 @@ export default function App() {
   return (
     <div className={cn(
       "min-h-screen transition-colors duration-300 font-sans selection:bg-emerald-500 selection:text-white",
+      helpOpen && "sm:pr-[360px]",
       isDarkMode ? "bg-[#141414] text-[#E4E3E0]" : "bg-[#E4E3E0] text-[#141414]"
     )}>
       {/* Header */}
@@ -666,7 +670,14 @@ export default function App() {
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <Settings size={18} className="opacity-50 hover:opacity-100 cursor-pointer transition-opacity" />
+            <button
+              onClick={() => setHelpOpen(!helpOpen)}
+              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors",
+                helpOpen ? "border-emerald-500 text-emerald-500" : (isDarkMode ? "border-[#E4E3E0]/30" : "border-[#141414]/30"))}
+              title="Справка: что означает каждый член модели"
+            >
+              <BookOpen size={14} /> Справка
+            </button>
             
             <div className={cn(
               "px-3 py-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-colors duration-300",
@@ -765,7 +776,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-widest opacity-50">Институциональная среда (k)</label>
+                  <label data-term="k" className="text-xs font-bold uppercase tracking-widest opacity-50">Институциональная среда (k)</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { 
@@ -811,7 +822,7 @@ export default function App() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
                     <div className="flex items-center gap-1.5 group relative">
-                      <label className="text-xs font-bold uppercase tracking-widest opacity-50">Коэф. дивиденда (α)</label>
+                      <label data-term="alpha" className="text-xs font-bold uppercase tracking-widest opacity-50">Коэф. дивиденда (α)</label>
                       <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                       <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
                         Коэффициент дивиденда (α) — это доля симбиотического дивиденда, закреплённая за конкретной группой получателей (например, Экофонд, компании-резиденты, город), в рамках распределения общего SD по экобюджету назначения (вторая вкладка участники).
@@ -838,7 +849,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-widest opacity-50">Выбор режима (Пресеты)</label>
+                  <label data-term="regime" className="text-xs font-bold uppercase tracking-widest opacity-50">Выбор режима (Пресеты)</label>
                   <div className="grid grid-cols-3 gap-2">
                     {regimes.map((r, idx) => (
                       <div key={r.id} className="group relative">
@@ -868,7 +879,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="flex items-center gap-1.5 group relative">
-                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Коэффициент синергии (φ)</label>
+                    <label data-term="phi" className="text-xs font-bold uppercase tracking-widest opacity-50">Коэффициент синергии (φ)</label>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
                       Коэффициент синергии (φ) — это интегральный показатель, отражающий долю реализованного симбиотического эффекта (полученного симбиотического дивиденда) от потенциально возможного эффекта в экосистеме кластера
@@ -892,7 +903,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="flex items-center gap-1.5 group relative">
-                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Эффективность ресурсов (Er)</label>
+                    <label data-term="Er" className="text-xs font-bold uppercase tracking-widest opacity-50">Эффективность ресурсов (Er)</label>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
                       Эффективность ресурсов (Er) — это показатель, отражающий, насколько полно и результативно используются материальные и энергетические ресурсы кластера в результате симбиоза (с учётом предотвращённых потерь и экономии)
@@ -915,7 +926,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="flex items-center gap-1.5 group relative">
-                    <label className="text-xs font-bold uppercase tracking-widest opacity-50">Индекс инвестиций (C)</label>
+                    <label data-term="C_ind" className="text-xs font-bold uppercase tracking-widest opacity-50">Индекс инвестиций (C)</label>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
                       Индекс инвестиций I — это нормированный показатель, отражающий долю фактически привлечённых инвестиций в экоплатформу от целевого объёма инвестиций за период
@@ -959,7 +970,7 @@ export default function App() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 group relative">
-                    <span className="text-[10px] font-bold uppercase tracking-widest">1. Синерг. плотность (C ≥ 15%)</span>
+                    <span data-term="density" className="text-[10px] font-bold uppercase tracking-widest">1. Синерг. плотность (C ≥ 15%)</span>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
                       C≥15% — это уровень связности экосистемы, при котором не менее 15% потенциально возможных симбиотических связей между участниками кластера фактически реализованы (начало экосистемного режима).
@@ -982,7 +993,7 @@ export default function App() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 group relative">
-                    <span className="text-[10px] font-bold tracking-wide">2. БЮДЖЕТ (SD_б + B_внеш ≥ C_ликв)</span>
+                    <span data-term="C_liq" className="text-[10px] font-bold tracking-wide">2. БЮДЖЕТ (SD_б + B_внеш ≥ C_ликв)</span>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[9px] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
                       SD_б + B_внеш ≥ C_ликв — условие, что дивиденд в бюджете назначения вместе с внешним источником (B_внеш: целевые средства бюджета, экологические платежи, грант) покрывает стоимость ликвидации накопленного ущерба. Одним SD_б оно не выполняется ни в одном сценарии главы 2 (3,6–3,9 против 15,5 млн руб.).
@@ -1006,7 +1017,7 @@ export default function App() {
                   />
                 </div>
                 <div className="flex justify-between items-center pt-1">
-                  <span className="text-[9px] font-mono opacity-70">Внешний источник B_внеш</span>
+                  <span data-term="B_ext" className="text-[9px] font-mono opacity-70">Внешний источник B_внеш</span>
                   <span className="text-[10px] font-bold font-mono">{bExt.toFixed(1)} млн руб.</span>
                 </div>
                 <input type="range" min="0" max="20" step="0.5" value={bExt}
@@ -1034,7 +1045,7 @@ export default function App() {
               <div className="space-y-2 group relative">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 size={14} className={getIconColor(turbineEff)} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest cursor-help">Эффективность турбины (Er): {turbineEff}%</span>
+                  <span data-term="Er" className="text-[10px] font-bold uppercase tracking-widest cursor-help">Эффективность турбины (Er): {turbineEff}%</span>
                 </div>
                 <input 
                   type="range" 
@@ -1057,7 +1068,7 @@ export default function App() {
               <div className="space-y-2 group relative">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 size={14} className={getIconColor(heatExchanger)} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest cursor-help">Теплообменник (Ew): {heatExchanger}%</span>
+                  <span data-term="Er" className="text-[10px] font-bold uppercase tracking-widest cursor-help">Теплообменник (Ew): {heatExchanger}%</span>
                 </div>
                 <input 
                   type="range" 
@@ -1119,6 +1130,7 @@ export default function App() {
               {/* 1. φ — Синергия (механизм) */}
               <KPICard
                 label="① Синергия (φ)"
+                term="phi"
                 value={metrics.phi.toFixed(1)}
                 unit="%"
                 icon={<Zap size={16} />}
@@ -1138,6 +1150,7 @@ export default function App() {
               {/* 2. ΔE(t) — Верифицированная экономия */}
               <KPICard
                 label="② Экономия ΔE(t)"
+                term="dE_t"
                 value={metrics.deltaE_t.toFixed(1)}
                 unit="млн.руб/год"
                 icon={<Thermometer size={16} />}
@@ -1157,6 +1170,7 @@ export default function App() {
               {/* 3. SD — Симбиотический дивиденд */}
               <KPICard
                 label="③ Дивиденд SD(t)"
+                term="SD"
                 value={metrics.sd.toFixed(2)}
                 unit="млн.руб"
                 icon={<TrendingUp size={16} />}
@@ -1175,6 +1189,7 @@ export default function App() {
               {/* 4. U — Целевая функция */}
               <KPICard
                 label="④ Целевая функция U"
+                term="U"
                 value={metrics.u.toFixed(2)}
                 icon={<Gauge size={16} />}
                 trend={metrics.trends.u}
@@ -1193,6 +1208,7 @@ export default function App() {
               {/* 5. SD_e — Экофонд */}
               <KPICard
                 label="⑤ Экофонд SD_e"
+                term="ecofund"
                 value={metrics.distribution.ecofund.toFixed(2)}
                 unit="млн.руб"
                 icon={<Leaf size={16} />}
@@ -1627,12 +1643,12 @@ export default function App() {
             <h3 className="text-xs font-bold uppercase tracking-widest mb-6">Математический аппарат модели</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Базовая экономия (12)</div>
+                <div data-term="dE_base" className="text-[9px] font-mono opacity-50 uppercase">Базовая экономия (12)</div>
                 <div className="text-xs font-bold font-mono">ΔE_base = Σ(ΔE_i − A_i) − Z_пл = <span className="is-number">{metrics.deltaE_base.toFixed(1)}</span></div>
                 <p className="text-[9px] opacity-70 italic leading-tight">Чистый эффект по потокам (табл. 2.6) за вычетом аннуитетов и затрат платформы; заменяет валовые 250 млн руб.</p>
               </div>
               <div className="space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Коэф. синергии (13)</div>
+                <div data-term="phi" className="text-[9px] font-mono opacity-50 uppercase">Коэф. синергии (13)</div>
                 <div className="text-xs font-bold font-mono">φ = 1 − e^(−k·C) = <span className="is-number">{(metrics.phi / 100).toFixed(3)}</span></div>
                 <div className="text-[9px] font-mono opacity-40 uppercase mt-1">
                   k(t) = {metrics.k.toFixed(2)} | C = {metrics.c_ind.toFixed(2)}
@@ -1653,19 +1669,19 @@ export default function App() {
                 <p className="text-[9px] opacity-70 italic leading-tight">Реализуемый потенциал при k={metrics.k} и C={metrics.c/100}.</p>
               </div>
               <div className="space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Вериф. экономия (14)</div>
+                <div data-term="dE_t" className="text-[9px] font-mono opacity-50 uppercase">Вериф. экономия (14)</div>
                 <div className="text-xs font-bold font-mono">ΔE(t) = φ(Cинд)·Σ(E_i − A_i) − Z_пл = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
-                <div className="text-[9px] font-mono opacity-60">Порог окупаемости платформы C_min = {Number.isFinite(metrics.cMin) ? metrics.cMin.toFixed(3) : '—'} (при k = {metrics.k.toFixed(1)})</div>
+                <div data-term="C_min" className="text-[9px] font-mono opacity-60">Порог окупаемости платформы C_min = {Number.isFinite(metrics.cMin) ? metrics.cMin.toFixed(3) : '—'} (при k = {metrics.k.toFixed(1)})</div>
                 <p className="text-[9px] opacity-70 italic leading-tight">Затраты платформы постоянны и на φ не умножаются: ниже C_min платформа убыточна.</p>
               </div>
               <div className="space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Симб. дивиденд (15)</div>
+                <div data-term="SD" className="text-[9px] font-mono opacity-50 uppercase">Симб. дивиденд (15)</div>
                 <div className="text-xs font-bold font-mono">SD(t) = α · ΔE(t) · M<sub>режим</sub> = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
                 <p className="text-[9px] opacity-70 italic leading-tight">Распределяемый доход при α={metrics.alpha}, M={metrics.distribution.shares.multiplier}.</p>
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-dashed border-gray-500/30">
-              <div className="text-[9px] font-mono opacity-50 uppercase mb-2">Калибровка параметра k (16)</div>
+              <div data-term="k" className="text-[9px] font-mono opacity-50 uppercase mb-2">Калибровка параметра k (16)</div>
               <div className="text-[10px] font-mono italic">k_i = −ln(1 − φ_i) / C_инд,i</div>
             </div>
           </div>
@@ -1686,16 +1702,16 @@ export default function App() {
               {/* Входные параметры якоря */}
               <div className="space-y-3">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Входные параметры</div>
-                <MiniSlider label="Cap_Аз, мощность NH₃ (C)" value={anchor.capAz} min={1000} max={1350} step={10}
+                <MiniSlider term="cap" label="Cap_Аз, мощность NH₃ (C)" value={anchor.capAz} min={1000} max={1350} step={10}
                   onChange={(v) => setAnchor({ ...anchor, capAz: v })} fmt={(v) => `${ru(v)} тыс. т`} />
-                <MiniSlider label="Полный CO₂ на т мощности (B)" value={anchor.eFull} min={1.79} max={2.10} step={0.01}
+                <MiniSlider term="co2" label="Полный CO₂ на т мощности (B)" value={anchor.eFull} min={1.79} max={2.10} step={0.01}
                   onChange={(v) => setAnchor({ ...anchor, eFull: v })} fmt={(v) => `${ru(v, 2)} т`} note="медиана 5 заводов CF, 2022–2023" />
-                <MiniSlider label="Процессный CO₂ на т мощности (B)" value={anchor.eProc} min={1.01} max={1.32} step={0.005}
+                <MiniSlider term="co2" label="Процессный CO₂ на т мощности (B)" value={anchor.eProc} min={1.01} max={1.32} step={0.005}
                   onChange={(v) => setAnchor({ ...anchor, eProc: v })} fmt={(v) => `${ru(v, 3)} т`} />
-                <MiniSlider label="U, выпуск карбамида (C)" value={anchor.urea} min={300} max={700} step={10}
+                <MiniSlider term="co2" label="U, выпуск карбамида (C)" value={anchor.urea} min={300} max={700} step={10}
                   onChange={(v) => setAnchor({ ...anchor, urea: v })} fmt={(v) => `${ru(v)} тыс. т`} note="запросить у предприятия" />
                 <div className="space-y-1">
-                  <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">N₂O: очистка на агрегатах HNO₃</span>
+                  <span data-term="n2o" className="text-[9px] font-bold uppercase tracking-wider opacity-60">N₂O: очистка на агрегатах HNO₃</span>
                   <div className="grid grid-cols-2 gap-2">
                     {[{ v: true, l: 'Есть · вариант A' }, { v: false, l: 'Нет · вариант B' }].map((o) => (
                       <button key={String(o.v)} onClick={() => setAnchor({ ...anchor, n2oAbated: o.v })}
@@ -1707,20 +1723,20 @@ export default function App() {
                   </div>
                 </div>
                 {!anchor.n2oAbated && (<>
-                  <MiniSlider label="AN, выпуск селитры (C)" value={anchor.an} min={1000} max={1400} step={20}
+                  <MiniSlider term="n2o" label="AN, выпуск селитры (C)" value={anchor.an} min={1000} max={1400} step={20}
                     onChange={(v) => setAnchor({ ...anchor, an: v })} fmt={(v) => `${ru(v)} тыс. т`} />
-                  <MiniSlider label="EF, кг N₂O на т HNO₃" value={anchor.efN2O} min={8} max={9} step={0.1}
+                  <MiniSlider term="n2o" label="EF, кг N₂O на т HNO₃" value={anchor.efN2O} min={8} max={9} step={0.1}
                     onChange={(v) => setAnchor({ ...anchor, efN2O: v })} fmt={(v) => ru(v, 1)} note="Öko-Institut (2023)" />
                 </>)}
-                <MiniSlider label="d_t, дни простоя 2025–2026 (C)" value={downDays} min={0} max={60} step={1}
+                <MiniSlider term="downDays" label="d_t, дни простоя 2025–2026 (C)" value={downDays} min={0} max={60} step={1}
                   onChange={setDownDays} fmt={(v) => `${v} дн. (−${ru(v / 365 * 100, 1)} %)`} note="влияет на ряды и на поток CO₂ в 2026 г." />
-                <MiniSlider label="π_A, доля периода без поставок якоря (B)" value={piA} min={0.028} max={0.094} step={0.001}
+                <MiniSlider term="pi_A" label="π_A, доля периода без поставок якоря (B)" value={piA} min={0.028} max={0.094} step={0.001}
                   onChange={setPiA} fmt={(v) => ru(v, 3)} />
               </div>
 
               {/* Оценка выбросов, табл. 3.2 */}
               <div className="space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Оценка выбросов, тыс. т (табл. 3.2)</div>
+                <div data-term="co2" className="text-[9px] font-mono opacity-50 uppercase">Оценка выбросов, тыс. т (табл. 3.2)</div>
                 <table className="w-full text-[10px] font-mono">
                   <tbody>
                     {[
@@ -1747,17 +1763,17 @@ export default function App() {
                     <div className="opacity-50">диапазон аналогов 0,83–2,8</div>
                   </div>
                   <div className="p-2 border border-gray-500/20">
-                    <div className="opacity-60">Пищевая CO₂ / свободный поток</div>
+                    <div data-term="Q0" className="opacity-60">Пищевая CO₂ / свободный поток</div>
                     <div className="text-sm font-bold">{ru(anchorCalc.foodUse * 100, 1)} %</div>
                     <div className="opacity-50">Q₀ = 32 тыс. т (A)</div>
                   </div>
                   <div className="p-2 border border-gray-500/20">
-                    <div className="opacity-60">σ_Δ — риск π_A</div>
+                    <div data-term="sigma_eps" className="opacity-60">σ_Δ — риск π_A</div>
                     <div className="text-sm font-bold">{ru(CALIB.sigmaDelta, 2)}</div>
                     <div className="opacity-50">годовые изменения, аналоги</div>
                   </div>
                   <div className="p-2 border border-gray-500/20">
-                    <div className="opacity-60">σ_ε — шум имитации</div>
+                    <div data-term="sigma_eps" className="opacity-60">σ_ε — шум имитации</div>
                     <div className="text-sm font-bold">{ru(CALIB.sigmaEps, 3)}</div>
                     <div className="opacity-50">остатки модели (3.2)</div>
                   </div>
@@ -1766,7 +1782,7 @@ export default function App() {
 
               {/* Ряды 2017–2026, табл. 3.3 */}
               <div className="space-y-2">
-                <div className="text-[9px] font-mono opacity-60">РЯДЫ 2017–2026, тыс. т (3.7), по γ_t аналогов</div>
+                <div data-term="gamma_t" className="text-[9px] font-mono opacity-60">РЯДЫ 2017–2026, тыс. т (3.7), по γ_t аналогов</div>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={anchorCalc.series} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
@@ -1793,7 +1809,7 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-gray-500/30">
               {/* Разложение ΔE_base */}
               <div className="lg:col-span-2 space-y-2">
-                <div className="text-[9px] font-mono opacity-50 uppercase">Состав ΔE_base, млн руб./год (табл. 2.6; формулы 3.11–3.12)</div>
+                <div data-term="flows" className="text-[9px] font-mono opacity-50 uppercase">Состав ΔE_base, млн руб./год (табл. 2.6; формулы 3.11–3.12)</div>
                 <table className="w-full text-[10px] font-mono">
                   <thead>
                     <tr className="opacity-50 text-left border-b border-gray-500/20">
@@ -1822,25 +1838,25 @@ export default function App() {
                   </tbody>
                 </table>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <MiniSlider label="Q₁ − Q₀, прирост продаж CO₂" value={dQ} min={0} max={30} step={1}
+                  <MiniSlider term="dQ" label="Q₁ − Q₀, прирост продаж CO₂" value={dQ} min={0} max={30} step={1}
                     onChange={setDQ} fmt={(v) => `${v} тыс. т`} note="табл. 2.5: 8–15 тыс. т" />
-                  <MiniSlider label="Доля поставок за счёт переключения" value={switchShare} min={0} max={1} step={0.05}
+                  <MiniSlider term="switch" label="Доля поставок за счёт переключения" value={switchShare} min={0} max={1} step={0.05}
                     onChange={setSwitchShare} fmt={(v) => `${ru(v * 100)} %`} note="при 50 % ΔE_base снижается до 81,4" />
                 </div>
               </div>
 
               {/* Риск якоря и предел ТОР */}
               <div className="space-y-3 text-[10px] font-mono">
-                <div className="text-[9px] opacity-50 uppercase">Риск остановки якоря (§ 3.2)</div>
+                <div data-term="pi_A" className="text-[9px] opacity-50 uppercase">Риск остановки якоря (§ 3.2)</div>
                 <div className="flex justify-between"><span className="opacity-70">ΔE(t) при работающем якоре</span><span>{ru(metrics.deltaE_t, 1)}</span></div>
-                <div className="flex justify-between"><span className="opacity-70 pr-2">ΔE(t) ожидаемый, π_A = {ru(piA, 3)}</span><span className="font-bold">{ru(metrics.deltaE_exp, 1)}</span></div>
-                <div className="flex justify-between"><span className="opacity-70">Доля «Азота» по Шепли, 25 %</span><span>{ru(metrics.anchorShare, 1)}</span></div>
+                <div data-term="dE_exp" className="flex justify-between"><span className="opacity-70 pr-2">ΔE(t) ожидаемый, π_A = {ru(piA, 3)}</span><span className="font-bold">{ru(metrics.deltaE_exp, 1)}</span></div>
+                <div data-term="shapley" className="flex justify-between"><span className="opacity-70">Доля «Азота» по Шепли, 25 %</span><span>{ru(metrics.anchorShare, 1)}</span></div>
                 <div className="flex justify-between"><span className="opacity-70">То же с поправкой (1 − π_A), (3.25)</span><span className="font-bold">{ru(metrics.anchorShareRisk, 1)}</span></div>
                 <div className="pt-3 border-t border-dashed border-gray-500/30 space-y-2">
-                  <div className="text-[9px] opacity-50 uppercase">Критическая доля продаж якорю (3.27)</div>
-                  <MiniSlider label="m_j, маржинальный доход" value={marginJ} min={0.1} max={0.6} step={0.01}
+                  <div data-term="lambda_star" className="text-[9px] opacity-50 uppercase">Критическая доля продаж якорю (3.27)</div>
+                  <MiniSlider term="lambda_star" label="m_j, маржинальный доход" value={marginJ} min={0.1} max={0.6} step={0.01}
                     onChange={setMarginJ} fmt={(v) => ru(v, 2)} />
-                  <MiniSlider label="FC_j / R_j, постоянные затраты" value={fcJ} min={0.02} max={0.3} step={0.01}
+                  <MiniSlider term="lambda_star" label="FC_j / R_j, постоянные затраты" value={fcJ} min={0.02} max={0.3} step={0.01}
                     onChange={setFcJ} fmt={(v) => ru(v, 2)} />
                   {(() => {
                     const lam = Math.max(0, 1 - fcJ / marginJ);
@@ -2034,9 +2050,12 @@ export default function App() {
         )}
       </main>
 
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} onOpen={() => setHelpOpen(true)} isDarkMode={isDarkMode} />
+
       {/* Footer Status Bar */}
       <footer className={cn(
-        "border-t px-6 py-2 flex items-center justify-between fixed bottom-0 w-full z-10 transition-colors duration-300",
+        "border-t px-6 py-2 flex items-center justify-between fixed bottom-0 left-0 right-0 z-10 transition-colors duration-300",
+        helpOpen && "sm:right-[360px]",
         isDarkMode ? "bg-[#141414] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
       )}>
         <div className="flex items-center gap-4">
@@ -2056,9 +2075,9 @@ export default function App() {
   );
 }
 
-function KPICard({ label, value, unit, icon, trend, isDarkMode, formula, trendLarge, tooltip }: { label: string, value: string, unit?: string, icon: React.ReactNode, trend: string, isDarkMode: boolean, formula?: React.ReactNode, trendLarge?: boolean, tooltip?: string }) {
+function KPICard({ label, value, unit, icon, trend, isDarkMode, formula, trendLarge, tooltip, term }: { label: string, value: string, unit?: string, icon: React.ReactNode, trend: string, isDarkMode: boolean, formula?: React.ReactNode, trendLarge?: boolean, tooltip?: string, term?: string }) {
   return (
-    <div className={cn(
+    <div data-term={term} className={cn(
       "border p-4 space-y-3 transition-all duration-300 hover:-translate-y-1 relative group",
       isDarkMode ? "bg-[#1A1A1A] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
     )}>

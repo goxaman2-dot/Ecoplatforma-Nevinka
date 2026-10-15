@@ -34,11 +34,11 @@ interface Props {
 
 const MULT = { fiscal: 1.0, tech: 1.12, industrial: 1.18 };
 
-const Slider = ({ label, value, min, max, step, onChange, fmt, note }: {
+const Slider = ({ label, value, min, max, step, onChange, fmt, note, term }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; fmt: (v: number) => string; note?: string;
+  onChange: (v: number) => void; fmt: (v: number) => string; note?: string; term?: string;
 }) => (
-  <div className="space-y-1">
+  <div className="space-y-1" data-term={term}>
     <div className="flex justify-between items-end gap-2">
       <span className="text-[10px] font-bold tracking-wide opacity-70">{label}</span>
       <span className="text-[10px] font-bold font-mono whitespace-nowrap">{fmt(value)}</span>
@@ -50,8 +50,8 @@ const Slider = ({ label, value, min, max, step, onChange, fmt, note }: {
   </div>
 );
 
-const Stat = ({ label, value, sub, tone }: { label: React.ReactNode; value: string; sub?: React.ReactNode; tone?: 'ok' | 'bad' }) => (
-  <div className={cn('p-3 border',
+const Stat = ({ label, value, sub, tone, term }: { label: React.ReactNode; value: string; sub?: React.ReactNode; tone?: 'ok' | 'bad'; term?: string }) => (
+  <div data-term={term} className={cn('p-3 border',
     tone === 'ok' ? 'border-emerald-500/40 bg-emerald-500/5' : tone === 'bad' ? 'border-rose-500/40 bg-rose-500/5' : 'border-gray-500/20')}>
     <div className="text-[9px] font-mono opacity-60">{label}</div>
     <div className="text-lg font-bold font-mono">{value}</div>
@@ -187,24 +187,24 @@ export default function BilevelPanel(p: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Верхний уровень: θ */}
           <div className="space-y-4">
-            <div className="text-[9px] font-mono opacity-60">МЕХАНИЗМ ВЕРХНЕГО УРОВНЯ</div>
+            <div data-term="W" className="text-[9px] font-mono opacity-60">МЕХАНИЗМ ВЕРХНЕГО УРОВНЯ</div>
             <div className="grid grid-cols-1 gap-1">
               {MECHS.map((m) => (
-                <button key={m.id} onClick={() => setMech(m.id)} className={btn(mech === m.id)} title={m.note}>{m.label}</button>
+                <button key={m.id} data-term={m.id === 'sigma' ? 'sigmaMech' : m.id} onClick={() => setMech(m.id)} className={btn(mech === m.id)} title={m.note}>{m.label}</button>
               ))}
             </div>
-            <div className="text-[9px] font-mono opacity-60 pt-2">МОДЕЛЬ ПОВЕДЕНИЯ РЕЗИДЕНТОВ</div>
+            <div data-term="U_j" className="text-[9px] font-mono opacity-60 pt-2">МОДЕЛЬ ПОВЕДЕНИЯ РЕЗИДЕНТОВ</div>
             <div className="grid grid-cols-1 gap-1">
               {BEHAVIORS.map((b) => (
-                <button key={b.id} onClick={() => setBehavior(b.id)} className={btn(behavior === b.id)} title={b.note}>{b.label}</button>
+                <button key={b.id} data-term={b.id} onClick={() => setBehavior(b.id)} className={btn(behavior === b.id)} title={b.note}>{b.label}</button>
               ))}
             </div>
             <div className="text-[9px] font-mono opacity-60 pt-2">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
-            <Slider label="σ — компенсация затрат подключения" value={sigma} min={0} max={1} step={0.01}
+            <Slider term="sigma" label="σ — компенсация затрат подключения" value={sigma} min={0} max={1} step={0.01}
               onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} note="доля c_j, которую несёт публичный партнёр" />
-            <Slider label="λ̄ — предел продаж якорю (ТОСЭР)" value={lambdaBar} min={0.3} max={1} step={0.05}
+            <Slider term="lambda" label="λ̄ — предел продаж якорю (ТОСЭР)" value={lambdaBar} min={0.3} max={1} step={0.05}
               onChange={setLambdaBar} fmt={(v) => ru(v, 2)} note="норма ПП РФ № 614: 0,5 от выручки инвестпроекта" />
-            <Slider label="B_внеш — внешний источник" value={p.bExt} min={0} max={20} step={0.5}
+            <Slider term="B_ext" label="B_внеш — внешний источник" value={p.bExt} min={0} max={20} step={0.5}
               onChange={p.setBExt} fmt={(v) => `${ru(v, 1)} млн руб.`} />
             <div className="text-[9px] font-mono opacity-60 leading-relaxed border-t border-dashed border-gray-500/30 pt-3">
               Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
@@ -216,27 +216,27 @@ export default function BilevelPanel(p: Props) {
 
           {/* Результаты */}
           <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-3 content-start">
-            <Stat label="C** — равновесная (3.18)" value={ru(eq.C, 3)} sub={`участников: ${eq.part.length}, связей: ${ru(eq.C * N_DOP)}`} />
-            <Stat label="C* — оптимальная (2.13)" value={ru(cs, 3)} sub={`Π(C*) = ${ru(piStar, 1)} млн руб.`} />
-            <Stat label="Δ_C — разрыв (3.19)" value={ru(dC, 3)} tone={dC > 0.0005 ? 'bad' : 'ok'}
+            <Stat term="C_eq" label="C** — равновесная (3.18)" value={ru(eq.C, 3)} sub={`участников: ${eq.part.length}, связей: ${ru(eq.C * N_DOP)}`} />
+            <Stat term="C_star" label="C* — оптимальная (2.13)" value={ru(cs, 3)} sub={`Π(C*) = ${ru(piStar, 1)} млн руб.`} />
+            <Stat term="dC" label="Δ_C — разрыв (3.19)" value={ru(dC, 3)} tone={dC > 0.0005 ? 'bad' : 'ok'}
               sub={dC < 0 ? 'сеть шире оптимума' : dC > 0.0005 ? 'сеть недобирает связи' : 'разрыв закрыт'} />
-            <Stat label="W = Π(C**) − Z (3.20)" value={ru(W, 1)} sub={`Π = ${ru(piEq, 1)}; Z = ${ru(eq.Z, 2)} млн руб.`} />
-            <Stat label="Ĉ — целевая связность (3.23)" value={ru(curve.hat.c, 3)}
+            <Stat term="W" label="W = Π(C**) − Z (3.20)" value={ru(W, 1)} sub={`Π = ${ru(piEq, 1)}; Z = ${ru(eq.Z, 2)} млн руб.`} />
+            <Stat term="C_hat" label="Ĉ — целевая связность (3.23)" value={ru(curve.hat.c, 3)}
               sub={`Z_min = ${ru(curve.hat.zmin ?? 0, 2)} млн руб. при σ = ${ru((curve.hat.sigma ?? 0) * 100)} %`} />
-            <Stat label="Z_min(C*) — цена полного закрытия" value={(() => {
+            <Stat term="Z_min" label="Z_min(C*) — цена полного закрытия" value={(() => {
               const last = curve.rows[curve.rows.length - 1];
               return last && last.zmin !== null ? ru(last.zmin, 2) : 'недостижимо';
             })()} sub="млн руб./год, (3.22)" />
-            <Stat label="γ_пуб·SD(C**) + B_внеш ≥ C_ликв (3.21)" value={`${ru(pubEq + p.bExt, 2)} / ${ru(p.cLiq, 1)}`}
+            <Stat term="C_liq" label="γ_пуб·SD(C**) + B_внеш ≥ C_ликв (3.21)" value={`${ru(pubEq + p.bExt, 2)} / ${ru(p.cLiq, 1)}`}
               tone={budgetOk ? 'ok' : 'bad'} sub={`из дивиденда ${ru(pubEq, 2)}; недостаёт ${ru(Math.max(0, p.cLiq - pubEq - p.bExt), 2)}`} />
-            <Stat label="SD(C**) — дивиденд" value={ru(sdEq, 2)} sub={`φ(C**) = ${ru(phiEq, 3)}`} />
+            <Stat term="SD" label="SD(C**) — дивиденд" value={ru(sdEq, 2)} sub={`φ(C**) = ${ru(phiEq, 3)}`} />
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={box}>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
+          <div data-term="Gamma" className="text-[10px] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
           <div className="text-[9px] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -267,7 +267,7 @@ export default function BilevelPanel(p: Props) {
         </div>
 
         <div className={box}>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
+          <div data-term="Z_min" className="text-[10px] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
           <div className="text-[9px] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -300,7 +300,7 @@ export default function BilevelPanel(p: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={box}>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-1">Резиденты-поставщики якоря</div>
+          <div data-term="lambda_star" className="text-[10px] font-bold uppercase tracking-widest mb-1">Резиденты-поставщики якоря</div>
           <div className="text-[9px] font-mono opacity-60 mb-3">Условие (3.16) и критическая доля λ*_j = 1 − FC_j/(m_j·R_j) (3.27)</div>
           <table className="w-full text-[10px] font-mono">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
@@ -325,7 +325,7 @@ export default function BilevelPanel(p: Props) {
         </div>
 
         <div className={box}>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-1">Поправка на эффект отдачи</div>
+          <div data-term="rebound" className="text-[10px] font-bold uppercase tracking-widest mb-1">Поправка на эффект отдачи</div>
           <div className="text-[9px] font-mono opacity-60 mb-3">
             Формулы (3.28)–(3.30) на рядах 2017–2026 гг.: Q₀ = Cap·γ_t, ε·Q₀ = выбросы года (рабочая книга «Азот_выбросы_модель_2017_2026.xlsx»)
           </div>
@@ -345,18 +345,18 @@ export default function BilevelPanel(p: Props) {
             )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Slider label="ΔQ/Q₀ — прирост выпуска" value={dqShare} min={0} max={0.1} step={0.002}
+            <Slider term="rebound" label="ΔQ/Q₀ — прирост выпуска" value={dqShare} min={0} max={0.1} step={0.002}
               onChange={setDqShare} fmt={(v) => `${ru(v * 100, 1)} %`} note="только вызванный симбиозом" />
-            <Slider label="u — доля переданного побочного продукта" value={u} min={0} max={0.1} step={0.0005}
+            <Slider term="u" label="u — доля переданного побочного продукта" value={u} min={0} max={0.1} step={0.0005}
               onChange={setUOverride} fmt={(v) => ru(v, 4)}
               note={uOverride === null ? `расчёт: ${ru(p.dQco2)} тыс. т / E_t` : 'задано вручную'} />
-            <Slider label="κ — выбросы при подготовке и использовании" value={kappa} min={0} max={0.5} step={0.01}
+            <Slider term="kappa" label="κ — выбросы при подготовке и использовании" value={kappa} min={0} max={0.5} step={0.01}
               onChange={setKappa} fmt={(v) => ru(v, 2)} />
           </div>
           <div className="grid grid-cols-3 gap-3 mt-4">
-            <Stat label="ΔEm, тыс. т CO₂ (3.28)" value={ru(rb.dEm, 1)} tone={rb.dEm < 0 ? 'ok' : 'bad'} />
-            <Stat label="u·(1−κ) против ΔQ/(Q₀+ΔQ) (3.29)" value={`${ru(rb.lhs, 3)} ${rb.ok ? '>' : '≤'} ${ru(rb.rhs, 3)}`} tone={rb.ok ? 'ok' : 'bad'} />
-            <Stat label="Порог прироста выпуска" value={`${ru(rb.threshold * 100, 1)} %`} sub="выше — выбросы растут" />
+            <Stat term="rebound" label="ΔEm, тыс. т CO₂ (3.28)" value={ru(rb.dEm, 1)} tone={rb.dEm < 0 ? 'ok' : 'bad'} />
+            <Stat term="rebound" label="u·(1−κ) против ΔQ/(Q₀+ΔQ) (3.29)" value={`${ru(rb.lhs, 3)} ${rb.ok ? '>' : '≤'} ${ru(rb.rhs, 3)}`} tone={rb.ok ? 'ok' : 'bad'} />
+            <Stat term="rebound" label="Порог прироста выпуска" value={`${ru(rb.threshold * 100, 1)} %`} sub="выше — выбросы растут" />
           </div>
           <table className="w-full text-[10px] font-mono mt-4">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
@@ -385,8 +385,8 @@ export default function BilevelPanel(p: Props) {
 
       <div className={box}>
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-          <div className="text-[10px] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
-          <button onClick={runMc} disabled={mcRunning}
+          <div data-term="W" className="text-[10px] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
+          <button data-term="mc" onClick={runMc} disabled={mcRunning}
             className={cn('px-3 py-1.5 text-[9px] font-bold uppercase border', mcRunning ? 'opacity-50' : 'border-emerald-500 text-emerald-500 hover:bg-emerald-500/10')}>
             {mcRunning ? 'Идёт расчёт…' : 'Монте-Карло: 200 испытаний'}
           </button>
@@ -398,14 +398,14 @@ export default function BilevelPanel(p: Props) {
           <table className="w-full text-[10px] font-mono min-w-[760px]">
             <thead><tr className="opacity-60 border-b border-gray-500/20 text-left">
               <th className="py-1 pr-2 font-normal">Поведение \ механизм</th>
-              {MECHS.map((m) => <th key={m.id} className="py-1 px-1 font-normal text-right" title={m.note}>{m.label}</th>)}
+              {MECHS.map((m) => <th key={m.id} data-term={m.id === 'sigma' ? 'sigmaMech' : m.id} className="py-1 px-1 font-normal text-right" title={m.note}>{m.label}</th>)}
             </tr></thead>
             <tbody>{BEHAVIORS.map((b, bi) => {
               const row = matrix[bi];
               const best = Math.max(...row.map((r) => r.W));
               return (
                 <tr key={b.id} className={cn('border-b border-gray-500/10', behavior === b.id && 'bg-emerald-500/5')}>
-                  <td className="py-1 pr-2" title={b.note}>{b.label}</td>
+                  <td data-term={b.id} className="py-1 pr-2" title={b.note}>{b.label}</td>
                   {row.map((r, mi) => (
                     <td key={mi} onClick={() => { setBehavior(b.id); setMech(MECHS[mi].id); }}
                       className={cn('py-1 px-1 text-right cursor-pointer whitespace-nowrap',

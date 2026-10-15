@@ -32,3 +32,7 @@ html {
   stroke-dasharray: 10, 5;
   animation: dash 1s linear infinite reverse;
 }
+
+/* Элементы со справкой: пунктирная рамка при наведении, курсор-подсказка */
+[data-term] { cursor: help; }
+[data-term]:hover { outline: 1px dashed rgba(16, 185, 129, 0.7); outline-offset: 2px; }

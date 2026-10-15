@@ -33,11 +33,11 @@ interface Props {
   e2026: number;          // выбросы якоря (CO₂ МГЭИК + N₂O выбранного варианта), тыс. т CO₂-экв.
 }
 
-const Slider = ({ label, value, min, max, step, onChange, fmt, note }: {
+const Slider = ({ label, value, min, max, step, onChange, fmt, note, term }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; fmt: (v: number) => string; note?: string;
+  onChange: (v: number) => void; fmt: (v: number) => string; note?: string; term?: string;
 }) => (
-  <div className="space-y-1">
+  <div className="space-y-1" data-term={term}>
     <div className="flex justify-between items-end gap-2">
       <span className="text-[10px] font-bold tracking-wide opacity-70">{label}</span>
       <span className="text-[10px] font-bold font-mono whitespace-nowrap">{fmt(value)}</span>
@@ -137,17 +137,17 @@ export default function BeneficiaryPanel(p: Props) {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="space-y-3">
-            <div className="text-[9px] font-mono opacity-60">ТРАЕКТОРИЯ СВЯЗНОСТИ</div>
+            <div data-term="C_ind" className="text-[9px] font-mono opacity-60">ТРАЕКТОРИЯ СВЯЗНОСТИ</div>
             <div className="flex justify-between text-[10px]"><span className="font-bold opacity-70">C_инд в 2026 г.</span><span className="font-mono font-bold">{ru(p.cInd, 2)}</span></div>
             <div className="text-[8px] font-mono opacity-40 -mt-2">задаётся индексом инвестиций на вкладке «Симуляция»</div>
-            <Slider label="Целевая связность" value={cTarget} min={0.05} max={0.4} step={0.01} onChange={setCTarget} fmt={(v) => ru(v, 2)} note="C* = 0,23 по (2.13) с платформой" />
-            <Slider label="Год достижения" value={yearTarget} min={2027} max={2040} step={1} onChange={setYearTarget} fmt={(v) => String(v)} />
+            <Slider term="C_star" label="Целевая связность" value={cTarget} min={0.05} max={0.4} step={0.01} onChange={setCTarget} fmt={(v) => ru(v, 2)} note="C* = 0,23 по (2.13) с платформой" />
+            <Slider term="C_ind" label="Год достижения" value={yearTarget} min={2027} max={2040} step={1} onChange={setYearTarget} fmt={(v) => String(v)} />
             <div className="text-[9px] font-mono opacity-60 pt-2">РАСПРЕДЕЛЕНИЕ И БЮДЖЕТЫ</div>
-            <Slider label="ω — доля выигрыша обмена у поставщика" value={omega} min={0} max={1} step={0.05} onChange={setOmega} fmt={(v) => ru(v, 2)} note="0,5 — середина коридора (решение Нэша)" />
-            <Slider label="Норматив платы за НВОС городу" value={nvosCity} min={0} max={1} step={0.05} onChange={setNvosCity} fmt={(v) => `${ru(v * 100)} %`} note="с 2026 г. устанавливает край (488-ФЗ), класс C" />
-            <Slider label="Ставка резидентов ТОСЭР в бюджет края" value={resTaxReg} min={0} max={0.17} step={0.01} onChange={setResTaxReg} fmt={(v) => `${ru(v * 100)} %`} note="федеральная часть 0 % в период льготы" />
-            <Slider label="σ — компенсация подключения краем" value={sigma} min={0} max={1} step={0.05} onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} />
-            <Slider label="Затраты подключения резидентов" value={connCost} min={0} max={20} step={0.5} onChange={setConnCost} fmt={(v) => `${ru(v, 1)} млн руб.`} note="Σc_j участников (двухуровневая модель)" />
+            <Slider term="omega" label="ω — доля выигрыша обмена у поставщика" value={omega} min={0} max={1} step={0.05} onChange={setOmega} fmt={(v) => ru(v, 2)} note="0,5 — середина коридора (решение Нэша)" />
+            <Slider term="nvos" label="Норматив платы за НВОС городу" value={nvosCity} min={0} max={1} step={0.05} onChange={setNvosCity} fmt={(v) => `${ru(v * 100)} %`} note="с 2026 г. устанавливает край (488-ФЗ), класс C" />
+            <Slider term="tax" label="Ставка резидентов ТОСЭР в бюджет края" value={resTaxReg} min={0} max={0.17} step={0.01} onChange={setResTaxReg} fmt={(v) => `${ru(v * 100)} %`} note="федеральная часть 0 % в период льготы" />
+            <Slider term="sigma" label="σ — компенсация подключения краем" value={sigma} min={0} max={1} step={0.05} onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} />
+            <Slider term="U_j" label="Затраты подключения резидентов" value={connCost} min={0} max={20} step={0.5} onChange={setConnCost} fmt={(v) => `${ru(v, 1)} млн руб.`} note="Σc_j участников (двухуровневая модель)" />
           </div>
 
           <div className="lg:col-span-3 space-y-4">
@@ -155,7 +155,7 @@ export default function BeneficiaryPanel(p: Props) {
               <span className="text-[10px] font-bold opacity-70">Год для годового баланса:</span>
               <input type="range" min={2026} max={2040} value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-48 h-1 accent-emerald-500" />
               <span className="text-sm font-bold font-mono text-emerald-500">{year}</span>
-              {year > 2036 && <span className="text-[9px] font-mono px-2 py-0.5 border border-amber-500/50 text-amber-500">за горизонтом стратегических документов — экстраполяция</span>}
+              {year > 2036 && <span data-term="extrap" className="text-[9px] font-mono px-2 py-0.5 border border-amber-500/50 text-amber-500">за горизонтом стратегических документов — экстраполяция</span>}
             </div>
             <div className="text-[9px] font-mono opacity-60">
               C = {ru(y.C, 3)}; k = {ru(y.k, 2)}; φ = {ru(y.phi, 3)}; Σ вкладов = {ru(y.G, 1)}; ΔE(t) = {ru(y.dE, 1)}; SD = {ru(y.sd, 2)}; ΔНВОС = {ru(y.nvos, 1)} млн руб.
@@ -164,12 +164,12 @@ export default function BeneficiaryPanel(p: Props) {
               <table className="w-full text-[10px] font-mono min-w-[640px]">
                 <thead><tr className="opacity-60 border-b border-gray-500/20 text-left">
                   <th className="py-1 font-normal">Бенефициар</th>
-                  <th className="py-1 font-normal text-right">Выигрыш обмена</th>
-                  <th className="py-1 font-normal text-right">Плата платформе</th>
-                  <th className="py-1 font-normal text-right">Дивиденд ±</th>
-                  <th className="py-1 font-normal text-right">Налог ±</th>
-                  <th className="py-1 font-normal text-right">Трансферты, НВОС</th>
-                  <th className="py-1 font-normal text-right">Итог, млн руб.</th>
+                  <th data-term="omega" className="py-1 font-normal text-right">Выигрыш обмена</th>
+                  <th data-term="Z_pl" className="py-1 font-normal text-right">Плата платформе</th>
+                  <th data-term="SD" className="py-1 font-normal text-right">Дивиденд ±</th>
+                  <th data-term="tax" className="py-1 font-normal text-right">Налог ±</th>
+                  <th data-term="nvos" className="py-1 font-normal text-right">Трансферты, НВОС</th>
+                  <th data-term="balance" className="py-1 font-normal text-right">Итог, млн руб.</th>
                 </tr></thead>
                 <tbody>
                   {BENEFICIARIES.map((b, i) => {
@@ -196,13 +196,13 @@ export default function BeneficiaryPanel(p: Props) {
                 </tbody>
               </table>
             </div>
-            <div className={cn('flex items-center gap-2 text-[10px] font-mono p-2 border',
+            <div data-term="balance" className={cn('flex items-center gap-2 text-[10px] font-mono p-2 border',
               y.balanceOk ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-rose-500/40 bg-rose-500/5')}>
               {y.balanceOk ? <CheckCircle2 size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
               Баланс {y.balanceOk ? 'замыкается' : 'НЕ замыкается'}: Σ = {ru(y.total, 2)} = ΔE(t) − ΔНВОС = {ru(y.dE, 2)} − {ru(y.nvos, 2)}.
               В границе участников (гл. 2) эффект {ru(y.dE, 1)}, в расширенной границе с бюджетом {ru(y.expected, 1)} млн руб.
             </div>
-            <div className="text-[10px] font-mono">
+            <div data-term="C_liq" className="text-[10px] font-mono">
               Покрытие ущерба (3.21): бюджет города из дивиденда + экофонд + B_внеш = {ru(y.ecoCover, 2)} против C_ликв = {ru(y.cLiq, 1)} млн руб. —{' '}
               <b className={y.ecoCover >= y.cLiq ? 'text-emerald-500' : 'text-orange-600'}>{y.ecoCover >= y.cLiq ? 'покрыто' : `недостаёт ${ru(y.cLiq - y.ecoCover, 1)}`}</b>
             </div>
@@ -212,7 +212,7 @@ export default function BeneficiaryPanel(p: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={box}>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-1">Чистая приведённая стоимость по бенефициарам, 2026–2040 гг.</div>
+          <div data-term="balance" className="text-[10px] font-bold uppercase tracking-widest mb-1">Чистая приведённая стоимость по бенефициарам, 2026–2040 гг.</div>
           <div className="text-[9px] font-mono opacity-60 mb-3">r = 0,10, млн руб.; Σ NPV = {ru(hz.npvTotal, 1)} (= NPV эффекта в расширенной границе)</div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -241,7 +241,7 @@ export default function BeneficiaryPanel(p: Props) {
         </div>
 
         <div className={box}>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-1">Выбросы якоря при стратегических сценариях, тыс. т CO₂-экв.</div>
+          <div data-term="rebound" className="text-[10px] font-bold uppercase tracking-widest mb-1">Выбросы якоря при стратегических сценариях, тыс. т CO₂-экв.</div>
           <div className="text-[9px] font-mono opacity-60 mb-3">
             Рост выпуска g = {ru(chemGrowth * 100, 1)} % в год до 2030 г., затем вдвое меньше; платформа передаёт до {ru(p.dQ)} тыс. т CO₂, κ = {ru(kappa, 2)}
           </div>
@@ -281,17 +281,17 @@ export default function BeneficiaryPanel(p: Props) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
           {STRATEGIES.map((s) => (
-            <button key={s.id} onClick={() => toggle(s.id)} className={chip(strats.has(s.id))} title={s.doc}>
+            <button key={s.id} data-term={({ chem: 'strat_chem', lowcarbon: 'strat_low', tor: 'strat_tor', krai: 'strat_krai' } as const)[s.id]} onClick={() => toggle(s.id)} className={chip(strats.has(s.id))} title={s.doc}>
               <div>{strats.has(s.id) ? '■' : '□'} {s.label} (до {s.horizon})</div>
               <div className="font-normal opacity-70 mt-0.5">{s.effect}</div>
             </button>
           ))}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-          <Slider label="g — рост выпуска аммиака" value={chemGrowth} min={0} max={0.05} step={0.005} onChange={setChemGrowth} fmt={(v) => `${ru(v * 100, 1)} % в год`} />
-          <Slider label="Цена выбросов в 2030 г." value={carbonPrice} min={0} max={5000} step={100} onChange={setCarbonPrice} fmt={(v) => `${ru(v)} руб./т`} note="далее +10 % в год" />
-          <Slider label="μ — доля CO₂ с вычетом" value={mu} min={0} max={1} step={0.05} onChange={setMu} fmt={(v) => ru(v, 2)} note="0 для напитков, теплиц, карбамида" />
-          <Slider label="B_внеш по краевой стратегии" value={bExtKrai} min={0} max={20} step={0.5} onChange={setBExtKrai} fmt={(v) => `${ru(v, 1)} млн руб.`} note="с 2028 г." />
+          <Slider term="strat_chem" label="g — рост выпуска аммиака" value={chemGrowth} min={0} max={0.05} step={0.005} onChange={setChemGrowth} fmt={(v) => `${ru(v * 100, 1)} % в год`} />
+          <Slider term="carbon" label="Цена выбросов в 2030 г." value={carbonPrice} min={0} max={5000} step={100} onChange={setCarbonPrice} fmt={(v) => `${ru(v)} руб./т`} note="далее +10 % в год" />
+          <Slider term="mu" label="μ — доля CO₂ с вычетом" value={mu} min={0} max={1} step={0.05} onChange={setMu} fmt={(v) => ru(v, 2)} note="0 для напитков, теплиц, карбамида" />
+          <Slider term="strat_krai" label="B_внеш по краевой стратегии" value={bExtKrai} min={0} max={20} step={0.5} onChange={setBExtKrai} fmt={(v) => `${ru(v, 1)} млн руб.`} note="с 2028 г." />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-[10px] font-mono min-w-[760px]">

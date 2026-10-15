@@ -44,6 +44,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import BilevelPanel from './BilevelPanel';
+import BeneficiaryPanel from './BeneficiaryPanel';
 import { AvatarGRES, AvatarAzot, AvatarEPP, AvatarResidents, AvatarOperator, AvatarBudget, AvatarPlatform } from './avatars';
 
 // Utility for tailwind classes
@@ -217,7 +218,7 @@ export default function App() {
   // Derived States
   const [history, setHistory] = useState<DataPoint[]>([]);
   const [isConnected, setIsConnected] = useState(true);
-  const [activeTab, setActiveTab] = useState<'simulation' | 'participants' | 'bilevel'>('simulation');
+  const [activeTab, setActiveTab] = useState<'simulation' | 'participants' | 'bilevel' | 'benef'>('simulation');
 
   const participants = [
     {
@@ -333,10 +334,14 @@ export default function App() {
     const flows = { heatGross, heatNet, co2Gross, co2Capex, co2Carbon, co2Net, recycleNet, nvosNet, platformCost };
 
     // Formula (14): Verified savings Delta E(t) = Delta E_base * phi
-    const deltaE_t = deltaE_base * phi_val;
+    // Постоянные затраты платформы от связности не зависят и на φ не умножаются:
+    // ΔE(t) = φ(C)·Σ чистых вкладов потоков − Z_пл. Отсюда порог окупаемости платформы C_min.
+    const flowsNetSum = deltaE_base + platformCost;
+    const deltaE_t = flowsNetSum * phi_val - platformCost;
+    const cMin = flowsNetSum > platformCost ? -Math.log(1 - platformCost / flowsNetSum) / k : Infinity;
     // Ожидаемый эффект с учётом риска остановки якоря (3.24)–(3.25) § 3.2: во время остановки
     // выпадает валовой поток CO2, аннуитет вложений сохраняется
-    const deltaE_exp = (deltaE_base - piA * co2Gross) * phi_val;
+    const deltaE_exp = (flowsNetSum - piA * co2Gross) * phi_val - platformCost;
     const anchorShare = CALIB.anchorShapley * deltaE_base;
     const anchorShareRisk = (1 - piA) * anchorShare;
 
@@ -408,7 +413,7 @@ export default function App() {
     return {
       sd, phi, distribution, u, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
       anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety, iu,
-      flows, deltaE_exp, anchorShare, anchorShareRisk, bExt, piA
+      flows, deltaE_exp, anchorShare, anchorShareRisk, bExt, piA, cMin, flowsNetSum
     };
   }, []);
 
@@ -626,6 +631,17 @@ export default function App() {
           >
             Двухуровневая модель
           </button>
+          <button 
+            onClick={() => setActiveTab('benef')}
+            className={cn(
+              "px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 border-b-2",
+              activeTab === 'benef' 
+                ? (isDarkMode ? "border-[#E4E3E0] text-[#E4E3E0]" : "border-[#141414] text-[#141414]")
+                : "border-transparent opacity-50 hover:opacity-100"
+            )}
+          >
+            Бенефициары и стратегии
+          </button>
         </nav>
         
         <div className="flex items-center gap-6">
@@ -663,11 +679,27 @@ export default function App() {
       </header>
 
       <main className="p-6">
-        {activeTab === 'bilevel' ? (
+        {activeTab === 'benef' ? (
+          <BeneficiaryPanel
+            isDarkMode={isDarkMode}
+            kScenario={kScenario}
+            cInd={investment / 100}
+            flows={{ heatNet: metrics.flows.heatNet, co2Net: metrics.flows.co2Net, recycleNet: metrics.flows.recycleNet, nvosNet: metrics.flows.nvosNet }}
+            platformCost={metrics.flows.platformCost}
+            alpha={alpha}
+            mult={metrics.distribution.shares.multiplier}
+            regimeWeights={({ fiscal: { operator: 0.25, suppliers: 0.15, corporation: 0.12 }, tech: { operator: 0.40, suppliers: 0.15, corporation: 0.12 }, industrial: { operator: 0.15, suppliers: 0.40, corporation: 0.12 } })[distRegime]}
+            bExt={bExt}
+            cLiq={15.5}
+            dQ={dQ}
+            e2026={(() => { const r = anchorCalc.series.find((x) => x.year === '2026')!; return r.co2 + (anchor.n2oAbated ? r.n2oA : r.n2oB); })()}
+          />
+        ) : activeTab === 'bilevel' ? (
           <BilevelPanel
             isDarkMode={isDarkMode}
             alpha={alpha}
-            deltaEBase={metrics.deltaE_base}
+            flowsNet={metrics.flowsNetSum}
+            platformCost={metrics.flows.platformCost}
             k={metrics.k}
             regime={distRegime}
             bExt={bExt}
@@ -1111,7 +1143,7 @@ export default function App() {
                 icon={<Thermometer size={16} />}
                 trend={metrics.trends.deltaE}
                 isDarkMode={isDarkMode}
-                tooltip="Верифицированная экономия от симбиоза. ΔE(t) = ΔE_base · φ(C_инд). ΔE_base — чистый эффект (табл. 2.6, 117,4 млн руб. по умолчанию): тепло ГРЭС + CO₂ «Азота» сверх 32 тыс. т + вторсырьё ЭПП + плата за НВОС − аннуитеты и затраты платформы."
+                tooltip="Верифицированная экономия от симбиоза. ΔE(t) = φ(C_инд)·Σ(E_i − A_i) − Z_пл: чистые вклады потоков (тепло ГРЭС, CO₂ «Азота» сверх 32 тыс. т, вторсырьё ЭПП, плата за НВОС; 187,1 млн руб.) реализуются в доле φ, а затраты платформы Z_пл = 69,6 млн руб. постоянны. При полной реализации ΔE = 117,4 млн руб. (табл. 2.6)."
                 formula={<span>ΔE(t) = Σ<sub className="text-[10px]">i</sub> E<sub className="text-[10px]">i</sub>(t) · φ(C<sub className="text-[10px]">инд</sub>)</span>}
                 trendLarge={true}
               />
@@ -1622,8 +1654,9 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Вериф. экономия (14)</div>
-                <div className="text-xs font-bold font-mono">ΔE(t) = Σi Ei(t) * φ(Cинд(t)) = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
-                <p className="text-[9px] opacity-70 italic leading-tight">Экономия, скорректированная на синергетическую реализуемость.</p>
+                <div className="text-xs font-bold font-mono">ΔE(t) = φ(Cинд)·Σ(E_i − A_i) − Z_пл = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
+                <div className="text-[9px] font-mono opacity-60">Порог окупаемости платформы C_min = {Number.isFinite(metrics.cMin) ? metrics.cMin.toFixed(3) : '—'} (при k = {metrics.k.toFixed(1)})</div>
+                <p className="text-[9px] opacity-70 italic leading-tight">Затраты платформы постоянны и на φ не умножаются: ниже C_min платформа убыточна.</p>
               </div>
               <div className="space-y-2">
                 <div className="text-[9px] font-mono opacity-50 uppercase">Симб. дивиденд (15)</div>

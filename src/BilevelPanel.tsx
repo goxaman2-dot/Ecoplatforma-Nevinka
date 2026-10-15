@@ -6,8 +6,9 @@ import { Layers } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
-  makePopulation, equilibrium, gammaMap, zMinCurve, cStar, piOf, rebound, phiOf,
-  N_DOP, PI, TYPE_INFO, type ResType, type Theta,
+  makePopulation, equilibrium, gammaMap, zMinCurve, rebound, evaluate, monotoneCheck, compareMatrix, monteCarlo,
+  mechParams, N_DOP, PI, TYPE_INFO, MECHS, BEHAVIORS,
+  type ResType, type Theta, type Context, type MechId, type BehaviorId,
 } from './bilevel';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
@@ -16,7 +17,8 @@ const ru = (x: number, d = 0) => x.toLocaleString('ru-RU', { minimumFractionDigi
 interface Props {
   isDarkMode: boolean;
   alpha: number;
-  deltaEBase: number;
+  flowsNet: number;       // Σ чистых вкладов потоков при φ = 1, млн руб.
+  platformCost: number;   // Z_пл, млн руб./год
   k: number;
   regime: 'fiscal' | 'tech' | 'industrial';
   bExt: number;
@@ -30,11 +32,7 @@ interface Props {
   n2oAbated: boolean;     // вариант N2O из вкладки «Симуляция»
 }
 
-const REGIME = {
-  fiscal: { sup: 0.15 / 0.52, mult: 1.0, label: 'Фискальный' },
-  tech: { sup: 0.15 / 0.67, mult: 1.12, label: 'Технологический' },
-  industrial: { sup: 0.40 / 0.67, mult: 1.18, label: 'Промышленный' },
-};
+const MULT = { fiscal: 1.0, tech: 1.12, industrial: 1.18 };
 
 const Slider = ({ label, value, min, max, step, onChange, fmt, note }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
@@ -65,52 +63,63 @@ export default function BilevelPanel(p: Props) {
   const pop = useMemo(() => makePopulation(), []);
   const [sigma, setSigma] = useState(0);
   const [lambdaBar, setLambdaBar] = useState(0.5);
+  const [mech, setMech] = useState<MechId>('divC');
+  const [behavior, setBehavior] = useState<BehaviorId>('myopic');
   const [dqShare, setDqShare] = useState(0.0);
   const [kappa, setKappa] = useState(0.2);
   const [baseYear, setBaseYear] = useState('2023');
   const [withN2O, setWithN2O] = useState(false);
   const [uOverride, setUOverride] = useState<number | null>(null);
+  const [mc, setMc] = useState<ReturnType<typeof monteCarlo> | null>(null);
+  const [mcRunning, setMcRunning] = useState(false);
 
-  const reg = REGIME[p.regime];
-  const betaOf = (phi: number) => 0.45 * phi + 0.25 * (1 - phi);       // (2.18)
-  const gammaRes = (phi: number) => (1 - betaOf(phi) - 0.08) * reg.sup;
+  const ctx: Context = useMemo(() => ({
+    k: p.k, alpha: p.alpha, mult: MULT[p.regime], flowsNet: p.flowsNet, platformCost: p.platformCost, lambdaBar, cLiq: p.cLiq,
+  }), [p.k, p.alpha, p.regime, p.flowsNet, p.platformCost, lambdaBar, p.cLiq]);
+  const ctx0: Context = useMemo(() => ({ ...ctx, lambdaBar: 0.5 }), [ctx]);
+  const th: Theta = { mech, behavior, sigma, ctx };
+  const th0: Theta = { mech, behavior, sigma: 0, ctx: ctx0 };
+  const mp = mechParams(th);
 
-  const th: Theta = { alpha: p.alpha, sigma, lambdaBar, k: p.k, deltaEBase: p.deltaEBase, gammaRes, mult: reg.mult };
-  const th0: Theta = { ...th, sigma: 0, lambdaBar: 0.5 };
-
-  const cs = useMemo(() => cStar(), []);
-  const piStar = piOf(cs);
-  const eq = useMemo(() => equilibrium(pop, th), [pop, p.alpha, sigma, lambdaBar, p.k, p.deltaEBase, p.regime]);
-  const eq0 = useMemo(() => equilibrium(pop, th0), [pop, p.alpha, p.k, p.deltaEBase, p.regime]);
+  const ev = useMemo(() => evaluate(pop, th), [pop, ctx, mech, behavior, sigma]);
+  const eq = ev;
+  const ev0 = useMemo(() => evaluate(pop, th0), [pop, ctx0, mech, behavior]);
+  const eq0 = ev0;
+  const cs = ev.cs;
+  const piStar = PI.G * (1 - Math.exp(-mp.k * cs)) - PI.T0 - mp.tau * cs * cs;
   const curve = useMemo(() => zMinCurve(pop, th, eq0.C, Math.max(cs, eq0.C)),
-    [pop, p.alpha, lambdaBar, p.k, p.deltaEBase, p.regime, eq0.C, cs]);
+    [pop, ctx, mech, behavior, eq0.C, cs]);
+  const mono = useMemo(() => monotoneCheck(pop, th), [pop, ctx, mech, behavior, sigma]);
+  const matrix = useMemo(() => compareMatrix(pop, ctx, 0), [pop, ctx]);
 
-  const piEq = piOf(eq.C);
-  const W = piEq - eq.Z;                                                   // (3.20)
+  const piEq = ev.pi;
+  const W = ev.W;                                                          // (3.20)
   const dC = cs - eq.C;                                                    // (3.19)
-  const phiEq = phiOf(eq.C, p.k);
-  const sdEq = Math.max(0, p.alpha * p.deltaEBase * phiEq * reg.mult);
-  const pubEq = betaOf(phiEq) * sdEq;
+  const phiEq = ev.phi;
+  const sdEq = ev.sd;
+  const pubEq = ev.pub;
   const budgetOk = pubEq + p.bExt >= p.cLiq;                               // (3.21)
 
-  // Следствие 2 табл. 3.8: отклик участия на 1 млн руб. затрат механизма
+  // Следствие 2 табл. 3.8: отклик участия на 1 млн руб. затрат механизма.
+  // Цена α — перераспределяемая сумма Δα·M·ΔE(t): её несут остальные получатели дивиденда.
   const resp = useMemo(() => {
-    const s1 = equilibrium(pop, { ...th0, sigma: 0.5 });
-    const a1 = equilibrium(pop, { ...th0, alpha: 0.12 });
-    const phi0 = phiOf(eq0.C, p.k);
-    const costAlpha = Math.max(1e-6, (0.12 - p.alpha) * p.deltaEBase * phi0 * reg.mult);
+    const base: Theta = { mech: 'divA', behavior: 'myopic', sigma: 0, ctx: ctx0 };
+    const e0 = equilibrium(pop, base);
+    const s1 = equilibrium(pop, { ...base, sigma: 0.5 });
+    const a1 = equilibrium(pop, { ...base, ctx: { ...ctx0, alpha: 0.12 } });
+    const dE0 = Math.max(0, ctx0.flowsNet * (1 - Math.exp(-ctx0.k * e0.C)) - ctx0.platformCost);
+    const costAlpha = Math.max(1e-6, Math.max(0, 0.12 - ctx0.alpha) * ctx0.mult * dE0);
     return {
-      sigma: (s1.part.length - eq0.part.length) / Math.max(s1.Z, 1e-6),
-      alpha: p.alpha >= 0.12 ? 0 : (a1.part.length - eq0.part.length) / costAlpha,
-      sZ: s1.Z, aZ: costAlpha,
+      sigma: (s1.part.length - e0.part.length) / Math.max(s1.Z, 1e-6),
+      alpha: ctx0.alpha >= 0.12 ? 0 : (a1.part.length - e0.part.length) / costAlpha,
     };
-  }, [pop, p.alpha, p.k, p.deltaEBase, p.regime, eq0]);
+  }, [pop, ctx0]);
 
   const gammaData = useMemo(() => {
     const rows = [];
-    for (let c = 0; c <= 0.5001; c += 0.005) rows.push({ c: Number(c.toFixed(3)), gamma: gammaMap(pop, c, th), diag: c });
+    for (let c = 0; c <= 0.5001; c += 0.005) rows.push({ c: Number(c.toFixed(3)), gamma: gammaMap(pop, c, th).C, diag: c });
     return rows;
-  }, [pop, p.alpha, sigma, lambdaBar, p.k, p.deltaEBase, p.regime]);
+  }, [pop, ctx, mech, behavior, sigma]);
 
   const zData = curve.rows.map((r) => ({
     c: Number(r.c.toFixed(3)), pi: r.pi, zmin: r.zmin, net: r.net,
@@ -144,6 +153,14 @@ export default function BilevelPanel(p: Props) {
   const u = rbRow.u;
   const rb = rbRow;
 
+  const runMc = () => {
+    setMcRunning(true);
+    setTimeout(() => { setMc(monteCarlo(pop, ctx0, 200, 15)); setMcRunning(false); }, 30);
+  };
+  const btn = (active: boolean) => cn('px-2 py-1.5 text-[9px] font-bold border text-left leading-tight transition-all',
+    active ? (p.isDarkMode ? 'bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]' : 'bg-[#141414] text-[#E4E3E0] border-[#141414]')
+      : 'border-gray-500/30 opacity-70 hover:opacity-100');
+
   const box = cn('border p-6 transition-colors duration-300',
     p.isDarkMode ? 'bg-[#1A1A1A] border-[#E4E3E0]/20' : 'bg-white border-[#141414]');
   const axis = { fontSize: 9 };
@@ -170,7 +187,19 @@ export default function BilevelPanel(p: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Верхний уровень: θ */}
           <div className="space-y-4">
-            <div className="text-[9px] font-mono opacity-60">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
+            <div className="text-[9px] font-mono opacity-60">МЕХАНИЗМ ВЕРХНЕГО УРОВНЯ</div>
+            <div className="grid grid-cols-1 gap-1">
+              {MECHS.map((m) => (
+                <button key={m.id} onClick={() => setMech(m.id)} className={btn(mech === m.id)} title={m.note}>{m.label}</button>
+              ))}
+            </div>
+            <div className="text-[9px] font-mono opacity-60 pt-2">МОДЕЛЬ ПОВЕДЕНИЯ РЕЗИДЕНТОВ</div>
+            <div className="grid grid-cols-1 gap-1">
+              {BEHAVIORS.map((b) => (
+                <button key={b.id} onClick={() => setBehavior(b.id)} className={btn(behavior === b.id)} title={b.note}>{b.label}</button>
+              ))}
+            </div>
+            <div className="text-[9px] font-mono opacity-60 pt-2">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
             <Slider label="σ — компенсация затрат подключения" value={sigma} min={0} max={1} step={0.01}
               onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} note="доля c_j, которую несёт публичный партнёр" />
             <Slider label="λ̄ — предел продаж якорю (ТОСЭР)" value={lambdaBar} min={0.3} max={1} step={0.05}
@@ -178,9 +207,10 @@ export default function BilevelPanel(p: Props) {
             <Slider label="B_внеш — внешний источник" value={p.bExt} min={0} max={20} step={0.5}
               onChange={p.setBExt} fmt={(v) => `${ru(v, 1)} млн руб.`} />
             <div className="text-[9px] font-mono opacity-60 leading-relaxed border-t border-dashed border-gray-500/30 pt-3">
-              Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; режим {reg.label} (M = {ru(reg.mult, 2)});
-              k(t) = {ru(p.k, 2)}; ΔE_base = {ru(p.deltaEBase, 1)} млн руб.<br />
-              Π(C) по (2.12): G = {PI.G}, T₀ = {PI.T0}, τ = {PI.tau}, k = {PI.k}; N_доп = {N_DOP}.
+              Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
+              Σ вкладов потоков = {ru(p.flowsNet, 1)}, Z_пл = {ru(p.platformCost, 1)} млн руб.<br />
+              Механизм: k = {ru(mp.k, 2)} (одно значение для SD и Π), τ = {mp.tau}, G = {PI.G}, T₀ = {PI.T0}; N_доп = {N_DOP}.<br />
+              Γ(C) {mono.ok ? 'не убывает — условие Тарского выполнено' : `убывает на ${ru(mono.worst, 3)} — условие Тарского нарушено`}.
             </div>
           </div>
 
@@ -351,6 +381,67 @@ export default function BilevelPanel(p: Props) {
             для CO₂ равна нулю, а прирост выбросов учитывается в натуральном выражении.
           </p>
         </div>
+      </div>
+
+      <div className={box}>
+        <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+          <div className="text-[10px] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
+          <button onClick={runMc} disabled={mcRunning}
+            className={cn('px-3 py-1.5 text-[9px] font-bold uppercase border', mcRunning ? 'opacity-50' : 'border-emerald-500 text-emerald-500 hover:bg-emerald-500/10')}>
+            {mcRunning ? 'Идёт расчёт…' : 'Монте-Карло: 200 испытаний'}
+          </button>
+        </div>
+        <div className="text-[9px] font-mono opacity-60 mb-3">
+          Критерий — W = Π(C**) − Z (3.20), млн руб./год, а не дивиденд: SD растёт просто от роста α. В ячейке: C** / W; лучший механизм в строке выделен.
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[10px] font-mono min-w-[760px]">
+            <thead><tr className="opacity-60 border-b border-gray-500/20 text-left">
+              <th className="py-1 pr-2 font-normal">Поведение \ механизм</th>
+              {MECHS.map((m) => <th key={m.id} className="py-1 px-1 font-normal text-right" title={m.note}>{m.label}</th>)}
+            </tr></thead>
+            <tbody>{BEHAVIORS.map((b, bi) => {
+              const row = matrix[bi];
+              const best = Math.max(...row.map((r) => r.W));
+              return (
+                <tr key={b.id} className={cn('border-b border-gray-500/10', behavior === b.id && 'bg-emerald-500/5')}>
+                  <td className="py-1 pr-2" title={b.note}>{b.label}</td>
+                  {row.map((r, mi) => (
+                    <td key={mi} onClick={() => { setBehavior(b.id); setMech(MECHS[mi].id); }}
+                      className={cn('py-1 px-1 text-right cursor-pointer whitespace-nowrap',
+                        r.W >= best - 1e-6 && b.id !== 'planner' ? 'text-emerald-500 font-bold' : '',
+                        behavior === b.id && mech === MECHS[mi].id && 'outline outline-1 outline-emerald-500')}>
+                      {ru(r.C, 3)} / {ru(r.W, 0)}
+                    </td>))}
+                </tr>);
+            })}</tbody>
+          </table>
+        </div>
+        {mc && (
+          <div className="overflow-x-auto mt-4">
+            <div className="text-[9px] font-mono opacity-60 mb-1">
+              Доля испытаний (из {mc.n}), в которых механизм дал наибольший W: выигрыш и затраты резидентов ±25 %, k ± 1, вклады потоков и Z_пл ±20 %; ничьи делятся поровну
+            </div>
+            <table className="w-full text-[10px] font-mono min-w-[760px]">
+              <tbody>{BEHAVIORS.map((b, bi) => b.id === 'planner' ? null : (
+                <tr key={b.id} className="border-b border-gray-500/10">
+                  <td className="py-1 pr-2">{b.label}</td>
+                  {mc.share[bi].map((sh, mi) => (
+                    <td key={mi} className="py-1 px-1 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <div className="h-1.5 bg-emerald-500/70" style={{ width: `${Math.round(sh * 40)}px` }} />
+                        <span className={sh >= 0.5 ? 'font-bold text-emerald-500' : ''}>{ru(sh * 100)} %</span>
+                      </div>
+                    </td>))}
+                </tr>))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="text-[10px] opacity-70 leading-relaxed mt-3">
+          Модели поведения — гипотезы, а не наблюдения. Матрица показывает, какой механизм выигрывает при каком типе поведения;
+          какой тип поведения есть у резидентов Невинномысска, определит обследование (§ 3.3). Строка «Планировщик» — эталон C = C*, достижимый без учёта стимулов.
+        </p>
       </div>
 
       <div className={box}>

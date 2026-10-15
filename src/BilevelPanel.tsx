@@ -199,60 +199,95 @@ export default function BilevelPanel(p: Props) {
                 <button key={b.id} data-term={b.id} onClick={() => setBehavior(b.id)} className={btn(behavior === b.id)} title={b.note}>{b.label}</button>
               ))}
             </div>
-            <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 pt-2">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
-            <Slider term="sigma" label="σ — компенсация затрат подключения" value={sigma} min={0} max={1} step={0.01}
-              onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} note="доля c_j, которую несёт публичный партнёр" />
-            <Slider term="lambda" label="λ̄ — предел продаж якорю (ТОСЭР)" value={lambdaBar} min={0.3} max={1} step={0.05}
-              onChange={setLambdaBar} fmt={(v) => ru(v, 2)} note="норма ПП РФ № 614: 0,5 от выручки инвестпроекта" />
-            <Slider term="B_ext" label="B_внеш — внешний источник" value={p.bExt} min={0} max={20} step={0.5}
-              onChange={p.setBExt} fmt={(v) => `${ru(v, 1)} млн руб.`} />
-            <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 leading-relaxed border-t border-dashed border-gray-500/30 pt-3">
-              Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
-              Σ вкладов потоков = {ru(p.flowsNet, 1)}, Z_пл = {ru(p.platformCost, 1)} млн руб.<br />
-              Механизм: k = {ru(mp.k, 2)} (одно значение для SD и Π), τ = {mp.tau}, G = {PI.G}, T₀ = {PI.T0}; N_доп = {N_DOP}.<br />
-              Γ(C) {mono.ok ? 'не убывает — условие Тарского выполнено' : `убывает на ${ru(mono.worst, 3)} — условие Тарского нарушено`}.
-            </div>
           </div>
 
-          {/* Результаты */}
-          <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-3 content-start">
-            <Stat term="C_eq" label="C** — равновесная (3.18)" value={ru(eq.C, 3)} sub={`участников: ${eq.part.length}, связей: ${ru(eq.C * N_DOP)}`} />
-            <Stat term="C_star" label="C* — оптимальная (2.13)" value={ru(cs, 3)} sub={`Π(C*) = ${ru(piStar, 1)} млн руб.`} />
-            <Stat term="dC" label="Δ_C — разрыв (3.19)" value={ru(dC, 3)} tone={dC > 0.0005 ? 'bad' : 'ok'}
-              sub={dC < 0 ? 'сеть шире оптимума' : dC > 0.0005 ? 'сеть недобирает связи' : 'разрыв закрыт'} />
-            <Stat term="W" label="W = Π(C**) − Z (3.20)" value={ru(W, 1)} sub={`Π = ${ru(piEq, 1)}; Z = ${ru(eq.Z, 2)} млн руб.`} />
-            <Stat term="C_hat" label="Ĉ — целевая связность (3.23)" value={ru(curve.hat.c, 3)}
-              sub={`Z_min = ${ru(curve.hat.zmin ?? 0, 2)} млн руб. при σ = ${ru((curve.hat.sigma ?? 0) * 100)} %`} />
-            <Stat term="Z_min" label="Z_min(C*) — цена полного закрытия" value={(() => {
-              const last = curve.rows[curve.rows.length - 1];
-              return last && last.zmin !== null ? ru(last.zmin, 2) : 'недостижимо';
-            })()} sub="млн руб./год, (3.22)" />
-            <Stat term="C_liq" label="γ_пуб·SD(C**) + B_внеш ≥ C_ликв (3.21)" value={`${ru(pubEq + p.bExt, 2)} / ${ru(p.cLiq, 1)}`}
-              tone={budgetOk ? 'ok' : 'bad'} sub={`из дивиденда ${ru(pubEq, 2)}; недостаёт ${ru(Math.max(0, p.cLiq - pubEq - p.bExt), 2)}`} />
-            <Stat term="SD" label="SD(C**) — дивиденд" value={ru(sdEq, 2)} sub={`φ(C**) = ${ru(phiEq, 3)}`} />
+          {/* Параметры верхнего уровня, графики и результаты */}
+          <div className="lg:col-span-3 space-y-5">
+            <div className="space-y-3">
+              <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+                <Slider term="sigma" label="σ — компенсация затрат подключения" value={sigma} min={0} max={1} step={0.01}
+                  onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} note="доля c_j, которую несёт публичный партнёр" />
+                <Slider term="lambda" label="λ̄ — предел продаж якорю (ТОСЭР)" value={lambdaBar} min={0.3} max={1} step={0.05}
+                  onChange={setLambdaBar} fmt={(v) => ru(v, 2)} note="норма ПП РФ № 614: 0,5 от выручки инвестпроекта" />
+                <Slider term="B_ext" label="B_внеш — внешний источник" value={p.bExt} min={0} max={20} step={0.5}
+                  onChange={p.setBExt} fmt={(v) => `${ru(v, 1)} млн руб.`} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 pt-4 border-t border-dashed border-gray-500/30">
+              <div data-nov="N1" data-nov-tag="Н1" className="min-w-0">
+                <div data-term="Gamma" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
+                <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={gammaData} margin={{ top: 20, right: 12, left: -16, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#88888833" />
+                      <XAxis dataKey="c" type="number" domain={[0, 0.5]} ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]} tick={axis} tickFormatter={(v) => ru(v, 1)} />
+                      <YAxis domain={[0, 0.5]} ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]} tick={axis} tickFormatter={(v) => ru(v, 1)} />
+                      <Tooltip formatter={(v: any) => ru(Number(v), 3)} labelFormatter={(l: any) => `C = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 12 }} />
+                      <Line dataKey="diag" name="C" stroke="#94a3b8" strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+                      <Line dataKey="gamma" name="Γ(C)" stroke="#10b981" strokeWidth={2} dot={false} type="stepAfter" isAnimationActive={false} />
+                      <ReferenceLine x={eq.C} stroke="#10b981" label={{ value: 'C**', position: 'top', fontSize: 11, fill: '#10b981' }} />
+                      <ReferenceLine x={cs} stroke="#e11d48" strokeDasharray="3 3" label={{ value: 'C*', position: 'top', fontSize: 11, fill: '#e11d48' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div data-nov="N2" data-nov-tag="Н2" className="min-w-0">
+                <div data-term="Z_min" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
+                <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={zData} margin={{ top: 20, right: 12, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#88888833" />
+                      <XAxis dataKey="c" type="number" domain={['dataMin', 'dataMax']} tick={axis} tickFormatter={(v) => ru(v, 3)} />
+                      <YAxis yAxisId="l" tick={axis} domain={['auto', 'auto']} />
+                      <YAxis yAxisId="r" orientation="right" tick={axis} />
+                      <Tooltip formatter={(v: any) => (v === null ? '—' : ru(Number(v), 2))} labelFormatter={(l: any) => `C̃ = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 12 }} />
+                      <Line yAxisId="l" dataKey="pi" name="Π(C̃)" stroke="#0ea5e9" dot={false} isAnimationActive={false} />
+                      <Line yAxisId="l" dataKey="net" name="Π − Z_min" stroke="#10b981" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
+                      <Line yAxisId="r" dataKey="zmin" name="Z_min (правая ось)" stroke="#f59e0b" type="stepAfter" dot={false} connectNulls={false} isAnimationActive={false} />
+                      <ReferenceLine yAxisId="l" x={curve.hat.c} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Ĉ', position: 'top', fontSize: 11, fill: '#10b981' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap gap-3 text-[length:calc(11px*var(--ui,1))] font-mono opacity-70 mt-2">
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-sky-500" />Π(C̃)</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-500" />Π − Z_min</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-500" />Z_min (правая ось)</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 content-start pt-4 border-t border-dashed border-gray-500/30">
+              <Stat term="C_eq" label="C** — равновесная (3.18)" value={ru(eq.C, 3)} sub={`участников: ${eq.part.length}, связей: ${ru(eq.C * N_DOP)}`} />
+              <Stat term="C_star" label="C* — оптимальная (2.13)" value={ru(cs, 3)} sub={`Π(C*) = ${ru(piStar, 1)} млн руб.`} />
+              <Stat term="dC" label="Δ_C — разрыв (3.19)" value={ru(dC, 3)} tone={dC > 0.0005 ? 'bad' : 'ok'}
+                sub={dC < 0 ? 'сеть шире оптимума' : dC > 0.0005 ? 'сеть недобирает связи' : 'разрыв закрыт'} />
+              <Stat term="W" label="W = Π(C**) − Z (3.20)" value={ru(W, 1)} sub={`Π = ${ru(piEq, 1)}; Z = ${ru(eq.Z, 2)} млн руб.`} />
+              <Stat term="C_hat" label="Ĉ — целевая связность (3.23)" value={ru(curve.hat.c, 3)}
+                sub={`Z_min = ${ru(curve.hat.zmin ?? 0, 2)} млн руб. при σ = ${ru((curve.hat.sigma ?? 0) * 100)} %`} />
+              <Stat term="Z_min" label="Z_min(C*) — цена полного закрытия" value={(() => {
+                const last = curve.rows[curve.rows.length - 1];
+                return last && last.zmin !== null ? ru(last.zmin, 2) : 'недостижимо';
+              })()} sub="млн руб./год, (3.22)" />
+              <Stat term="C_liq" label="γ_пуб·SD(C**) + B_внеш ≥ C_ликв (3.21)" value={`${ru(pubEq + p.bExt, 2)} / ${ru(p.cLiq, 1)}`}
+                tone={budgetOk ? 'ok' : 'bad'} sub={`из дивиденда ${ru(pubEq, 2)}; недостаёт ${ru(Math.max(0, p.cLiq - pubEq - p.bExt), 2)}`} />
+              <Stat term="SD" label="SD(C**) — дивиденд" value={ru(sdEq, 2)} sub={`φ(C**) = ${ru(phiEq, 3)}`} />
+            </div>
+            <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 leading-relaxed">
+                Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
+                Σ вкладов потоков = {ru(p.flowsNet, 1)}, Z_пл = {ru(p.platformCost, 1)} млн руб.<br />
+                Механизм: k = {ru(mp.k, 2)} (одно значение для SD и Π), τ = {mp.tau}, G = {PI.G}, T₀ = {PI.T0}; N_доп = {N_DOP}.<br />
+                Γ(C) {mono.ok ? 'не убывает — условие Тарского выполнено' : `убывает на ${ru(mono.worst, 3)} — условие Тарского нарушено`}.
+              </div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={box} data-nov="N1" data-nov-tag="Н1">
-          <div data-term="Gamma" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
-          <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={gammaData} margin={{ top: 20, right: 12, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#88888833" />
-                <XAxis dataKey="c" type="number" domain={[0, 0.5]} ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]} tick={axis} tickFormatter={(v) => ru(v, 1)} />
-                <YAxis domain={[0, 0.5]} ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]} tick={axis} tickFormatter={(v) => ru(v, 1)} />
-                <Tooltip formatter={(v: any) => ru(Number(v), 3)} labelFormatter={(l: any) => `C = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 12 }} />
-                <Line dataKey="diag" name="C" stroke="#94a3b8" strokeDasharray="4 3" dot={false} isAnimationActive={false} />
-                <Line dataKey="gamma" name="Γ(C)" stroke="#10b981" strokeWidth={2} dot={false} type="stepAfter" isAnimationActive={false} />
-                <ReferenceLine x={eq.C} stroke="#10b981" label={{ value: 'C**', position: 'top', fontSize: 11, fill: '#10b981' }} />
-                <ReferenceLine x={cs} stroke="#e11d48" strokeDasharray="3 3" label={{ value: 'C*', position: 'top', fontSize: 11, fill: '#e11d48' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono mt-3">
+          <div data-term="N_dop" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Участие резидентов по типам при C**</div>
+          <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
               <th className="py-1 font-normal">Тип резидента</th><th className="py-1 font-normal text-right">Участвуют</th>
               <th className="py-1 font-normal text-right">Всего</th><th className="py-1 font-normal text-right">Исключены (3.16)</th>
@@ -267,29 +302,8 @@ export default function BilevelPanel(p: Props) {
         </div>
 
         <div className={box} data-nov="N2" data-nov-tag="Н2">
-          <div data-term="Z_min" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
-          <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={zData} margin={{ top: 20, right: 12, left: -8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#88888833" />
-                <XAxis dataKey="c" type="number" domain={['dataMin', 'dataMax']} tick={axis} tickFormatter={(v) => ru(v, 3)} />
-                <YAxis yAxisId="l" tick={axis} domain={['auto', 'auto']} />
-                <YAxis yAxisId="r" orientation="right" tick={axis} />
-                <Tooltip formatter={(v: any) => (v === null ? '—' : ru(Number(v), 2))} labelFormatter={(l: any) => `C̃ = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 12 }} />
-                <Line yAxisId="l" dataKey="pi" name="Π(C̃)" stroke="#0ea5e9" dot={false} isAnimationActive={false} />
-                <Line yAxisId="l" dataKey="net" name="Π − Z_min" stroke="#10b981" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
-                <Line yAxisId="r" dataKey="zmin" name="Z_min (правая ось)" stroke="#f59e0b" type="stepAfter" dot={false} connectNulls={false} isAnimationActive={false} />
-                <ReferenceLine yAxisId="l" x={curve.hat.c} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Ĉ', position: 'top', fontSize: 11, fill: '#10b981' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex flex-wrap gap-3 text-[length:calc(11px*var(--ui,1))] font-mono opacity-70 mt-2">
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-sky-500" />Π(C̃)</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-500" />Π − Z_min</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-500" />Z_min (правая ось)</span>
-          </div>
-          <p className="text-[length:calc(12px*var(--ui,1))] opacity-70 leading-relaxed mt-3">
+          <div className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-2">Вывод о целевой связности</div>
+          <p className="text-[length:calc(13px*var(--ui,1))] opacity-80 leading-relaxed">
             {curve.hat.c < cs - 0.0025
               ? `Цена закрытия растёт быстрее выигрыша: целевая связность Ĉ = ${ru(curve.hat.c, 3)} лежит между C** и C*, добиваться оптимума бюджету невыгодно.`
               : `Разрыв выгодно закрыть полностью: Ĉ = C*, обоснованная сумма поддержки — Z_min(C*).`}

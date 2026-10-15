@@ -174,7 +174,7 @@ export default function BilevelPanel(p: Props) {
 
   return (
     <div className="space-y-6">
-      <div className={box}>
+      <div className={box} data-nov="N1" data-nov-tag="Н1">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-dashed border-gray-500/30 pb-3 mb-4">
           <h2 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
             <Layers size={16} /> Двухуровневая модель равновесной связности (§ 3.2)
@@ -235,7 +235,7 @@ export default function BilevelPanel(p: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className={box}>
+        <div className={box} data-nov="N1" data-nov-tag="Н1">
           <div data-term="Gamma" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
           <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
           <div className="h-64">
@@ -266,7 +266,7 @@ export default function BilevelPanel(p: Props) {
           </table>
         </div>
 
-        <div className={box}>
+        <div className={box} data-nov="N2" data-nov-tag="Н2">
           <div data-term="Z_min" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
           <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
           <div className="h-64">
@@ -299,7 +299,7 @@ export default function BilevelPanel(p: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className={box}>
+        <div className={box} data-nov="N3" data-nov-tag="Н3">
           <div data-term="lambda_star" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Резиденты-поставщики якоря</div>
           <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Условие (3.16) и критическая доля λ*_j = 1 − FC_j/(m_j·R_j) (3.27)</div>
           <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
@@ -324,7 +324,7 @@ export default function BilevelPanel(p: Props) {
           </p>
         </div>
 
-        <div className={box}>
+        <div className={box} data-nov="A2" data-nov-tag="А2">
           <div data-term="rebound" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Поправка на эффект отдачи</div>
           <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
             Формулы (3.28)–(3.30) на рядах 2017–2026 гг.: Q₀ = Cap·γ_t, ε·Q₀ = выбросы года (рабочая книга «Азот_выбросы_модель_2017_2026.xlsx»)
@@ -383,7 +383,7 @@ export default function BilevelPanel(p: Props) {
         </div>
       </div>
 
-      <div className={box}>
+      <div className={box} data-nov="N5" data-nov-tag="Н5">
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
           <div data-term="W" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
           <button data-term="mc" onClick={runMc} disabled={mcRunning}

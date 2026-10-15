@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   Gauge,
   HelpCircle,
+  Award,
   Thermometer,
   Wind,
   Droplets,
@@ -46,7 +47,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import BilevelPanel from './BilevelPanel';
 import BeneficiaryPanel from './BeneficiaryPanel';
-import HelpPanel from './HelpPanel';
+import HelpPanel, { NOV_COLOR } from './HelpPanel';
+import { NOVELTY, NOVELTY_ORDER } from './novelty';
 import { AvatarGRES, AvatarAzot, AvatarEPP, AvatarResidents, AvatarOperator, AvatarBudget, AvatarPlatform } from './avatars';
 
 // Utility for tailwind classes
@@ -232,6 +234,35 @@ export default function App() {
   }, [uiScale]);
   const [helpOpen, setHelpOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
   const [activeTab, setActiveTab] = useState<'simulation' | 'participants' | 'bilevel' | 'benef'>('simulation');
+  // Режим защиты: подсветка блоков, реализующих научную новизну главы 3
+  const [defense, setDefense] = useState<boolean>(() => {
+    try { return localStorage.getItem('eco-defense') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    document.documentElement.classList.toggle('defense', defense);
+    try { localStorage.setItem('eco-defense', defense ? '1' : '0'); } catch { /* хранилище недоступно */ }
+  }, [defense]);
+  const goNovelty = useCallback((id: string) => {
+    const n = NOVELTY[id];
+    if (!n) return;
+    setActiveTab(n.tab);
+    setHelpOpen(true);
+    window.dispatchEvent(new CustomEvent('eco-nov', { detail: id }));
+    // блок появляется после смены вкладки; ждём отрисовки
+    let tries = 0;
+    const seek = () => {
+      const el = document.querySelector(`[data-nov="${id}"]`) as HTMLElement | null;
+      if (el) {
+        const head = (document.querySelector('header') as HTMLElement | null)?.offsetHeight ?? 0;
+        const r = el.getBoundingClientRect();
+        const room = window.innerHeight - head;
+        const y = r.height < room - 40 ? r.top - head - (room - r.height) / 2 : r.top - head - 16;
+        window.scrollTo({ top: window.scrollY + y, behavior: 'smooth' });
+        el.classList.remove('nov-flash'); void el.offsetWidth; el.classList.add('nov-flash');
+      } else if (tries++ < 20) setTimeout(seek, 100);
+    };
+    setTimeout(seek, 60);
+  }, []);
 
   const participants = [
     {
@@ -688,6 +719,16 @@ export default function App() {
               <button onClick={() => setUiScale(Math.min(1.6, Math.round((uiScale + 0.1) * 10) / 10))} className="px-2 py-1.5 hover:bg-emerald-500/10" aria-label="Увеличить масштаб">A+</button>
             </div>
             <button
+              onClick={() => { const v = !defense; setDefense(v); if (v) setHelpOpen(true); }}
+              className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest border transition-colors",
+                defense ? "text-white" : (isDarkMode ? "border-[#E4E3E0]/30" : "border-[#141414]/30"))}
+              style={defense ? { background: NOV_COLOR, borderColor: NOV_COLOR } : undefined}
+              title="Режим защиты: подсветить блоки, реализующие научную новизну главы 3"
+              aria-pressed={defense}
+            >
+              <Award size={14} /> Новизна
+            </button>
+            <button
               onClick={() => setHelpOpen(!helpOpen)}
               className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest border transition-colors",
                 helpOpen ? "border-emerald-500 text-emerald-500" : (isDarkMode ? "border-[#E4E3E0]/30" : "border-[#141414]/30"))}
@@ -704,6 +745,22 @@ export default function App() {
             </div>
           </div>
         </div>
+        {defense && (
+          <div className="-mx-6 -mb-3 mt-1 px-6 py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[length:calc(12px*var(--ui,1))] border-t"
+            style={{ width: 'calc(100% + 3rem)', borderColor: NOV_COLOR, background: isDarkMode ? '#241a36' : '#f1ecfb' }}>
+            <span className="font-bold uppercase tracking-widest" style={{ color: NOV_COLOR }}>Научная новизна (гл. 3):</span>
+            {NOVELTY_ORDER.map((id) => {
+              const n = NOVELTY[id];
+              return (
+                <button key={id} onClick={() => goNovelty(id)} title={n.title}
+                  className="px-2 py-0.5 font-mono font-bold text-white hover:opacity-85"
+                  style={{ background: n.level === 'N' ? NOV_COLOR : '#a78bfa' }}>{n.tag}</button>
+              );
+            })}
+            <span className="opacity-70">сплошная рамка — положение, выносимое на защиту; пунктир — авторская адаптация метода; наведите на рамку блока</span>
+          </div>
+        )}
+
       </header>
 
       <main className="p-6">
@@ -1007,7 +1064,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div data-nov="N6" data-nov-tag="Н6" className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 group relative">
                     <span data-term="C_liq" className="text-[length:calc(12px*var(--ui,1))] font-bold tracking-wide">2. БЮДЖЕТ (SD_б + B_внеш ≥ C_ликв)</span>
@@ -1685,7 +1742,7 @@ export default function App() {
                 )}
                 <p className="text-[length:calc(11px*var(--ui,1))] opacity-70 italic leading-tight">Реализуемый потенциал при k={metrics.k} и C={metrics.c/100}.</p>
               </div>
-              <div className="space-y-2">
+              <div data-nov="N4" data-nov-tag="Н4" className="space-y-2">
                 <div data-term="dE_t" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 uppercase">Вериф. экономия (14)</div>
                 <div className="text-xs font-bold font-mono">ΔE(t) = φ(Cинд)·Σ(E_i − A_i) − Z_пл = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
                 <div data-term="C_min" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">Порог окупаемости платформы C_min = {Number.isFinite(metrics.cMin) ? metrics.cMin.toFixed(3) : '—'} (при k = {metrics.k.toFixed(1)})</div>
@@ -1798,7 +1855,7 @@ export default function App() {
               </div>
 
               {/* Ряды 2017–2026, табл. 3.3 */}
-              <div className="space-y-2">
+              <div data-nov="A1" data-nov-tag="А1" className="space-y-2">
                 <div data-term="gamma_t" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">РЯДЫ 2017–2026, тыс. т (3.7), по γ_t аналогов</div>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1825,7 +1882,7 @@ export default function App() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-gray-500/30">
               {/* Разложение ΔE_base */}
-              <div className="lg:col-span-2 space-y-2">
+              <div data-nov="A1" data-nov-tag="А1" className="lg:col-span-2 space-y-2">
                 <div data-term="flows" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 uppercase">Состав ΔE_base, млн руб./год (табл. 2.6; формулы 3.11–3.12)</div>
                 <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
                   <thead>
@@ -1863,7 +1920,7 @@ export default function App() {
               </div>
 
               {/* Риск якоря и предел ТОР */}
-              <div className="space-y-3 text-[length:calc(12px*var(--ui,1))] font-mono">
+              <div data-nov="N3" data-nov-tag="Н3" className="space-y-3 text-[length:calc(12px*var(--ui,1))] font-mono">
                 <div data-term="pi_A" className="text-[length:calc(11px*var(--ui,1))] opacity-50 uppercase">Риск остановки якоря (§ 3.2)</div>
                 <div className="flex justify-between"><span className="opacity-70">ΔE(t) при работающем якоре</span><span>{ru(metrics.deltaE_t, 1)}</span></div>
                 <div data-term="dE_exp" className="flex justify-between"><span className="opacity-70 pr-2">ΔE(t) ожидаемый, π_A = {ru(piA, 3)}</span><span className="font-bold">{ru(metrics.deltaE_exp, 1)}</span></div>
@@ -2067,7 +2124,7 @@ export default function App() {
         )}
       </main>
 
-      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} onOpen={() => setHelpOpen(true)} isDarkMode={isDarkMode} />
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} onOpen={() => setHelpOpen(true)} isDarkMode={isDarkMode} defense={defense} onGo={goNovelty} />
 
       {/* Footer Status Bar */}
       <footer className={cn(

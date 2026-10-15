@@ -1,0 +1,80 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='680' height='430' viewBox='0 0 680 430'>
+<rect width='100%' height='100%' fill='#fff'/>
+<rect x='70.0' y='40.0' width='96.7' height='320.0' fill='#d9d9d9' fill-opacity='0.55' stroke='none' stroke-width='1'/>
+<rect x='166.7' y='40.0' width='74.8' height='320.0' fill='#efefef' fill-opacity='0.9' stroke='none' stroke-width='1'/>
+<text x='118.3' y='56.0' font-size='13' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif' font-weight='bold'>I</text>
+<text x='204.1' y='56.0' font-size='13' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif' font-weight='bold'>II</text>
+<text x='445.7' y='56.0' font-size='13' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif' font-weight='bold'>III</text>
+<line x1='70.0' y1='360.0' x2='650.0' y2='360.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='364.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>−80</text>
+<line x1='70.0' y1='328.0' x2='650.0' y2='328.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='332.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>−60</text>
+<line x1='70.0' y1='296.0' x2='650.0' y2='296.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='300.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>−40</text>
+<line x1='70.0' y1='264.0' x2='650.0' y2='264.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='268.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>−20</text>
+<line x1='70.0' y1='232.0' x2='650.0' y2='232.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='236.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>0</text>
+<line x1='70.0' y1='200.0' x2='650.0' y2='200.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='204.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>20</text>
+<line x1='70.0' y1='168.0' x2='650.0' y2='168.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='172.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>40</text>
+<line x1='70.0' y1='136.0' x2='650.0' y2='136.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='140.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>60</text>
+<line x1='70.0' y1='104.0' x2='650.0' y2='104.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='108.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>80</text>
+<line x1='70.0' y1='72.0' x2='650.0' y2='72.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='76.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>100</text>
+<line x1='70.0' y1='40.0' x2='650.0' y2='40.0' stroke='#e3e3e3' stroke-width='0.6'/>
+<text x='64.0' y='44.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>120</text>
+<line x1='70.0' y1='360.0' x2='70.0' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='70.0' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,00</text>
+<line x1='166.7' y1='360.0' x2='166.7' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='166.7' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,05</text>
+<line x1='263.3' y1='360.0' x2='263.3' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='263.3' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,10</text>
+<line x1='360.0' y1='360.0' x2='360.0' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='360.0' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,15</text>
+<line x1='456.7' y1='360.0' x2='456.7' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='456.7' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,20</text>
+<line x1='553.3' y1='360.0' x2='553.3' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='553.3' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,25</text>
+<line x1='650.0' y1='360.0' x2='650.0' y2='364.0' stroke='#000' stroke-width='1'/>
+<text x='650.0' y='378.0' font-size='11' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>0,30</text>
+<line x1='70.0' y1='360.0' x2='650.0' y2='360.0' stroke='#000' stroke-width='1'/>
+<line x1='70.0' y1='360.0' x2='70.0' y2='40.0' stroke='#000' stroke-width='1'/>
+<line x1='70.0' y1='232.0' x2='650.0' y2='232.0' stroke='#000' stroke-width='0.9'/>
+<text x='356.0' y='398.0' font-size='12' text-anchor='middle' fill='#000' font-family='Times New Roman, Times, serif'>Индекс связности C</text>
+<text x='407.0' y='402.0' font-size='9' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>инд</text>
+<text transform='translate(18,200.0) rotate(-90)' font-size='12' text-anchor='middle' font-family='Times New Roman, Times, serif'>ΔE(t), млн руб. в год</text>
+<polyline fill='none' stroke='#000' stroke-width='1.8' points='70.0,343.4 79.7,343.4 89.3,343.4 99.0,343.4 108.7,343.4 118.3,343.4 128.0,343.4 137.7,343.4 147.3,343.4 157.0,343.4 166.7,274.3 176.3,268.4 186.0,262.6 195.7,256.9 205.3,251.4 215.0,246.0 224.7,240.8 234.3,235.7 244.0,230.7 253.7,225.9 263.3,221.2 273.0,216.6 282.7,212.1 292.3,207.8 302.0,203.5 311.7,199.4 321.3,195.4 331.0,191.5 340.7,187.6 350.3,183.9 360.0,180.3 369.7,176.8 379.3,173.3 389.0,170.0 398.7,166.7 408.3,163.5 418.0,160.4 427.7,157.4 437.3,154.5 447.0,151.6 456.7,148.9 466.3,146.1 476.0,143.5 485.7,140.9 495.3,138.4 505.0,136.0 514.7,133.6 524.3,131.3 534.0,129.0 543.7,126.8 553.3,124.7 563.0,122.6 572.7,120.5 582.3,118.6 592.0,116.6 601.7,114.8 611.3,112.9 621.0,111.1 630.7,109.4 640.3,107.7 650.0,106.1'/>
+<polyline fill='none' stroke='#000' stroke-width='1.6' stroke-dasharray='6 3' points='70.0,343.4 79.7,343.4 89.3,343.4 99.0,343.4 108.7,343.4 118.3,343.4 128.0,343.4 137.7,343.4 147.3,343.4 157.0,343.4 166.7,249.8 176.3,242.3 186.0,235.0 195.7,227.9 205.3,221.2 215.0,214.7 224.7,208.4 234.3,202.3 244.0,196.5 253.7,190.9 263.3,185.5 273.0,180.3 282.7,175.3 292.3,170.5 302.0,165.8 311.7,161.3 321.3,157.0 331.0,152.9 340.7,148.9 350.3,145.0 360.0,141.3 369.7,137.7 379.3,134.3 389.0,130.9 398.7,127.7 408.3,124.7 418.0,121.7 427.7,118.8 437.3,116.1 447.0,113.4 456.7,110.9 466.3,108.4 476.0,106.1 485.7,103.8 495.3,101.6 505.0,99.5 514.7,97.4 524.3,95.5 534.0,93.6 543.7,91.8 553.3,90.0 563.0,88.3 572.7,86.7 582.3,85.1 592.0,83.6 601.7,82.2 611.3,80.8 621.0,79.4 630.7,78.1 640.3,76.9 650.0,75.7'/>
+<line x1='241.5' y1='360.0' x2='241.5' y2='64.0' stroke='#000' stroke-width='0.8' stroke-dasharray='2 2'/>
+<line x1='397.2' y1='167.2' x2='466.3' y2='208.0' stroke='#444' stroke-width='0.8'/>
+<circle cx='397.2' cy='167.2' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='469.3' y='212.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>C** режимов Р1 и Р2 = 0,169</text>
+<text x='469.3' y='225.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>13 резидентов, ΔE = 40,5</text>
+<line x1='471.5' y1='144.7' x2='543.7' y2='168.0' stroke='#444' stroke-width='0.8'/>
+<circle cx='471.5' cy='144.7' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='546.7' y='172.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>C** режима Р2σ = 0,208</text>
+<text x='546.7' y='185.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>17 резидентов, ΔE = 54,6</text>
+<line x1='241.5' y1='232.0' x2='282.7' y2='280.0' stroke='#444' stroke-width='0.8'/>
+<circle cx='241.5' cy='232.0' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='285.7' y='284.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>C_min(2027) = 0,089</text>
+<text x='285.7' y='297.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>порог окупаемости платформы</text>
+<line x1='85.5' y1='343.4' x2='273.0' y2='331.2' stroke='#444' stroke-width='0.8'/>
+<circle cx='85.5' cy='343.4' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='276.0' y='335.2' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>Р0: C₀ ≈ 0,008</text>
+<text x='276.0' y='348.2' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>(действующая связь пищевого CO₂)</text>
+<line x1='592.0' y1='83.6' x2='514.7' y2='72.0' stroke='#444' stroke-width='0.8'/>
+<circle cx='592.0' cy='83.6' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='511.7' y='76.0' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>2036 г., k = 7,5</text>
+<line x1='592.0' y1='116.6' x2='621.0' y2='128.0' stroke='#444' stroke-width='0.8'/>
+<circle cx='592.0' cy='116.6' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='624.0' y='132.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>2027 г.,</text>
+<text x='624.0' y='145.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>k = 5,25</text>
+<line x1='190.0' y1='232.0' x2='180.2' y2='180.8' stroke='#444' stroke-width='0.8'/>
+<circle cx='190.0' cy='232.0' r='2.2' fill='#444' stroke='#444' stroke-width='1'/>
+<text x='177.2' y='184.8' font-size='11' text-anchor='end' fill='#000' font-family='Times New Roman, Times, serif'>C_min(2036) = 0,062</text>
+<text x='74.0' y='418.0' font-size='11' text-anchor='start' fill='#000' font-family='Times New Roman, Times, serif'>I — линейное состояние (C &lt; 0,05; φ = 0); II — переходное (0,05 ≤ C &lt; C_min; ΔE &lt; 0); III — экосистемное (C ≥ C_min)</text>
+</svg>

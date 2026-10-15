@@ -63,7 +63,7 @@ export default function HelpPanel({ open, onClose, onOpen, isDarkMode }: Props) 
   return (
     <aside className={panel} aria-label="Справка по обозначениям модели">
       <div className={cn('flex items-center justify-between px-4 py-3 border-b', isDarkMode ? 'border-[#E4E3E0]/15' : 'border-[#141414]/15')}>
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest">
+        <div className="flex items-center gap-2 text-[length:calc(13px*var(--ui,1))] font-bold uppercase tracking-widest">
           <BookOpen size={15} /> Справка по модели
         </div>
         <div className="flex items-center gap-1">
@@ -79,35 +79,35 @@ export default function HelpPanel({ open, onClose, onOpen, isDarkMode }: Props) 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
         {t ? (
           <div className="space-y-3">
-            <div className="text-[9px] font-mono uppercase tracking-widest opacity-60">{t.group}{pinned ? ' · закреплено' : ''}</div>
+            <div className="text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-widest opacity-60">{t.group}{pinned ? ' · закреплено' : ''}</div>
             <div className="text-2xl font-bold font-mono leading-tight">{t.sym}</div>
             <div className="text-sm font-bold leading-snug">{t.name}</div>
-            <p className="text-[12px] leading-relaxed">{t.what}</p>
+            <p className="text-[length:calc(14px*var(--ui,1))] leading-relaxed">{t.what}</p>
             {t.calc && (
-              <div className={cn('p-2.5 border text-[11px] font-mono leading-relaxed', isDarkMode ? 'border-[#E4E3E0]/20 bg-white/5' : 'border-[#141414]/15 bg-black/[0.03]')}>
-                <div className={cn('text-[9px] uppercase tracking-widest mb-1', muted)}>Как считается</div>
+              <div className={cn('p-2.5 border text-[length:calc(13px*var(--ui,1))] font-mono leading-relaxed', isDarkMode ? 'border-[#E4E3E0]/20 bg-white/5' : 'border-[#141414]/15 bg-black/[0.03]')}>
+                <div className={cn('text-[length:calc(11px*var(--ui,1))] uppercase tracking-widest mb-1', muted)}>Как считается</div>
                 {t.calc}
               </div>
             )}
             {t.effect && (
               <div>
-                <div className={cn('text-[9px] font-mono uppercase tracking-widest mb-1', muted)}>Как влияет на результат</div>
-                <p className="text-[12px] leading-relaxed">{t.effect}</p>
+                <div className={cn('text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-widest mb-1', muted)}>Как влияет на результат</div>
+                <p className="text-[length:calc(14px*var(--ui,1))] leading-relaxed">{t.effect}</p>
               </div>
             )}
             {t.src && (
               <div>
-                <div className={cn('text-[9px] font-mono uppercase tracking-widest mb-1', muted)}>Источник и класс данных</div>
-                <p className={cn('text-[11px] leading-relaxed', muted)}>{t.src}</p>
+                <div className={cn('text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-widest mb-1', muted)}>Источник и класс данных</div>
+                <p className={cn('text-[length:calc(13px*var(--ui,1))] leading-relaxed', muted)}>{t.src}</p>
               </div>
             )}
             {t.rel && t.rel.length > 0 && (
               <div>
-                <div className={cn('text-[9px] font-mono uppercase tracking-widest mb-1.5', muted)}>Связано с</div>
+                <div className={cn('text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-widest mb-1.5', muted)}>Связано с</div>
                 <div className="flex flex-wrap gap-1.5">
                   {t.rel.filter((r) => GLOSSARY[r]).map((r) => (
                     <button key={r} onClick={() => { setCurrent(r); setPinned(true); }}
-                      className={cn('px-2 py-1 text-[10px] font-mono border hover:border-emerald-500', isDarkMode ? 'border-[#E4E3E0]/25' : 'border-[#141414]/25')}>
+                      className={cn('px-2 py-1 text-[length:calc(12px*var(--ui,1))] font-mono border hover:border-emerald-500', isDarkMode ? 'border-[#E4E3E0]/25' : 'border-[#141414]/25')}>
                       {GLOSSARY[r].sym}
                     </button>
                   ))}
@@ -116,7 +116,7 @@ export default function HelpPanel({ open, onClose, onOpen, isDarkMode }: Props) 
             )}
           </div>
         ) : (
-          <div className={cn('text-[12px] leading-relaxed', muted)}>
+          <div className={cn('text-[length:calc(14px*var(--ui,1))] leading-relaxed', muted)}>
             Наведите курсор на показатель, ползунок или кнопку с пунктирной рамкой — здесь появится, что означает этот член модели,
             как он считается и как влияет на результат. Щелчок по показателю (или Alt + щелчок по кнопке) закрепляет описание.
           </div>
@@ -126,18 +126,18 @@ export default function HelpPanel({ open, onClose, onOpen, isDarkMode }: Props) 
           <label className={cn('flex items-center gap-2 px-2 py-1.5 border', isDarkMode ? 'border-[#E4E3E0]/25' : 'border-[#141414]/25')}>
             <Search size={13} className="opacity-60" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Поиск обозначения или термина"
-              className="flex-1 bg-transparent outline-none text-[11px]" />
+              className="flex-1 bg-transparent outline-none text-[length:calc(13px*var(--ui,1))]" />
           </label>
           {GROUPS.map((g) => {
             const items = list.filter(([, x]) => x.group === g);
             if (!items.length) return null;
             return (
               <div key={g}>
-                <div className={cn('text-[9px] font-mono uppercase tracking-widest mt-2 mb-1', muted)}>{g}</div>
+                <div className={cn('text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-widest mt-2 mb-1', muted)}>{g}</div>
                 <div className="flex flex-wrap gap-1">
                   {items.map(([id, x]) => (
                     <button key={id} onClick={() => { setCurrent(id); setPinned(true); }} title={x.name}
-                      className={cn('px-1.5 py-0.5 text-[10px] font-mono border',
+                      className={cn('px-1.5 py-0.5 text-[length:calc(12px*var(--ui,1))] font-mono border',
                         current === id ? 'border-emerald-500 text-emerald-600' : isDarkMode ? 'border-[#E4E3E0]/20' : 'border-[#141414]/20')}>
                       {x.sym}
                     </button>

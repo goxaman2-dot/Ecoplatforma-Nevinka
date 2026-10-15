@@ -40,22 +40,22 @@ const Slider = ({ label, value, min, max, step, onChange, fmt, note, term }: {
 }) => (
   <div className="space-y-1" data-term={term}>
     <div className="flex justify-between items-end gap-2">
-      <span className="text-[10px] font-bold tracking-wide opacity-70">{label}</span>
-      <span className="text-[10px] font-bold font-mono whitespace-nowrap">{fmt(value)}</span>
+      <span className="text-[length:calc(12px*var(--ui,1))] font-bold tracking-wide opacity-70">{label}</span>
+      <span className="text-[length:calc(12px*var(--ui,1))] font-bold font-mono whitespace-nowrap">{fmt(value)}</span>
     </div>
     <input type="range" min={min} max={max} step={step} value={value}
       onChange={(e) => onChange(Number(e.target.value))}
       className="w-full h-1 appearance-none cursor-pointer bg-gray-500/20 accent-emerald-500" />
-    {note && <div className="text-[8px] font-mono opacity-40">{note}</div>}
+    {note && <div className="text-[length:calc(10px*var(--ui,1))] font-mono opacity-40">{note}</div>}
   </div>
 );
 
 const Stat = ({ label, value, sub, tone, term }: { label: React.ReactNode; value: string; sub?: React.ReactNode; tone?: 'ok' | 'bad'; term?: string }) => (
   <div data-term={term} className={cn('p-3 border',
     tone === 'ok' ? 'border-emerald-500/40 bg-emerald-500/5' : tone === 'bad' ? 'border-rose-500/40 bg-rose-500/5' : 'border-gray-500/20')}>
-    <div className="text-[9px] font-mono opacity-60">{label}</div>
+    <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">{label}</div>
     <div className="text-lg font-bold font-mono">{value}</div>
-    {sub && <div className="text-[9px] font-mono opacity-50 leading-tight">{sub}</div>}
+    {sub && <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 leading-tight">{sub}</div>}
   </div>
 );
 
@@ -157,13 +157,13 @@ export default function BilevelPanel(p: Props) {
     setMcRunning(true);
     setTimeout(() => { setMc(monteCarlo(pop, ctx0, 200, 15)); setMcRunning(false); }, 30);
   };
-  const btn = (active: boolean) => cn('px-2 py-1.5 text-[9px] font-bold border text-left leading-tight transition-all',
+  const btn = (active: boolean) => cn('px-2 py-1.5 text-[length:calc(11px*var(--ui,1))] font-bold border text-left leading-tight transition-all',
     active ? (p.isDarkMode ? 'bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]' : 'bg-[#141414] text-[#E4E3E0] border-[#141414]')
       : 'border-gray-500/30 opacity-70 hover:opacity-100');
 
   const box = cn('border p-6 transition-colors duration-300',
     p.isDarkMode ? 'bg-[#1A1A1A] border-[#E4E3E0]/20' : 'bg-white border-[#141414]');
-  const axis = { fontSize: 9 };
+  const axis = { fontSize: 11 };
 
   const checks = [
     { n: 1, text: 'Без мер поддержки C**(θ₀) < C*', val: `${ru(eq0.C, 3)} против ${ru(cs, 3)}`, ok: eq0.C < cs },
@@ -179,7 +179,7 @@ export default function BilevelPanel(p: Props) {
           <h2 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
             <Layers size={16} /> Двухуровневая модель равновесной связности (§ 3.2)
           </h2>
-          <span className="text-[9px] font-mono opacity-60">
+          <span className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">
             Популяция: 52 резидента ТОСЭР, типы A–D (табл. 2.12) — демонстрационные значения, класс C, до обследования § 3.3
           </span>
         </div>
@@ -187,26 +187,26 @@ export default function BilevelPanel(p: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Верхний уровень: θ */}
           <div className="space-y-4">
-            <div data-term="W" className="text-[9px] font-mono opacity-60">МЕХАНИЗМ ВЕРХНЕГО УРОВНЯ</div>
+            <div data-term="W" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">МЕХАНИЗМ ВЕРХНЕГО УРОВНЯ</div>
             <div className="grid grid-cols-1 gap-1">
               {MECHS.map((m) => (
                 <button key={m.id} data-term={m.id === 'sigma' ? 'sigmaMech' : m.id} onClick={() => setMech(m.id)} className={btn(mech === m.id)} title={m.note}>{m.label}</button>
               ))}
             </div>
-            <div data-term="U_j" className="text-[9px] font-mono opacity-60 pt-2">МОДЕЛЬ ПОВЕДЕНИЯ РЕЗИДЕНТОВ</div>
+            <div data-term="U_j" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 pt-2">МОДЕЛЬ ПОВЕДЕНИЯ РЕЗИДЕНТОВ</div>
             <div className="grid grid-cols-1 gap-1">
               {BEHAVIORS.map((b) => (
                 <button key={b.id} data-term={b.id} onClick={() => setBehavior(b.id)} className={btn(behavior === b.id)} title={b.note}>{b.label}</button>
               ))}
             </div>
-            <div className="text-[9px] font-mono opacity-60 pt-2">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
+            <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 pt-2">ВЕРХНИЙ УРОВЕНЬ: θ = (α, γ_h, σ, F)</div>
             <Slider term="sigma" label="σ — компенсация затрат подключения" value={sigma} min={0} max={1} step={0.01}
               onChange={setSigma} fmt={(v) => `${ru(v * 100)} %`} note="доля c_j, которую несёт публичный партнёр" />
             <Slider term="lambda" label="λ̄ — предел продаж якорю (ТОСЭР)" value={lambdaBar} min={0.3} max={1} step={0.05}
               onChange={setLambdaBar} fmt={(v) => ru(v, 2)} note="норма ПП РФ № 614: 0,5 от выручки инвестпроекта" />
             <Slider term="B_ext" label="B_внеш — внешний источник" value={p.bExt} min={0} max={20} step={0.5}
               onChange={p.setBExt} fmt={(v) => `${ru(v, 1)} млн руб.`} />
-            <div className="text-[9px] font-mono opacity-60 leading-relaxed border-t border-dashed border-gray-500/30 pt-3">
+            <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 leading-relaxed border-t border-dashed border-gray-500/30 pt-3">
               Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
               Σ вкладов потоков = {ru(p.flowsNet, 1)}, Z_пл = {ru(p.platformCost, 1)} млн руб.<br />
               Механизм: k = {ru(mp.k, 2)} (одно значение для SD и Π), τ = {mp.tau}, G = {PI.G}, T₀ = {PI.T0}; N_доп = {N_DOP}.<br />
@@ -236,23 +236,23 @@ export default function BilevelPanel(p: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={box}>
-          <div data-term="Gamma" className="text-[10px] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
-          <div className="text-[9px] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
+          <div data-term="Gamma" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
+          <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={gammaData} margin={{ top: 20, right: 12, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#88888833" />
                 <XAxis dataKey="c" type="number" domain={[0, 0.5]} ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]} tick={axis} tickFormatter={(v) => ru(v, 1)} />
                 <YAxis domain={[0, 0.5]} ticks={[0, 0.1, 0.2, 0.3, 0.4, 0.5]} tick={axis} tickFormatter={(v) => ru(v, 1)} />
-                <Tooltip formatter={(v: any) => ru(Number(v), 3)} labelFormatter={(l: any) => `C = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 10 }} />
+                <Tooltip formatter={(v: any) => ru(Number(v), 3)} labelFormatter={(l: any) => `C = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 12 }} />
                 <Line dataKey="diag" name="C" stroke="#94a3b8" strokeDasharray="4 3" dot={false} isAnimationActive={false} />
                 <Line dataKey="gamma" name="Γ(C)" stroke="#10b981" strokeWidth={2} dot={false} type="stepAfter" isAnimationActive={false} />
-                <ReferenceLine x={eq.C} stroke="#10b981" label={{ value: 'C**', position: 'top', fontSize: 9, fill: '#10b981' }} />
-                <ReferenceLine x={cs} stroke="#e11d48" strokeDasharray="3 3" label={{ value: 'C*', position: 'top', fontSize: 9, fill: '#e11d48' }} />
+                <ReferenceLine x={eq.C} stroke="#10b981" label={{ value: 'C**', position: 'top', fontSize: 11, fill: '#10b981' }} />
+                <ReferenceLine x={cs} stroke="#e11d48" strokeDasharray="3 3" label={{ value: 'C*', position: 'top', fontSize: 11, fill: '#e11d48' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <table className="w-full text-[10px] font-mono mt-3">
+          <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono mt-3">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
               <th className="py-1 font-normal">Тип резидента</th><th className="py-1 font-normal text-right">Участвуют</th>
               <th className="py-1 font-normal text-right">Всего</th><th className="py-1 font-normal text-right">Исключены (3.16)</th>
@@ -267,8 +267,8 @@ export default function BilevelPanel(p: Props) {
         </div>
 
         <div className={box}>
-          <div data-term="Z_min" className="text-[10px] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
-          <div className="text-[9px] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
+          <div data-term="Z_min" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
+          <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={zData} margin={{ top: 20, right: 12, left: -8, bottom: 0 }}>
@@ -276,20 +276,20 @@ export default function BilevelPanel(p: Props) {
                 <XAxis dataKey="c" type="number" domain={['dataMin', 'dataMax']} tick={axis} tickFormatter={(v) => ru(v, 3)} />
                 <YAxis yAxisId="l" tick={axis} domain={['auto', 'auto']} />
                 <YAxis yAxisId="r" orientation="right" tick={axis} />
-                <Tooltip formatter={(v: any) => (v === null ? '—' : ru(Number(v), 2))} labelFormatter={(l: any) => `C̃ = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 10 }} />
+                <Tooltip formatter={(v: any) => (v === null ? '—' : ru(Number(v), 2))} labelFormatter={(l: any) => `C̃ = ${ru(Number(l), 3)}`} contentStyle={{ fontSize: 12 }} />
                 <Line yAxisId="l" dataKey="pi" name="Π(C̃)" stroke="#0ea5e9" dot={false} isAnimationActive={false} />
                 <Line yAxisId="l" dataKey="net" name="Π − Z_min" stroke="#10b981" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
                 <Line yAxisId="r" dataKey="zmin" name="Z_min (правая ось)" stroke="#f59e0b" type="stepAfter" dot={false} connectNulls={false} isAnimationActive={false} />
-                <ReferenceLine yAxisId="l" x={curve.hat.c} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Ĉ', position: 'top', fontSize: 9, fill: '#10b981' }} />
+                <ReferenceLine yAxisId="l" x={curve.hat.c} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Ĉ', position: 'top', fontSize: 11, fill: '#10b981' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-wrap gap-3 text-[9px] font-mono opacity-70 mt-2">
+          <div className="flex flex-wrap gap-3 text-[length:calc(11px*var(--ui,1))] font-mono opacity-70 mt-2">
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-sky-500" />Π(C̃)</span>
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-emerald-500" />Π − Z_min</span>
             <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-amber-500" />Z_min (правая ось)</span>
           </div>
-          <p className="text-[10px] opacity-70 leading-relaxed mt-3">
+          <p className="text-[length:calc(12px*var(--ui,1))] opacity-70 leading-relaxed mt-3">
             {curve.hat.c < cs - 0.0025
               ? `Цена закрытия растёт быстрее выигрыша: целевая связность Ĉ = ${ru(curve.hat.c, 3)} лежит между C** и C*, добиваться оптимума бюджету невыгодно.`
               : `Разрыв выгодно закрыть полностью: Ĉ = C*, обоснованная сумма поддержки — Z_min(C*).`}
@@ -300,9 +300,9 @@ export default function BilevelPanel(p: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={box}>
-          <div data-term="lambda_star" className="text-[10px] font-bold uppercase tracking-widest mb-1">Резиденты-поставщики якоря</div>
-          <div className="text-[9px] font-mono opacity-60 mb-3">Условие (3.16) и критическая доля λ*_j = 1 − FC_j/(m_j·R_j) (3.27)</div>
-          <table className="w-full text-[10px] font-mono">
+          <div data-term="lambda_star" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Резиденты-поставщики якоря</div>
+          <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Условие (3.16) и критическая доля λ*_j = 1 − FC_j/(m_j·R_j) (3.27)</div>
+          <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
               <th className="py-1 font-normal">№</th><th className="py-1 font-normal">Тип</th>
               <th className="py-1 font-normal text-right">λ_j</th><th className="py-1 font-normal text-right">m_j</th>
@@ -318,28 +318,28 @@ export default function BilevelPanel(p: Props) {
               </tr>))}
             </tbody>
           </table>
-          <p className="text-[10px] opacity-70 leading-relaxed mt-3">
+          <p className="text-[length:calc(12px*var(--ui,1))] opacity-70 leading-relaxed mt-3">
             Единая норма λ̄ = {ru(lambdaBar, 2)} мягка для низкомаржинальных резидентов и жёстка для высокомаржинальных.
             Закупки CO₂ и тепла у «Азота» под предел не подпадают.
           </p>
         </div>
 
         <div className={box}>
-          <div data-term="rebound" className="text-[10px] font-bold uppercase tracking-widest mb-1">Поправка на эффект отдачи</div>
-          <div className="text-[9px] font-mono opacity-60 mb-3">
+          <div data-term="rebound" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Поправка на эффект отдачи</div>
+          <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
             Формулы (3.28)–(3.30) на рядах 2017–2026 гг.: Q₀ = Cap·γ_t, ε·Q₀ = выбросы года (рабочая книга «Азот_выбросы_модель_2017_2026.xlsx»)
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className="text-[10px] font-bold opacity-70">База:</span>
+            <span className="text-[length:calc(12px*var(--ui,1))] font-bold opacity-70">База:</span>
             {[{ v: false, l: 'CO₂ (EPA)' }, { v: true, l: `CO₂ + N₂O (вар. ${p.n2oAbated ? 'A' : 'B'})` }].map((o) => (
               <button key={String(o.v)} onClick={() => setWithN2O(o.v)}
-                className={cn('px-2 py-1 text-[9px] font-bold border',
+                className={cn('px-2 py-1 text-[length:calc(11px*var(--ui,1))] font-bold border',
                   withN2O === o.v ? (p.isDarkMode ? 'bg-[#E4E3E0] text-[#141414] border-[#E4E3E0]' : 'bg-[#141414] text-[#E4E3E0] border-[#141414]') : 'border-gray-500/30 opacity-70')}>
                 {o.l}
               </button>
             ))}
             {uOverride !== null && (
-              <button onClick={() => setUOverride(null)} className="px-2 py-1 text-[9px] font-bold border border-amber-500/50 text-amber-500">
+              <button onClick={() => setUOverride(null)} className="px-2 py-1 text-[length:calc(11px*var(--ui,1))] font-bold border border-amber-500/50 text-amber-500">
                 u по расчёту
               </button>
             )}
@@ -358,7 +358,7 @@ export default function BilevelPanel(p: Props) {
             <Stat term="rebound" label="u·(1−κ) против ΔQ/(Q₀+ΔQ) (3.29)" value={`${ru(rb.lhs, 3)} ${rb.ok ? '>' : '≤'} ${ru(rb.rhs, 3)}`} tone={rb.ok ? 'ok' : 'bad'} />
             <Stat term="rebound" label="Порог прироста выпуска" value={`${ru(rb.threshold * 100, 1)} %`} sub="выше — выбросы растут" />
           </div>
-          <table className="w-full text-[10px] font-mono mt-4">
+          <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono mt-4">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
               <th className="py-1 font-normal">Год</th><th className="py-1 font-normal text-right">γ_t</th>
               <th className="py-1 font-normal text-right">Q₀, тыс. т NH₃</th><th className="py-1 font-normal text-right">E_t, тыс. т</th>
@@ -375,8 +375,8 @@ export default function BilevelPanel(p: Props) {
               </tr>))}
             </tbody>
           </table>
-          <div className="text-[8px] font-mono opacity-50 mt-1">Щелчок по строке выбирает базовый год; 2024–2026 гг. — индекс 1,0 с учётом дней простоя d_t.</div>
-          <p className="text-[10px] opacity-70 leading-relaxed mt-3">
+          <div className="text-[length:calc(10px*var(--ui,1))] font-mono opacity-50 mt-1">Щелчок по строке выбирает базовый год; 2024–2026 гг. — индекс 1,0 с учётом дней простоя d_t.</div>
+          <p className="text-[length:calc(12px*var(--ui,1))] opacity-70 leading-relaxed mt-3">
             Ставка платы за НВОС для парниковых газов в России не установлена (s_НВОС = 0), поэтому по (3.30) денежная поправка ΔE
             для CO₂ равна нулю, а прирост выбросов учитывается в натуральном выражении.
           </p>
@@ -385,17 +385,17 @@ export default function BilevelPanel(p: Props) {
 
       <div className={box}>
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-          <div data-term="W" className="text-[10px] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
+          <div data-term="W" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
           <button data-term="mc" onClick={runMc} disabled={mcRunning}
-            className={cn('px-3 py-1.5 text-[9px] font-bold uppercase border', mcRunning ? 'opacity-50' : 'border-emerald-500 text-emerald-500 hover:bg-emerald-500/10')}>
+            className={cn('px-3 py-1.5 text-[length:calc(11px*var(--ui,1))] font-bold uppercase border', mcRunning ? 'opacity-50' : 'border-emerald-500 text-emerald-500 hover:bg-emerald-500/10')}>
             {mcRunning ? 'Идёт расчёт…' : 'Монте-Карло: 200 испытаний'}
           </button>
         </div>
-        <div className="text-[9px] font-mono opacity-60 mb-3">
+        <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
           Критерий — W = Π(C**) − Z (3.20), млн руб./год, а не дивиденд: SD растёт просто от роста α. В ячейке: C** / W; лучший механизм в строке выделен.
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-[10px] font-mono min-w-[760px]">
+          <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono min-w-[760px]">
             <thead><tr className="opacity-60 border-b border-gray-500/20 text-left">
               <th className="py-1 pr-2 font-normal">Поведение \ механизм</th>
               {MECHS.map((m) => <th key={m.id} data-term={m.id === 'sigma' ? 'sigmaMech' : m.id} className="py-1 px-1 font-normal text-right" title={m.note}>{m.label}</th>)}
@@ -419,10 +419,10 @@ export default function BilevelPanel(p: Props) {
         </div>
         {mc && (
           <div className="overflow-x-auto mt-4">
-            <div className="text-[9px] font-mono opacity-60 mb-1">
+            <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-1">
               Доля испытаний (из {mc.n}), в которых механизм дал наибольший W: выигрыш и затраты резидентов ±25 %, k ± 1, вклады потоков и Z_пл ±20 %; ничьи делятся поровну
             </div>
-            <table className="w-full text-[10px] font-mono min-w-[760px]">
+            <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono min-w-[760px]">
               <tbody>{BEHAVIORS.map((b, bi) => b.id === 'planner' ? null : (
                 <tr key={b.id} className="border-b border-gray-500/10">
                   <td className="py-1 pr-2">{b.label}</td>
@@ -438,15 +438,15 @@ export default function BilevelPanel(p: Props) {
             </table>
           </div>
         )}
-        <p className="text-[10px] opacity-70 leading-relaxed mt-3">
+        <p className="text-[length:calc(12px*var(--ui,1))] opacity-70 leading-relaxed mt-3">
           Модели поведения — гипотезы, а не наблюдения. Матрица показывает, какой механизм выигрывает при каком типе поведения;
           какой тип поведения есть у резидентов Невинномысска, определит обследование (§ 3.3). Строка «Планировщик» — эталон C = C*, достижимый без учёта стимулов.
         </p>
       </div>
 
       <div className={box}>
-        <div className="text-[10px] font-bold uppercase tracking-widest mb-3">Проверяемые следствия модели (табл. 3.8) при текущих параметрах</div>
-        <table className="w-full text-[10px] font-mono">
+        <div className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-3">Проверяемые следствия модели (табл. 3.8) при текущих параметрах</div>
+        <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
           <tbody>{checks.map((c) => (
             <tr key={c.n} className="border-b border-gray-500/10">
               <td className="py-2 pr-3 opacity-60">{c.n}</td>
@@ -458,7 +458,7 @@ export default function BilevelPanel(p: Props) {
             </tr>))}
           </tbody>
         </table>
-        <p className="text-[9px] font-mono opacity-50 mt-3">
+        <p className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 mt-3">
           Проверка на демонстрационной популяции показывает работу модели, но не подтверждает следствия: для этого нужны реестр связей платформы,
           отчётность резидентов и данные «Азота» о выпуске и выбросах (§ 3.3).
         </p>

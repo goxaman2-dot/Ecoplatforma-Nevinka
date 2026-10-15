@@ -36,3 +36,48 @@ html {
 /* Элементы со справкой: пунктирная рамка при наведении, курсор-подсказка */
 [data-term] { cursor: help; }
 [data-term]:hover { outline: 1px dashed rgba(16, 185, 129, 0.7); outline-offset: 2px; }
+
+/* ── Ползунки: единый видимый стиль во всех браузерах и обеих темах ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.22);
+  outline: none;
+  cursor: pointer;
+}
+.theme-dark input[type="range"] { background: rgba(228, 227, 224, 0.28); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+input[type="range"]::-moz-range-track { background: transparent; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45); }
+/* Ползунки состояния оборудования сохраняют свой цвет */
+input[type="range"].accent-red-500::-webkit-slider-thumb { background: #ef4444; }
+input[type="range"].accent-orange-500::-webkit-slider-thumb { background: #f97316; }
+input[type="range"].accent-emerald-400::-webkit-slider-thumb { background: #34d399; }
+input[type="range"].accent-green-500::-webkit-slider-thumb { background: #22c55e; }
+input[type="range"].accent-red-500::-moz-range-thumb { background: #ef4444; }
+input[type="range"].accent-orange-500::-moz-range-thumb { background: #f97316; }
+input[type="range"].accent-emerald-400::-moz-range-thumb { background: #34d399; }
+input[type="range"].accent-green-500::-moz-range-thumb { background: #22c55e; }
+
+/* Подписи графиков масштабируются вместе с интерфейсом */
+:root { --ui: 1; }
+.recharts-cartesian-axis-tick-value, .recharts-label, .recharts-text { font-size: calc(11px * var(--ui, 1)); }

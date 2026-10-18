@@ -127,7 +127,7 @@ export default function BeneficiaryPanel(p: Props) {
 
   return (
     <div className="space-y-6">
-      <div className={box}>
+      <div className={box} data-nov="N6" data-nov-tag="Н6">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-dashed border-gray-500/30 pb-3 mb-4">
           <h2 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
             <Landmark size={16} /> Бенефициары экоплатформы и стратегический контур, 2026–2040 гг.
@@ -240,7 +240,7 @@ export default function BeneficiaryPanel(p: Props) {
           </p>
         </div>
 
-        <div className={box}>
+        <div className={box} data-nov="A2" data-nov-tag="А2">
           <div data-term="rebound" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Выбросы якоря при стратегических сценариях, тыс. т CO₂-экв.</div>
           <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
             Рост выпуска g = {ru(chemGrowth * 100, 1)} % в год до 2030 г., затем вдвое меньше; платформа передаёт до {ru(p.dQ)} тыс. т CO₂, κ = {ru(kappa, 2)}

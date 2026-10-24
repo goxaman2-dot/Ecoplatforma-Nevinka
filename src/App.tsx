@@ -795,7 +795,7 @@ export default function App() {
                 <p className="text-[length:calc(10px*var(--ui,1))] font-mono opacity-50 leading-tight">Пороги 5 % и 15 % — сценарные ориентиры главы 2; экономическая граница — C_min (§ 3.3.2).</p>
               </div>
 
-              <div data-nov="N6" data-nov-tag="Н6" className="space-y-2">
+              <div data-nov="N6" data-nov-tag="Н5" className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 group relative">
                     <span data-term="C_liq" className="text-[length:calc(12px*var(--ui,1))] font-bold tracking-wide">2. БЮДЖЕТ (SD_б + B_внеш ≥ C_ликв)</span>
@@ -1294,7 +1294,7 @@ export default function App() {
                 )}
                 <p className="text-[length:calc(11px*var(--ui,1))] opacity-70 italic leading-tight">Реализуемый потенциал при k={metrics.k} и C={metrics.c/100}.</p>
               </div>
-              <div data-nov="N4" data-nov-tag="Н4" className="space-y-2">
+              <div data-nov="N4" data-nov-tag="Н4а" className="space-y-2">
                 <div data-term="dE_t" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 uppercase">Вериф. экономия (14)</div>
                 <div className="text-xs font-bold font-mono">ΔE(t) = φ(Cинд)·Σ(E_i − A_i) − Z_пл = <span className="is-number">{metrics.deltaE_t.toFixed(2)}</span></div>
                 <div data-term="C_min" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">Порог окупаемости платформы C_min = {Number.isFinite(metrics.cMin) ? metrics.cMin.toFixed(3) : '—'} (при k = {metrics.k.toFixed(1)})</div>
@@ -1472,7 +1472,7 @@ export default function App() {
               </div>
 
               {/* Риск якоря и предел ТОР */}
-              <div data-nov="N3" data-nov-tag="Н3" className="space-y-3 text-[length:calc(12px*var(--ui,1))] font-mono">
+              <div data-nov="N3" data-nov-tag="Н3в" className="space-y-3 text-[length:calc(12px*var(--ui,1))] font-mono">
                 <div data-term="pi_A" className="text-[length:calc(11px*var(--ui,1))] opacity-50 uppercase">Риск остановки якоря (§ 3.2)</div>
                 <div className="flex justify-between"><span className="opacity-70">ΔE(t) при работающем якоре</span><span>{ru(metrics.deltaE_t, 1)}</span></div>
                 <div data-term="dE_exp" className="flex justify-between"><span className="opacity-70 pr-2">ΔE(t) ожидаемый, π_A = {ru(piA, 3)}</span><span className="font-bold">{ru(metrics.deltaE_exp, 1)}</span></div>

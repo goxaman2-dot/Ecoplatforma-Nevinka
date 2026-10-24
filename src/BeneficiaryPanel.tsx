@@ -127,7 +127,7 @@ export default function BeneficiaryPanel(p: Props) {
 
   return (
     <div className="space-y-6">
-      <div className={box} data-nov="N6" data-nov-tag="Н6">
+      <div className={box} data-nov="N6" data-nov-tag="Н5">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-dashed border-gray-500/30 pb-3 mb-4">
           <h2 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
             <Landmark size={16} /> Бенефициары экоплатформы и стратегический контур, 2026–2040 гг.

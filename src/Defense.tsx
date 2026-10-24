@@ -5,7 +5,7 @@ import {
 import { ChevronLeft, ChevronRight, ShieldCheck, FlaskConical, Network, Landmark, RefreshCw, BookMarked, AlertTriangle, History } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { NOVELTY } from './novelty';
+import { NOVELTY, POSITIONS } from './novelty';
 import { GENESIS, PROBLEMS, THESIS_EXTRA, STATUS_LABEL, ROADMAP, GOV_DECISIONS, AUTHOR, MODEL_VERSION, type Status } from './v5content';
 import { runSelfCheck } from './selfcheck';
 import { n1, n2, n3, n4, n5, n6, baseCtx, POP, type Interval, type TornadoRow, barrierCurve, barrierMin, barrierBreakEven, grid05, C0_OBS } from './thesisLab';
@@ -229,7 +229,7 @@ const P = ({ children, className }: { children: React.ReactNode; className?: str
 );
 
 // ─── Паспорт модели ───
-function Passport({ card, muted, isDarkMode, go }: Ctx) {
+function Passport({ card, muted, isDarkMode, go, onOpenLab }: Ctx) {
   const [checks, setChecks] = useState(() => runSelfCheck());
   const okN = checks.filter((c) => c.ok).length;
   return (
@@ -251,6 +251,30 @@ function Passport({ card, muted, isDarkMode, go }: Ctx) {
         <div className="mt-4 p-3 border-l-4 text-[length:calc(14px*var(--ui,1))] leading-relaxed" style={{ borderColor: 'var(--c-mid)', background: isDarkMode ? 'rgba(212,160,23,.08)' : 'rgba(212,160,23,.08)' }}>
           <AlertTriangle size={15} className="inline -mt-0.5 mr-1.5" style={{ color: 'var(--c-mid)' }} />
           <b>Платформа не создана.</b> Модель не показывает её работу, а проверяет положения, выносимые на защиту, на откалиброванных данных и формулирует условные прогнозы, которые можно опровергнуть после запуска. Параметры имеют класс A (факт, норма), B (перенос по аналогам) или C (допущение).
+        </div>
+      </div>
+
+      <div className={card}>
+        <H color="var(--c-nov)">Положения, выносимые на защиту · утверждены 24.10.2026</H>
+        <div className="space-y-2.5 mt-1">
+          {POSITIONS.map((p) => (
+            <div key={p.n} className={cn('flex flex-wrap items-start gap-3 pb-2.5 border-b last:border-b-0', isDarkMode ? 'border-[#E4E3E0]/10' : 'border-[#141414]/10')}>
+              <span className="w-8 h-8 shrink-0 flex items-center justify-center text-white font-bold font-mono" style={{ background: 'var(--c-nov)' }}>{p.n}</span>
+              <div className="flex-1 min-w-[260px]">
+                <P className="font-bold leading-snug">{p.title}</P>
+                <div className={cn('text-[length:calc(12px*var(--ui,1))] font-mono mt-0.5', muted)}>{p.where}</div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {p.n === 1 && <button onClick={() => go({ kind: 'gen', id: 'Г1' })} className="px-2 py-1 font-mono font-bold border-2 text-[length:calc(12px*var(--ui,1))]" style={{ borderColor: 'var(--c-gen)', color: 'var(--c-gen)' }}>Генезис Г1–Г6</button>}
+                {p.n === 2 && <button onClick={() => onOpenLab()} className="px-2 py-1 font-mono font-bold border-2 text-[length:calc(12px*var(--ui,1))]" style={{ borderColor: 'var(--c-nov)', color: 'var(--c-nov)' }}>Лаборатория: расчёт ΔE и SD</button>}
+                {p.theses.map((t) => (
+                  <button key={t} onClick={() => (t.startsWith('N') ? go({ kind: 'thesis', id: t }) : onOpenLab(t))} title={NOVELTY[t].title}
+                    className="px-2 py-1 font-mono font-bold border-2 text-[length:calc(12px*var(--ui,1))]"
+                    style={{ borderColor: NOVELTY[t].level === 'N' ? 'var(--c-nov)' : 'var(--c-nov-a)', color: NOVELTY[t].level === 'N' ? 'var(--c-nov)' : 'var(--c-nov-a)' }}>{NOVELTY[t].tag}</button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -278,7 +302,7 @@ function Passport({ card, muted, isDarkMode, go }: Ctx) {
           <H>Цветовая система</H>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[length:calc(13px*var(--ui,1))]">
             {[
-              ['var(--c-nov)', 'Новизна: положения Н1–Н6'],
+              ['var(--c-nov)', 'Новизна: положения 3–5 (метки Н3а–Н5)'],
               ['var(--c-nov-a)', 'Авторская адаптация метода: А1–А2'],
               ['var(--c-gen)', 'Генезис: история науки и объекта'],
               ['var(--c-part)', 'Участники: производственная сторона'],
@@ -792,7 +816,7 @@ function ThesisPage({ id, card, muted, isDarkMode, go, onOpenLab }: Ctx & { id: 
         <div className="flex items-start gap-3">
           <span className="px-2.5 py-1 text-white text-2xl font-bold font-mono shrink-0" style={{ background: 'var(--c-nov)' }}>{nv.tag}</span>
           <div className="min-w-0">
-            <H color="var(--c-nov)">Положение, выносимое на защиту · {nv.where}</H>
+            <H color="var(--c-nov)">Положение {nv.pos} из 5, выносимое на защиту · {nv.where}</H>
             <h2 className="text-xl font-bold leading-tight">{nv.title}</h2>
           </div>
         </div>

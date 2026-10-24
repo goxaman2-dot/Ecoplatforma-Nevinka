@@ -46,8 +46,11 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import BilevelPanel from './BilevelPanel';
+import { CALIB, calcAnchor, calcMetrics, type AnchorParams } from './core';
 import BeneficiaryPanel from './BeneficiaryPanel';
 import HelpPanel, { NOV_COLOR } from './HelpPanel';
+import Defense, { type Audience } from './Defense';
+import { AUTHOR, MODEL_VERSION } from './v5content';
 import { NOVELTY, NOVELTY_ORDER } from './novelty';
 import { AvatarGRES, AvatarAzot, AvatarEPP, AvatarResidents, AvatarOperator, AvatarBudget, AvatarPlatform } from './avatars';
 
@@ -87,73 +90,6 @@ interface DataPoint {
   sdt: number;
   er: number;
   ef: number;
-}
-
-// ─── Калибровка § 3.1 (редакция 14.10.2026), таблица 3.7 «Перенос в симулятор» ───
-// Класс качества: A — нормативный или наблюдаемый факт, B — перенос по аналогам, C — допущение.
-const CALIB = {
-  capAz: 1160,        // Cap_Аз, тыс. т NH3/год (1000–1350), C
-  eFull: 1.88,        // полный CO2 на т мощности, т (1,79–2,10), B; было 2,16
-  eProc: 1.125,       // процессный CO2 на т мощности, т (1,01–1,32), B; было 1,27; 1160·1,125 = 1305
-  urea: 500,          // U, выпуск карбамида, тыс. т (300–700), C
-  ureaCO2: 0.733,     // 44/60 ≈ 0,733 т CO2 в тонне карбамида
-  rN2O: 0.3732,       // медиана r_k (квартили 0,18; 0,37; 0,70), формула (3.5)
-  an: 1200,           // AN, выпуск аммиачной селитры, тыс. т (1000–1400), C
-  hno3PerAN: 63 / 80, // 0,7875 т HNO3 на т селитры
-  efN2O: 8.5,         // EF, кг N2O на т HNO3 (8–9), Öko-Institut (2023)
-  gwpN2O: 298,
-  climateTrace: 1444, // модельная оценка Climate TRACE, тыс. т CO2-экв.
-  q0: 32,             // Q_0, базовые продажи пищевой CO2, тыс. т/год, A (с декабря 2018 г.)
-  mu: 0,              // μ (CBAM): переданный CO2 не вычитается из встроенных выбросов, A
-  piA: 0.05,          // π_A (0,028–0,094), B
-  sigmaDelta: 0.22,   // σ_Δ — годовые изменения процессного CO2 у аналогов (для π_A), B
-  sigmaEps: 0.073,    // σ_ε — остатки модели (3.2), шум имитации, B
-  lambdaBar: 0.5,     // λ̄ — предел продаж якорю, доля выручки инвестпроекта (ТОР), A
-  anchorShapley: 0.25 // доля «Азота» в векторе Шепли при s = 0,3 (§ 2.5.3)
-};
-
-// γ_t — индекс активности аналогов (модель 3.2); 2024–2026 приняты равными 1
-const GAMMA_T: Record<number, number> = {
-  2017: 0.922, 2018: 0.953, 2019: 0.954, 2020: 1.015, 2021: 0.953,
-  2022: 0.970, 2023: 1.000, 2024: 1.000, 2025: 1.000, 2026: 1.000
-};
-
-// Продажи пищевой CO2 по годам: до декабря 2018 г. их не было
-const foodCO2 = (y: number) => (y < 2018 ? 0 : y === 2018 ? CALIB.q0 / 12 : CALIB.q0);
-
-interface AnchorParams {
-  capAz: number; eFull: number; eProc: number; urea: number;
-  an: number; efN2O: number; n2oAbated: boolean; downDays: number;
-}
-
-// Формулы (3.3)–(3.7): уровень выбросов «Азота» и ряды 2017–2026 гг.
-function calcAnchor(p: AnchorParams) {
-  const co2EPA = p.capAz * p.eFull;                                   // (3.3)
-  const ureaBound = CALIB.ureaCO2 * p.urea;
-  const co2IPCC = co2EPA - ureaBound;                                 // (3.4)
-  const n2oA = p.capAz * p.eProc * CALIB.rN2O;                        // (3.5)
-  const n2oB = p.an * CALIB.hno3PerAN * p.efN2O * CALIB.gwpN2O / 1000; // (3.6)
-  const n2o = p.n2oAbated ? n2oA : n2oB;
-  const proc = p.capAz * p.eProc;
-  const freeCO2 = proc - ureaBound - CALIB.q0;
-  const total = co2IPCC + n2o;
-  const ctRatio = total / CALIB.climateTrace;
-  const series = Object.keys(GAMMA_T).map(Number).map((y) => {
-    // (3.7): Ê_t = Ê_2023 · exp(γ_t − γ_2023) · (1 − d_t/365); d_t задаётся для 2025–2026 гг.
-    const g = GAMMA_T[y] * (y >= 2025 ? 1 - p.downDays / 365 : 1);
-    return {
-      year: String(y),
-      gamma: g,
-      co2EPA: co2EPA * g,
-      co2: co2IPCC * g,
-      n2oB: n2oB * g,
-      n2oA: n2oA * g,
-      proc: proc * g,
-      free: proc * g - ureaBound * g - foodCO2(y)
-    };
-  });
-  return { co2EPA, co2IPCC, ureaBound, n2oA, n2oB, n2o, proc, freeCO2, total, ctRatio, series,
-    foodUse: CALIB.q0 / freeCO2 };
 }
 
 const MiniSlider = ({ label, value, min, max, step, onChange, fmt, cls, note, term }: {
@@ -234,6 +170,11 @@ export default function App() {
   }, [uiScale]);
   const [helpOpen, setHelpOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
   const [activeTab, setActiveTab] = useState<'simulation' | 'participants' | 'bilevel' | 'benef'>('simulation');
+  // Версия 5.0: «Модель» (генезис — тезис — проблемы) и «Лаборатория» (прежние вкладки)
+  const [view, setView] = useState<'model' | 'lab'>('model');
+  const [audience, setAudience] = useState<Audience>('council');
+  const [focus, setFocus] = useState(false);
+  useEffect(() => { if (view === 'model') setHelpOpen(false); }, [view]);
   // Режим защиты: подсветка блоков, реализующих научную новизну главы 3
   const [defense, setDefense] = useState<boolean>(() => {
     try { return localStorage.getItem('eco-defense') === '1'; } catch { return false; }
@@ -245,6 +186,8 @@ export default function App() {
   const goNovelty = useCallback((id: string) => {
     const n = NOVELTY[id];
     if (!n) return;
+    setView('lab');
+    setDefense(true);
     setActiveTab(n.tab);
     setHelpOpen(true);
     window.dispatchEvent(new CustomEvent('eco-nov', { detail: id }));
@@ -302,164 +245,7 @@ export default function App() {
     }
   ];
 
-  // Function to calculate metrics for any given state
-  const calculateMetrics = useCallback((params: {
-    resourceEfficiency: number,
-    turbineEff: number,
-    heatExchanger: number,
-    filterResource: number,
-    investment: number,
-    year: number,
-    kScenario: number,
-    alpha: number,
-    distRegime: 'fiscal' | 'tech' | 'industrial',
-    dQ?: number,
-    switchShare?: number,
-    downDays?: number,
-    piA?: number,
-    bExt?: number
-  }) => {
-    const { resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime } = params;
-    const dQ = params.dQ ?? 12;
-    const switchShare = params.switchShare ?? 0;
-    const downDays = params.downDays ?? 0;
-    const piA = params.piA ?? CALIB.piA;
-    const bExt = params.bExt ?? 0;
-    
-    // C_ind is investment in decimal (0-0.30)
-    const c_ind = investment / 100;
-    
-    // k: institutional speed parameter (Formula 2)
-    // Time factor: k increases as institutional measures are implemented (2026-2036)
-    const timeProgress = (year - 2026) / 10; // 0 to 1
-    const k = kScenario + timeProgress * 2.5; // k grows over 10 years
-    
-    // Formula (2): phi = 1 - exp(-k * C_ind)
-    // IMPORTANT: C_ind is in fractions (0.10 for 10%)
-    let phi_val = 1 - Math.exp(-k * c_ind);
-    if (investment < 5) {
-      phi_val = 0;
-    }
-    const phi = phi_val * 100; // in percent for display
-    
-    // Resource Efficiency Effect (E_it)
-    // Er (turbine) and Ew (heat exchanger) influence energy savings
-    const e_it_factor = (turbineEff / 100) * 0.6 + (heatExchanger / 100) * 0.4;
-    
-    // Ecological Effect (E_f)
-    // Ef (filter) influences fines and emissions
-    const e_f_factor = filterResource / 100;
-
-    // Calibration Anchors for k=5:
-    // phi(0.10) ≈ 0.39
-    // phi(0.25) ≈ 0.71
-    const anchor10 = 1 - Math.exp(-5 * 0.10);
-    const anchor25 = 1 - Math.exp(-5 * 0.25);
-
-    // ΔE_base — ЧИСТЫЙ дополнительный эффект по формулам (2.7)–(2.9), табл. 2.6, млн руб./год.
-    // Прежнее значение 250 соответствовало валовой экономии и заменено (табл. 3.7).
-    // Ползунки Er/Ew масштабируют тепловой поток, «Эффективность ресурсов» — вторсырьё,
-    // фильтр Ef — сокращение платы за НВОС; при значениях по умолчанию ΔE_base = 117,4.
-    const ANN15 = 0.1315, ANN7 = 0.2054;
-    const downFactor = year === 2026 ? 1 - downDays / 365 : 1; // d_t: простой «Азота» в 2026 г.
-    const heatGross = 438 * 0.5 * (360 - 50) / 1000 * (e_it_factor / 0.8);
-    const heatNet = heatGross - 300 * ANN15;
-    // (3.11): ΔE_CO2 = (Q_1 − Q_0)·(p_альт − c) − A_CO2; засчитывается только прирост сверх Q_0 = 32 тыс. т,
-    // переключение прежних покупателей прироста не даёт
-    const co2Gross = dQ * (8000 - 2000) / 1000 * (1 - switchShare) * downFactor;
-    const co2Capex = dQ > 0 ? 100 * ANN15 : 0;
-    // (3.12): углеродная часть μ·q·p_C; для всех каналов CO2 Невинномысска μ = 0 (CBAM)
-    const co2Carbon = CALIB.mu * dQ * 0;
-    const co2Net = co2Gross - co2Capex + co2Carbon;
-    const recycleNet = 30 * 2000 / 1000 * (1 + (resourceEfficiency - 40) / 100);
-    const nvosNet = 60 * 663.2 / 1000 * (e_f_factor / 0.8);
-    const platformCost = 120 * ANN7 + 30 + 15;
-    const deltaE_base = heatNet + co2Net + recycleNet + nvosNet - platformCost;
-    const flows = { heatGross, heatNet, co2Gross, co2Capex, co2Carbon, co2Net, recycleNet, nvosNet, platformCost };
-
-    // Formula (14): Verified savings Delta E(t) = Delta E_base * phi
-    // Постоянные затраты платформы от связности не зависят и на φ не умножаются:
-    // ΔE(t) = φ(C)·Σ чистых вкладов потоков − Z_пл. Отсюда порог окупаемости платформы C_min.
-    const flowsNetSum = deltaE_base + platformCost;
-    const deltaE_t = flowsNetSum * phi_val - platformCost;
-    const cMin = flowsNetSum > platformCost ? -Math.log(1 - platformCost / flowsNetSum) / k : Infinity;
-    // Ожидаемый эффект с учётом риска остановки якоря (3.24)–(3.25) § 3.2: во время остановки
-    // выпадает валовой поток CO2, аннуитет вложений сохраняется
-    const deltaE_exp = (flowsNetSum - piA * co2Gross) * phi_val - platformCost;
-    const anchorShare = CALIB.anchorShapley * deltaE_base;
-    const anchorShareRisk = (1 - piA) * anchorShare;
-
-    // Constraint 2: Budget sufficiency; SD_б + B_внеш ≥ C_ликв
-    const c_liq = 15.5 + (year - 2026) * 0.5; // 15,5–20,5 млн руб., класс C
-    
-    // Distribution Regimes
-    const shares = {
-      fiscal: { budget: 0.40, operator: 0.25, suppliers: 0.15, corporation: 0.12, multiplier: 1.0 },
-      tech: { budget: 0.25, operator: 0.40, suppliers: 0.15, corporation: 0.12, multiplier: 1.12 },
-      industrial: { budget: 0.25, operator: 0.15, suppliers: 0.40, corporation: 0.12, multiplier: 1.18 }
-    };
-
-    const currentShares = shares[distRegime];
-    
-    // Ecofund share: фиксированные 8% согласно Таблице 1 статьи (формула 6.2)
-    const ecofundShare = 0.08;
-
-    // Formula (15): Symbiotic Dividend SD = alpha * Delta E(t) * Multiplier
-    // Отрицательный чистый эффект дивиденда не образует
-    let sd = Math.max(0, alpha * deltaE_t * currentShares.multiplier);
-    if (investment < 5) {
-      sd = 0;
-    }
-    
-    // Нелинейная функция доли бюджета β(C_инд) = β₀·φ + β₁·(1−φ)
-    // β₀ = 0.45 (экосистемный режим), β₁ = 0.25 (низкая связность) — формула (11)
-    const beta = 0.45 * phi_val + 0.25 * (1 - phi_val);
-    const sd_budget = sd * beta;
-
-    // Доли бюджета (β) и экофонда (8%) заданы формулами (11) и (6.2);
-    // остаток 1 − β − 0.08 делится между оператором, поставщиками и корпорацией
-    // в пропорциях выбранного режима, поэтому сумма долей всегда равна 100% SD
-    const restWeight = currentShares.operator + currentShares.suppliers + currentShares.corporation;
-    const rest = Math.max(0, 1 - beta - ecofundShare);
-    const effShares = {
-      budget: beta,
-      operator: rest * currentShares.operator / restWeight,
-      suppliers: rest * currentShares.suppliers / restWeight,
-      corporation: rest * currentShares.corporation / restWeight,
-      ecofund: ecofundShare,
-      multiplier: currentShares.multiplier
-    };
-
-    const distribution = {
-      budget: sd_budget,
-      operator: sd * effShares.operator,
-      suppliers: sd * effShares.suppliers,
-      corporation: sd * effShares.corporation,
-      ecofund: sd * ecofundShare,
-      shares: effShares
-    };
-
-    // Constraints check
-    const constraints = {
-      density: investment >= 15, // C_ind >= 15%
-      budget: sd_budget + bExt >= c_liq
-    };
-
-    // U: Utility Function (Target)
-    // Экологическая безопасность: покрытие C_ликв дивидендом бюджета и внешним источником B_внеш
-    const ecoSafety = Math.min(1.2, (sd_budget + bExt) / (c_liq || 1));
-    const u = (phi * 0.5 + (sd / 9.75 * 100) * 0.3 + (ecoSafety * 20));
-
-    // Индекс Устойчивости Экоплатформы (ИУ)
-    // ИУ = (φ·0.35 + EcoSafety/1.2·0.30 + E_it·0.20 + E_f·0.15) · 100
-    const iu = (phi_val * 0.35 + (ecoSafety / 1.2) * 0.30 + e_it_factor * 0.20 + e_f_factor * 0.15) * 100;
-
-    return {
-      sd, phi, distribution, u, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
-      anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety, iu,
-      flows, deltaE_exp, anchorShare, anchorShareRisk, bExt, piA, cMin, flowsNetSum
-    };
-  }, []);
+  const calculateMetrics = useCallback(calcMetrics, []);
 
   // Baseline metrics for 2026 with default settings
   const baseline = useMemo(() => calculateMetrics({
@@ -622,7 +408,7 @@ export default function App() {
     <div className={cn(
       "min-h-screen transition-colors duration-300 font-sans selection:bg-emerald-500 selection:text-white",
       isDarkMode && "theme-dark",
-      helpOpen && "sm:pr-[360px]",
+      helpOpen && view === 'lab' && "sm:pr-[360px]",
       isDarkMode ? "bg-[#141414] text-[#E4E3E0]" : "bg-[#E4E3E0] text-[#141414]"
     )}>
       {/* Header */}
@@ -638,17 +424,26 @@ export default function App() {
             <Cpu size={24} />
           </div>
           <div>
-            <h1 className="text-sm font-bold uppercase tracking-widest whitespace-nowrap">Симулятор Эко-Платформы</h1>
-            <p className="text-[length:calc(12px*var(--ui,1))] font-mono opacity-50 uppercase">Интегрированный интерфейс Dynsim v4.2.0</p>
+            <h1 className="text-sm font-bold uppercase tracking-widest whitespace-nowrap">Имитационная модель экоплатформы</h1>
+            <p className="text-[length:calc(12px*var(--ui,1))] font-mono opacity-60">г. Невинномысск · автор: {AUTHOR.role} {AUTHOR.name} · v{MODEL_VERSION}</p>
           </div>
         </div>
 
         <nav className="flex flex-wrap items-center gap-1">
+          <button
+            onClick={() => setView('model')}
+            className={cn("px-3 py-2 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-wider whitespace-nowrap border-2 transition-colors",
+              view === 'model' ? "text-white" : "")}
+            style={view === 'model' ? { background: 'var(--c-nov)', borderColor: 'var(--c-nov)' } : { borderColor: 'var(--c-nov)', color: 'var(--c-nov)' }}
+          >
+            Модель
+          </button>
+          <span className="px-2 text-[length:calc(11px*var(--ui,1))] font-mono uppercase opacity-50">Лаборатория:</span>
           <button 
-            onClick={() => setActiveTab('simulation')}
+            onClick={() => { setView('lab'); setActiveTab('simulation'); }}
             className={cn(
               "px-3 py-2 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 border-b-2",
-              activeTab === 'simulation' 
+              view === 'lab' && activeTab === 'simulation' 
                 ? (isDarkMode ? "border-[#E4E3E0] text-[#E4E3E0]" : "border-[#141414] text-[#141414]")
                 : "border-transparent opacity-50 hover:opacity-100"
             )}
@@ -656,10 +451,10 @@ export default function App() {
             Симуляция
           </button>
           <button 
-            onClick={() => setActiveTab('participants')}
+            onClick={() => { setView('lab'); setActiveTab('participants'); }}
             className={cn(
               "px-3 py-2 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 border-b-2",
-              activeTab === 'participants' 
+              view === 'lab' && activeTab === 'participants' 
                 ? (isDarkMode ? "border-[#E4E3E0] text-[#E4E3E0]" : "border-[#141414] text-[#141414]")
                 : "border-transparent opacity-50 hover:opacity-100"
             )}
@@ -667,10 +462,10 @@ export default function App() {
             Участники
           </button>
           <button 
-            onClick={() => setActiveTab('bilevel')}
+            onClick={() => { setView('lab'); setActiveTab('bilevel'); }}
             className={cn(
               "px-3 py-2 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 border-b-2",
-              activeTab === 'bilevel' 
+              view === 'lab' && activeTab === 'bilevel' 
                 ? (isDarkMode ? "border-[#E4E3E0] text-[#E4E3E0]" : "border-[#141414] text-[#141414]")
                 : "border-transparent opacity-50 hover:opacity-100"
             )}
@@ -678,10 +473,10 @@ export default function App() {
             Двухуровневая модель
           </button>
           <button 
-            onClick={() => setActiveTab('benef')}
+            onClick={() => { setView('lab'); setActiveTab('benef'); }}
             className={cn(
               "px-3 py-2 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 border-b-2",
-              activeTab === 'benef' 
+              view === 'lab' && activeTab === 'benef' 
                 ? (isDarkMode ? "border-[#E4E3E0] text-[#E4E3E0]" : "border-[#141414] text-[#141414]")
                 : "border-transparent opacity-50 hover:opacity-100"
             )}
@@ -691,14 +486,6 @@ export default function App() {
         </nav>
         
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="hidden 2xl:flex items-center gap-2">
-            <div className={cn("w-2 h-2 rounded-full animate-pulse", isConnected ? "bg-emerald-500" : "bg-red-500")} />
-            <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase tracking-tighter">
-              {isConnected ? "DYNSIM: ПОДКЛЮЧЕНО" : "DYNSIM: ОФФЛАЙН"}
-            </span>
-          </div>
-          <div className={cn("hidden 2xl:block h-8 w-[1px] transition-colors duration-300", isDarkMode ? "bg-[#E4E3E0]/20" : "bg-[#141414]/10")} />
-          
           <div className="flex items-center gap-4">
             {/* Theme Toggle */}
             <button 
@@ -718,7 +505,21 @@ export default function App() {
               <button onClick={() => setUiScale(1)} className="px-1.5 py-1.5 opacity-70 hover:opacity-100" title="Сбросить масштаб">{Math.round(uiScale * 100)}%</button>
               <button onClick={() => setUiScale(Math.min(1.6, Math.round((uiScale + 0.1) * 10) / 10))} className="px-2 py-1.5 hover:bg-emerald-500/10" aria-label="Увеличить масштаб">A+</button>
             </div>
-            <button
+            {view === 'model' && (
+              <div className={cn("flex items-center border text-[length:calc(12px*var(--ui,1))] font-bold", isDarkMode ? "border-[#E4E3E0]/30" : "border-[#141414]/30")} title="Адресат показа">
+                {([['council', 'Учёный совет'], ['gov', 'Правительство']] as const).map(([id, l]) => (
+                  <button key={id} onClick={() => setAudience(id)} aria-pressed={audience === id}
+                    className={cn("px-2.5 py-1.5", audience === id && (isDarkMode ? "bg-[#E4E3E0] text-[#141414]" : "bg-[#141414] text-white"))}>{l}</button>
+                ))}
+              </div>
+            )}
+            {view === 'model' && (
+              <button onClick={() => setFocus(!focus)} aria-pressed={focus} title="Скрыть боковые меню (клавиша F или двойной щелчок по свободному полю)"
+                className={cn("px-2.5 py-1.5 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest border", focus ? (isDarkMode ? "bg-[#E4E3E0] text-[#141414]" : "bg-[#141414] text-white") : (isDarkMode ? "border-[#E4E3E0]/30" : "border-[#141414]/30"))}>
+                Фокус
+              </button>
+            )}
+            {view === 'lab' && <button
               onClick={() => { const v = !defense; setDefense(v); if (v) setHelpOpen(true); }}
               className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest border transition-colors",
                 defense ? "text-white" : (isDarkMode ? "border-[#E4E3E0]/30" : "border-[#141414]/30"))}
@@ -727,7 +528,7 @@ export default function App() {
               aria-pressed={defense}
             >
               <Award size={14} /> Новизна
-            </button>
+            </button>}
             <button
               onClick={() => setHelpOpen(!helpOpen)}
               className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest border transition-colors",
@@ -737,15 +538,9 @@ export default function App() {
               <BookOpen size={14} /> Справка
             </button>
             
-            <div className={cn(
-              "hidden 2xl:block px-3 py-1 text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest cursor-pointer transition-colors duration-300",
-              isDarkMode ? "bg-[#E4E3E0] text-[#141414] hover:bg-[#E4E3E0]/90" : "bg-[#141414] text-[#E4E3E0] hover:bg-[#141414]/90"
-            )}>
-              Export Data
-            </div>
           </div>
         </div>
-        {defense && (
+        {defense && view === 'lab' && (
           <div className="-mx-6 -mb-3 mt-1 px-6 py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[length:calc(12px*var(--ui,1))] border-t"
             style={{ width: 'calc(100% + 3rem)', borderColor: NOV_COLOR, background: isDarkMode ? '#241a36' : '#f1ecfb' }}>
             <span className="font-bold uppercase tracking-widest" style={{ color: NOV_COLOR }}>Научная новизна (гл. 3):</span>
@@ -763,8 +558,11 @@ export default function App() {
 
       </header>
 
-      <main className="p-6">
-        {activeTab === 'benef' ? (
+      <main className="p-6 pb-14">
+        {view === 'model' ? (
+          <Defense isDarkMode={isDarkMode} audience={audience} focus={focus} setFocus={setFocus}
+            onOpenLab={(id) => { if (id) goNovelty(id); else setView('lab'); }} />
+        ) : activeTab === 'benef' ? (
           <BeneficiaryPanel
             isDarkMode={isDarkMode}
             kScenario={kScenario}
@@ -2129,20 +1927,14 @@ export default function App() {
       {/* Footer Status Bar */}
       <footer className={cn(
         "border-t px-6 py-2 flex items-center justify-between fixed bottom-0 left-0 right-0 z-10 transition-colors duration-300",
-        helpOpen && "sm:right-[360px]",
+        helpOpen && view === 'lab' && "sm:right-[360px]",
         isDarkMode ? "bg-[#141414] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
       )}>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Activity size={12} className="text-emerald-500" />
-            <span className="text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-tighter">Система: Норма</span>
-          </div>
-          <div className={cn("w-[1px] h-3 transition-colors duration-300", isDarkMode ? "bg-[#E4E3E0]/20" : "bg-[#141414]/20")} />
-          <span className="text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-tighter opacity-50">Буфер: <span className="is-number">1024</span>МБ</span>
-          <span className="text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-tighter opacity-50">Задержка: <span className="is-number">12</span>мс</span>
+        <div className="text-[length:calc(11px*var(--ui,1))] font-mono tracking-tight opacity-70 truncate">
+          Имитационная модель · платформа не создана · классы данных A / B / C · версия {MODEL_VERSION}
         </div>
-        <div className="text-[length:calc(11px*var(--ui,1))] font-mono uppercase tracking-tighter opacity-50">
-          © <span className="is-number">2026</span> Eco-Platform Dynamics • Конфиденциально
+        <div className="text-[length:calc(11px*var(--ui,1))] font-mono tracking-tight opacity-60 whitespace-nowrap pl-4">
+          {AUTHOR.role} {AUTHOR.name}, СКФУ, <span className="is-number">2026</span>
         </div>
       </footer>
     </div>

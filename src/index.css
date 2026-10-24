@@ -54,7 +54,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--c-ctl);
   border: 2px solid #ffffff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.35);
 }
@@ -62,12 +62,12 @@ input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--c-ctl);
   border: 2px solid #ffffff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 input[type="range"]::-moz-range-track { background: transparent; }
-input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45); }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.45); }
 /* Ползунки состояния оборудования сохраняют свой цвет */
 input[type="range"].accent-red-500::-webkit-slider-thumb { background: #ef4444; }
 input[type="range"].accent-orange-500::-webkit-slider-thumb { background: #f97316; }
@@ -79,7 +79,24 @@ input[type="range"].accent-emerald-400::-moz-range-thumb { background: #34d399; 
 input[type="range"].accent-green-500::-moz-range-thumb { background: #22c55e; }
 
 /* Подписи графиков масштабируются вместе с интерфейсом */
-:root { --ui: 1; }
+:root {
+  --ui: 1;
+  /* Цветовая система версии 5.0 (ТЗ, подраздел 3.1) */
+  --c-nov: #7c3aed; --c-nov-a: #a78bfa;      /* новизна: Н и А */
+  --c-gen: #9a6b2f;                           /* генезис */
+  --c-part: #1d4ed8; --c-part-2: #0e7490;     /* участники */
+  --c-bud: #ea580c; --c-bud-2: #c2410c; --c-bud-3: #f59e0b; /* бюджеты */
+  --c-ok: #2e8b57; --c-mid: #b8860b; --c-bad: #c0392b;      /* статус проблемы */
+  --c-ctl: #141414;                           /* управление: графит */
+}
+.theme-dark {
+  --c-nov: #a78bfa; --c-nov-a: #c4b5fd;
+  --c-gen: #d0a568;
+  --c-part: #60a5fa; --c-part-2: #22d3ee;
+  --c-bud: #fb923c; --c-bud-2: #f97316; --c-bud-3: #fbbf24;
+  --c-ok: #4fbf83; --c-mid: #e6b93a; --c-bad: #e2685a;
+  --c-ctl: #E4E3E0;
+}
 .recharts-cartesian-axis-tick-value, .recharts-label, .recharts-text { font-size: calc(11px * var(--ui, 1)); }
 
 /* Режим защиты: блоки научной новизны главы 3 */

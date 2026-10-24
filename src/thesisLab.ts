@@ -2,8 +2,7 @@
 // Используются функции ядра без изменений; разброс параметров — как в Монте-Карло главы 3:
 // k ± 1, вклады потоков и затраты платформы ± 20 %, выигрыш и затраты резидентов ± 25 %.
 
-import { CALIB, calcMetrics } from './core';
-import { BASE_PARAMS } from './selfcheck';
+import { CALIB, calcMetrics, BASE_PARAMS } from './core';
 import {
   makePopulation, perturbPopulation, equilibrium, evaluate, zMinCurve, monteCarlo, lcg,
   cStar, PI, type Context, type Resident, type MechId,
@@ -158,4 +157,32 @@ export function n6(year: number, mech: MechId = 'divC', n = 300) {
   ];
   const city = computeYear(benefInputs(year), year);
   return { ev, cLiq, cover: interval(ev.pub / cLiq, xs), tornado, base: ev.pub / cLiq, city };
+}
+
+// ── Ретропрогноз: информационный барьер (3.35) ──
+// x_min — наименьшие доп. затраты резидента на поиск и согласование, при которых равновесие
+// без платформы (θ₀: k − 2, τ = 2000, α = 0, Z_пл = 0) не выше наблюдаемой связности C₀ = 1/130.
+export const C0_OBS = 1 / 130;
+const addCost = (pop: Resident[], x: number) => pop.map((j) => ({ ...j, c: j.c + x }));
+export function p0At(ctx: Context, x: number) {
+  return evaluate(addCost(POP, x), { mech: 'none', behavior: 'myopic', sigma: 0, ctx });
+}
+export function barrierMin(ctx: Context) {
+  let lo = 0, hi = 6;
+  if (p0At(ctx, 0).C <= C0_OBS) return 0;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (p0At(ctx, mid).C <= C0_OBS) hi = mid; else lo = mid; }
+  return hi;
+}
+// Порог барьера, выше которого платформа (механизм mech, барьер снят) даёт больший ΔE, чем двусторонние сделки
+export function barrierBreakEven(ctx: Context, mech: MechId) {
+  const dEm = evaluate(POP, { mech, behavior: 'myopic', sigma: 0, ctx }).dE;
+  if (p0At(ctx, 0).dE <= dEm) return 0;
+  let lo = 0, hi = 6;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (p0At(ctx, mid).dE <= dEm) hi = mid; else lo = mid; }
+  return hi;
+}
+// Значения на сетке 0,05 млн руб., как в § 3.3.3 (табл. 3.11, формула 3.35)
+export const grid05 = (x: number) => Math.ceil(x / 0.05 - 1e-9) * 0.05;
+export function barrierCurve(ctx: Context, xs: number[]) {
+  return xs.map((x) => { const e = p0At(ctx, x); return { x, C: e.C, dE: e.dE, part: e.part.length }; });
 }

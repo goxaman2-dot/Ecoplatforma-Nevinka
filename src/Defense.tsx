@@ -2,23 +2,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, BarChart, Bar, Cell, LabelList,
 } from 'recharts';
-import { ChevronLeft, ChevronRight, ShieldCheck, FlaskConical, Network, Landmark, RefreshCw, BookMarked, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShieldCheck, FlaskConical, Network, Landmark, RefreshCw, BookMarked, AlertTriangle, History } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { NOVELTY } from './novelty';
 import { GENESIS, PROBLEMS, THESIS_EXTRA, STATUS_LABEL, ROADMAP, GOV_DECISIONS, AUTHOR, MODEL_VERSION, type Status } from './v5content';
 import { runSelfCheck } from './selfcheck';
-import { n1, n2, n3, n4, n5, n6, baseCtx, POP, type Interval, type TornadoRow } from './thesisLab';
+import { n1, n2, n3, n4, n5, n6, baseCtx, POP, type Interval, type TornadoRow, barrierCurve, barrierMin, barrierBreakEven, grid05, C0_OBS } from './thesisLab';
 import { gammaMap, MECHS, BEHAVIORS, evaluate, type MechId, type BehaviorId } from './bilevel';
-import { calcMetrics } from './core';
-import { BASE_PARAMS } from './selfcheck';
+import { calcMetrics, BASE_PARAMS } from './core';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 const ru = (x: number, d = 0) => (Number.isFinite(x) ? x.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—');
 
 export type Audience = 'council' | 'gov';
 type Page =
-  | { kind: 'passport' } | { kind: 'gov' } | { kind: 'bridge' }
+  | { kind: 'passport' } | { kind: 'gov' } | { kind: 'bridge' } | { kind: 'retro' }
   | { kind: 'gen'; id: string } | { kind: 'prob'; id: string } | { kind: 'thesis'; id: string };
 
 export const THESES = ['N1', 'N2', 'N3', 'N4', 'N5', 'N6'];
@@ -165,6 +164,7 @@ export default function Defense({ isDarkMode, audience, focus, setFocus, onOpenL
           {page.kind === 'passport' && <Passport {...ctx} />}
           {page.kind === 'gov' && <GovPage {...ctx} />}
           {page.kind === 'bridge' && <Bridge {...ctx} />}
+          {page.kind === 'retro' && <Retro {...ctx} />}
           {page.kind === 'gen' && <GenesisPage id={page.id} {...ctx} />}
           {page.kind === 'prob' && <ProblemPage id={page.id} {...ctx} />}
           {page.kind === 'thesis' && <ThesisPage key={page.id} id={page.id} {...ctx} />}
@@ -212,6 +212,7 @@ function PageNav({ page, go, audience, isDarkMode, onOpenLab }: { page: Page; go
           </button>
         );
       })}
+      <button className={b(page.kind === 'retro')} onClick={() => go({ kind: 'retro' })}><History size={13} className="inline -mt-0.5 mr-1" />Ретропрогноз</button>
       <button className={b(page.kind === 'bridge')} onClick={() => go({ kind: 'bridge' })}><Network size={13} className="inline -mt-0.5 mr-1" />Мост</button>
       <button className={cn(b(false), 'ml-auto')} onClick={() => onOpenLab(page.kind === 'thesis' ? page.id : undefined)}>
         <FlaskConical size={13} className="inline -mt-0.5 mr-1" />Лаборатория
@@ -228,7 +229,7 @@ const P = ({ children, className }: { children: React.ReactNode; className?: str
 );
 
 // ─── Паспорт модели ───
-function Passport({ card, muted, isDarkMode }: Ctx) {
+function Passport({ card, muted, isDarkMode, go }: Ctx) {
   const [checks, setChecks] = useState(() => runSelfCheck());
   const okN = checks.filter((c) => c.ok).length;
   return (
@@ -267,7 +268,7 @@ function Passport({ card, muted, isDarkMode }: Ctx) {
               ].map(([a, b]) => (
                 <tr key={a} className={cn('border-b', isDarkMode ? 'border-[#E4E3E0]/10' : 'border-[#141414]/10')}>
                   <td className="py-1.5 pr-3 font-bold align-top whitespace-nowrap">{a}</td>
-                  <td className="py-1.5 leading-snug">{b}</td>
+                  <td className="py-1.5 leading-snug">{b}{a === 'Объяснительность' && <> <button onClick={() => go({ kind: 'retro' })} className="underline font-bold" style={{ color: 'var(--c-gen)' }}>Ретропрогноз →</button></>}</td>
                 </tr>
               ))}
             </tbody>
@@ -326,6 +327,59 @@ function Passport({ card, muted, isDarkMode }: Ctx) {
   );
 }
 
+const OutOfText = ({ children }: { children: React.ReactNode }) => (
+  <div className="mt-2 inline-block px-2 py-0.5 text-[length:calc(11px*var(--ui,1))] font-mono border border-dashed" style={{ borderColor: 'var(--c-mid)', color: 'var(--c-mid)' }}>{children}</div>
+);
+
+// ─── Ретропрогноз: информационный барьер (3.35) ───
+function Retro({ card, muted, isDarkMode }: Ctx) {
+  const d = useMemo(() => {
+    const ctx = baseCtx(2027);
+    const xs = Array.from({ length: 61 }, (_, i) => +(i * 0.05).toFixed(2));
+    const curve = barrierCurve(ctx, xs).map((r) => ({ ...r, Cpct: r.C * 100 }));
+    const xmin = barrierMin(ctx);
+    const be = barrierBreakEven(ctx, 'coord');
+    return { curve, xmin, xminG: grid05(xmin), be: grid05(be), beRaw: be };
+  }, []);
+  const grid = isDarkMode ? '#333' : '#e5e5e5';
+  const ax = isDarkMode ? '#c3c2b7' : '#52514e';
+  return (
+    <div className="space-y-4">
+      <div className={cn(card, 'border-l-8')} style={{ borderLeftColor: 'var(--c-gen)' }}>
+        <H color="var(--c-gen)">Объяснительность · § 3.3.3, табл. 3.11, формула (3.35)</H>
+        <h2 className="text-xl font-bold leading-tight">Ретропрогноз: почему за 2017–2026 гг. возникла одна межзаводская связь</h2>
+        <P className="mt-2">Режим Р0 (двусторонние сделки без платформы) дополняется информационным барьером x — затратами одного резидента на поиск партнёра и проверку его данных, млн руб./год. Модель ищет такое x, при котором равновесная доля связей C** опускается до наблюдаемой: одна связь из 130 возможных пар (C₀ = 1/130 ≈ {ru(C0_OBS * 100, 2)} %).</P>
+      </div>
+      <div className={card}>
+        <H>C** режима Р0 в зависимости от барьера x, 2027 г.</H>
+        <div className="h-[340px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={d.curve} margin={{ top: 28, right: 24, bottom: 28, left: 8 }}>
+              <CartesianGrid stroke={grid} strokeDasharray="3 3" />
+              <XAxis dataKey="x" type="number" domain={[0, 3]} ticks={[0, 0.5, 1, 1.5, 2, 2.5, 3]} tickFormatter={(v) => ru(v, 1)} stroke={ax}
+                label={{ value: 'барьер x, млн руб./год', position: 'insideBottom', offset: -16, fill: ax, fontSize: 12 }} />
+              <YAxis stroke={ax} tickFormatter={(v) => ru(v, 0)} label={{ value: 'C**, %', angle: -90, position: 'insideLeft', fill: ax, fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => ru(v, 2) + ' %'} labelFormatter={(v) => 'x = ' + ru(Number(v), 2)} />
+              <ReferenceLine y={C0_OBS * 100} stroke="var(--c-gen)" strokeDasharray="4 3" label={{ value: 'наблюдаемо: 1/130', position: 'insideTopLeft', dx: 40, fill: 'var(--c-gen)', fontSize: 12 }} />
+              <ReferenceLine x={d.xminG} stroke="var(--c-nov)" label={{ value: 'x_min = ' + ru(d.xminG, 2), position: 'top', fill: 'var(--c-nov)', fontSize: 12 }} />
+              <ReferenceLine x={d.be} stroke="var(--c-mid)" strokeDasharray="6 3" label={{ value: 'безубыточность ' + ru(d.be, 2), position: 'insideTopLeft', fill: 'var(--c-mid)', fontSize: 12 }} />
+              <Line type="stepAfter" dataKey="Cpct" stroke="var(--c-gen)" strokeWidth={2.5} dot={false} isAnimationActive={false} name="C** Р0" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className={card}><H>Минимальный барьер</H><div className="text-3xl font-bold font-mono" style={{ color: 'var(--c-nov)' }}>{ru(d.xminG, 2)}</div>
+          <div className={cn('text-[length:calc(12px*var(--ui,1))]', muted)}>млн руб./год на сетке 0,05 (точно {ru(d.xmin, 3)}); в тексте — 1,75</div></div>
+        <div className={card}><H>Порог безубыточности платформы</H><div className="text-3xl font-bold font-mono" style={{ color: 'var(--c-mid)' }}>{ru(d.be, 2)}</div>
+          <div className={cn('text-[length:calc(12px*var(--ui,1))]', muted)}>выше этого барьера платформа (координация, Р1) даёт больший ΔE, чем сделки без неё; в тексте — 0,9–1,05</div></div>
+        <div className={card}><H>Что отвергло бы объяснение</H>
+          <P>Если обследование покажет, что резиденты тратят на поиск и согласование договора заметно меньше 1 млн руб. в год, а обмены всё равно не начинаются, причина лежит вне информационного барьера, и вклад платформы требует пересмотра (§ 3.3.3).</P></div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Генезис и проблемы ───
 function GenesisPage({ id, card, muted, go }: Ctx & { id: string }) {
   const s = GENESIS.find((x) => x.id === id)!;
@@ -346,6 +400,7 @@ function GenesisPage({ id, card, muted, go }: Ctx & { id: string }) {
         </div>
       </div>
       <div className="mt-5"><H>Куда ведёт в модели</H><P>{s.leads}</P></div>
+      {s.id === 'О1' && <button onClick={() => go({ kind: 'retro' })} className="mt-3 px-3 py-1.5 font-bold border-2" style={{ borderColor: 'var(--c-gen)', color: 'var(--c-gen)' }}><History size={13} className="inline -mt-0.5 mr-1" />Ретропрогноз: барьер (3.35)</button>}
       <Links theses={s.theses} problems={s.problems} go={go} muted={muted} />
     </div>
   );
@@ -370,7 +425,7 @@ function ProblemPage({ id, card, muted, go }: Ctx & { id: string }) {
       </div>
       {p.japan && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-          <div><H>Как решала Япония</H><P>{p.japan}</P></div>
+          <div><H>Как решала Япония</H><P>{p.japan}</P><OutOfText>Вне текста глав · источник проверен (GEC 2005; Van Berkel et al. 2009; Hashimoto et al. 2010)</OutOfText></div>
           <div><H>Чем отличается Невинномысск</H><P>{p.differs}</P></div>
         </div>
       )}
@@ -406,7 +461,7 @@ function IntervalView({ v, d, unit = '', label }: { v: Interval; d: number; unit
       <div className="text-[length:calc(12px*var(--ui,1))] opacity-80">{label}</div>
       <div className="text-3xl font-bold font-mono leading-tight" style={{ color: 'var(--c-nov)' }}>{ru(v.mid, d)}{unit && <span className="text-base font-bold">{unit}</span>}</div>
       <div className="text-[length:calc(13px*var(--ui,1))] font-mono">интервал 5–95 %: [{ru(v.lo, d)}; {ru(v.hi, d)}]{unit}</div>
-      {v.n > 0 && <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">{v.n} испытаний в браузере</div>}
+      {v.n > 0 && <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">{v.n} испытаний в браузере · расчёт модели; в тексте — точечное значение</div>}
     </div>
   );
 }
@@ -675,7 +730,7 @@ function ThesisPage({ id, card, muted, isDarkMode, go, onOpenLab }: Ctx & { id: 
         <div><div className="text-[length:calc(12px*var(--ui,1))] opacity-80">Компенсация σ = 0,3 против Р2, 2027 г.</div><div className="text-3xl font-bold font-mono">+{r5.addSigma}</div><div className="text-[length:calc(13px*var(--ui,1))] font-mono">резидента при затратах {ru(r5.costSigma, 2)} млн руб./год</div></div>
       </div>
     ) : null;
-    sens = <div className={cn('text-[length:calc(14px*var(--ui,1))] leading-relaxed')}>Устойчивость выбора механизма проверяется самим Монте-Карло: в каждом испытании возмущаются выигрыш и затраты резидентов (±25 %), k (±1), вклады потоков и затраты платформы (±20 %); ничьи делятся поровну. В главе 3 — 25 000 испытаний, в браузере — 200.</div>;
+    sens = <div className={cn('text-[length:calc(14px*var(--ui,1))] leading-relaxed')}>Устойчивость выбора механизма проверяется самим Монте-Карло: в каждом испытании возмущаются выигрыш и затраты резидентов (±25 %), k (±1), вклады потоков и затраты платформы (±20 %); ничьи делятся поровну. В браузере — 200 испытаний; в табл. 3.11а главы 3 — 1000. Монте-Карло § 3.3.4 (5000 × 5 сценариев рисков) относится к другому эксперименту.</div>;
   }
 
   // Н6

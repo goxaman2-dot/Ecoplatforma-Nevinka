@@ -12,6 +12,7 @@ import {
   BarChart,
   Bar,
   Cell,
+  ReferenceLine,
 } from 'recharts';
 import {
   Activity,
@@ -84,13 +85,6 @@ const FlowEdge = ({ id, d, color, width, active, duration = "3s" }: any) => (
   </>
 );
 
-interface DataPoint {
-  time: string;
-  u: number;
-  sdt: number;
-  er: number;
-  ef: number;
-}
 
 const MiniSlider = ({ label, value, min, max, step, onChange, fmt, cls, note, term }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
@@ -110,11 +104,6 @@ const MiniSlider = ({ label, value, min, max, step, onChange, fmt, cls, note, te
 
 const ru = (x: number, d = 0) => x.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-// Нормальная случайная величина (Бокса — Мюллера) для шума σ_ε
-const gauss = () => {
-  const u = 1 - Math.random(), v = Math.random();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-};
 
 export default function App() {
   // Theme State with persistence and system preference
@@ -131,10 +120,10 @@ export default function App() {
 
   // Simulation States (Sliders)
   const [synergyFactor, setSynergyFactor] = useState(75); // 0-100%
-  const [resourceEfficiency, setResourceEfficiency] = useState(40); // 0-100%
-  const [turbineEff, setTurbineEff] = useState(80); // Er: 50, 65, 80, 95
-  const [heatExchanger, setHeatExchanger] = useState(80); // Ew: 50, 65, 80, 95
-  const [filterResource, setFilterResource] = useState(80); // Ef: 50, 65, 80, 95
+  // Параметры потоков по табл. 2.5 (класс C)
+  const [heatAvail, setHeatAvail] = useState(0.5);       // a — доступность тепла ГРЭС
+  const [recycleSaving, setRecycleSaving] = useState(2000); // экономия на логистике вторсырья, руб./т
+  const [wasteOut, setWasteOut] = useState(60);          // отходы вне размещения, тыс. т/год
   const [investment, setInvestment] = useState(15); // C index: 0-30
   const [year, setYear] = useState(2026); // 2026-2036
   const [kScenario, setKScenario] = useState(5); // k: 3 (Органическая), 5 (Умеренная), 7 (Координируемая)
@@ -156,7 +145,6 @@ export default function App() {
   const anchorCalc = useMemo(() => calcAnchor({ ...anchor, downDays }), [anchor, downDays]);
 
   // Derived States
-  const [history, setHistory] = useState<DataPoint[]>([]);
   const [isConnected, setIsConnected] = useState(true);
   // Масштаб интерфейса для презентации: 90–160 %, запоминается в браузере
   const [uiScale, setUiScale] = useState<number>(() => {
@@ -207,52 +195,42 @@ export default function App() {
     setTimeout(seek, 60);
   }, []);
 
+  // Получатели дивиденда по схеме В (§ 2.5.2, формула 2.18); функции — по § 1.3.2, 2.2.1, 2.5.4, 3.5.1
   const participants = [
     {
-      name: 'Бюджет дестинации ★ (Невинномысск)',
-      functions: 'Получает долю β(C_инд) = 25–45% SD (формула 11); финансирует экофонд, рекультивацию фосфогипса, инфраструктуру; заказывает независимый аудит ΔE через СКФУ',
-      contribution: 'Политическая воля; госмониторинг; данные о накопленном ущербе',
-      share: 40,
-      amount: 10.0
+      name: 'Бюджет г. Невинномысска',
+      functions: 'Получает долю β(C) = 25–45 % дивиденда как территория, принимающая экологическую нагрузку (2.18); вместе с внешним источником финансирует ликвидацию накопленного ущерба (3.21).',
+      contribution: 'Правовой режим и ответственность за ликвидацию ущерба (§ 1.3.2); при запуске теряет часть платы за НВОС (§ 2.5.4).',
     },
     {
-      name: 'Оператор платформы (ООО/АО)',
-      functions: 'Разрабатывает и эксплуатирует IoT-платформу, AI-матчинг, цифровые двойники; организует сетевую координацию',
-      contribution: 'Программный продукт; алгоритмы верификации ΔE; команда координатора',
-      share: 25,
-      amount: 6.25
+      name: 'Оператор платформы',
+      functions: 'Ведёт реестр потоков, рассчитывает эффект и ценовые коридоры, готовит типовые договоры (§ 2.2.1, табл. 2.3). Ресурсами участников не распоряжается.',
+      contribution: 'Учёт и расчёт; основной доход — сервисный платёж, дивиденд — премия за результат (§ 2.5.4).',
     },
     {
-      name: 'Резиденты-поставщики ресурсов (Азот, ГРЭС, ЭПП)',
-      functions: 'Поставляют тепло, CO₂, вторсырьё; раскрывают данные о потоках; заключают долгосрочные симбиотические контракты',
-      contribution: 'Производственные данные в реальном времени; объёмы вторичных ресурсов',
-      share: 15,
-      amount: 3.75
+      name: 'Поставщики ресурсов (ГРЭС, «Азот», ЭПП)',
+      functions: 'Поставляют низкопотенциальное тепло, CO₂ сверх действующих 32 тыс. т, вторичное сырьё (табл. 2.6).',
+      contribution: 'Объём и качество ресурса, за которые отвечают по договору (§ 1.3.2).',
     },
     {
       name: 'Корпорация развития Ставропольского края',
-      functions: 'Реинвестирует долю SD в новых резидентов ТОСЭР; обеспечивает правовую базу; Стратегия-2035',
-      contribution: 'Льготы ТОСЭР; нормативная база; административный ресурс',
-      share: 12,
-      amount: 3.0
+      functions: 'Получатель части остатка дивиденда в схеме В (§ 2.5.2); участник этапа масштабирования дорожной карты (табл. 3.21).',
+      contribution: 'Региональные инструменты поддержки резидентов ТОСЭР.',
     },
     {
-      name: 'Экофонд ликвидации ущерба',
-      functions: 'Аккумулирует средства для рекультивации отвалов фосфогипса (18 млн т), очистки грунтовых вод, р. Кубань',
-      contribution: 'Экологический аудит; отчётность по ликвидации ущерба',
-      share: 8,
-      amount: 2.0
-    }
+      name: 'Экофонд ликвидации накопленного ущерба',
+      functions: 'Постоянная доля 8 % дивиденда в схеме В (2.18), направляемая на ликвидацию накопленного экологического ущерба.',
+      contribution: 'Целевое использование средств; отчётность перед публичным партнёром.',
+    },
   ];
 
   const calculateMetrics = useCallback(calcMetrics, []);
 
   // Baseline metrics for 2026 with default settings
   const baseline = useMemo(() => calculateMetrics({
-    resourceEfficiency: 40,
-    turbineEff: 80,
-    heatExchanger: 80,
-    filterResource: 80,
+    heatAvail: 0.5,
+    recycleSaving: 2000,
+    wasteOut: 60,
     investment: 15,
     year: 2026,
     kScenario: 5,
@@ -263,10 +241,9 @@ export default function App() {
   // Calculate current metrics based on provided formulas
   const metrics = useMemo(() => {
     const current = calculateMetrics({
-      resourceEfficiency,
-      turbineEff,
-      heatExchanger,
-      filterResource,
+      heatAvail,
+      recycleSaving,
+      wasteOut,
       investment,
       year,
       kScenario,
@@ -284,19 +261,14 @@ export default function App() {
 
     return {
       ...current,
-      turbineEff,
-      heatExchanger,
-      filterResource,
       trends: {
-        u: calculateTrend(current.u, baseline.u),
         sd: calculateTrend(current.sd, baseline.sd),
         phi: calculateTrend(current.phi, baseline.phi),
         ecofund: calculateTrend(current.distribution.ecofund, baseline.distribution.ecofund),
-        iu: calculateTrend(current.iu, baseline.iu),
         deltaE: calculateTrend(current.deltaE_t, baseline.deltaE_t)
       }
     };
-  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt, baseline]);
+  }, [calculateMetrics, heatAvail, recycleSaving, wasteOut, investment, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt, baseline]);
 
   const getStatusColor = (val: number) => {
     if (val <= 50) return "accent-red-500";
@@ -312,27 +284,11 @@ export default function App() {
     return "text-green-500";
   };
 
-  // Simulation Loop
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHistory((prev) => {
-        const newPoint = {
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          // Шум имитации задаётся σ_ε = 0,073 (остатки модели 3.2), а не σ_Δ
-          u: metrics.u * (1 + CALIB.sigmaEps * 0.3 * gauss()),
-          sdt: metrics.sd * 10 * (1 + CALIB.sigmaEps * gauss()),
-          er: metrics.phi,
-          ef: metrics.sd,
-          iu: metrics.iu + (Math.random() - 0.5) * 0.5,
-        };
-        const next = [...prev, newPoint];
-        if (next.length > 20) return next.slice(1);
-        return next;
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [metrics]);
+  // Траектория по годам 2026–2036 при текущих параметрах (вместо «живого» графика с шумом)
+  const yearPath = useMemo(() => Array.from({ length: 11 }, (_, i) => 2026 + i).map((y) => {
+    const m = calculateMetrics({ heatAvail, recycleSaving, wasteOut, investment, year: y, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt });
+    return { year: String(y), dE: m.deltaE_t, sd: m.sd, budget: m.sd_budget, cMin: m.cMin };
+  }), [calculateMetrics, heatAvail, recycleSaving, wasteOut, investment, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt]);
 
   // Determine Regime based on C (Investment Index) and Phi (Synergy)
   const currentRegime = useMemo(() => {
@@ -345,7 +301,7 @@ export default function App() {
   // (5%, 15%, 30%) при текущих настройках, а не задаются вручную
   const regimeBounds = useMemo(() => {
     const at = (c: number) => calculateMetrics({
-      resourceEfficiency, turbineEff, heatExchanger, filterResource,
+      heatAvail, recycleSaving, wasteOut,
       investment: c, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt
     });
     const m5 = at(5), m15 = at(15), m30 = at(30);
@@ -357,7 +313,7 @@ export default function App() {
       sd2: `${f1(m5.sd)}–${f1(m15.sd)}`,
       sd3: `${f1(m15.sd)}–${f1(m30.sd)}`
     };
-  }, [calculateMetrics, resourceEfficiency, turbineEff, heatExchanger, filterResource, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt]);
+  }, [calculateMetrics, heatAvail, recycleSaving, wasteOut, year, kScenario, alpha, distRegime, dQ, switchShare, downDays, piA, bExt]);
 
   const regimes = [
     { 
@@ -727,9 +683,9 @@ export default function App() {
                       <div key={r.id} className="group relative">
                         <button
                           onClick={() => {
-                            if (idx === 0) { setInvestment(2); setSynergyFactor(5); setResourceEfficiency(20); }
-                            if (idx === 1) { setInvestment(10); setSynergyFactor(45); setResourceEfficiency(55); }
-                            if (idx === 2) { setInvestment(25); setSynergyFactor(90); setResourceEfficiency(85); }
+                            if (idx === 0) { setInvestment(2); setSynergyFactor(5); }
+                            if (idx === 1) { setInvestment(10); setSynergyFactor(45); }
+                            if (idx === 2) { setInvestment(25); setSynergyFactor(90); }
                           }}
                           className={cn(
                             "w-full py-2 text-[length:calc(11px*var(--ui,1))] font-bold uppercase tracking-tighter border transition-all duration-300",
@@ -770,29 +726,6 @@ export default function App() {
                 <p className="text-[length:calc(10px*var(--ui,1))] opacity-50 italic leading-tight">
                   {metrics.phi === 0 ? "Связи отсутствуют (разрозненность)" : "Рассчитано на основе k и C_инд"}
                 </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-end">
-                  <div className="flex items-center gap-1.5 group relative">
-                    <label data-term="Er" className="text-xs font-bold uppercase tracking-widest opacity-50">Эффективность ресурсов (Er)</label>
-                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
-                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                      Эффективность ресурсов (Er) — это показатель, отражающий, насколько полно и результативно используются материальные и энергетические ресурсы кластера в результате симбиоза (с учётом предотвращённых потерь и экономии)
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold font-mono">{resourceEfficiency}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" max="100" 
-                  value={resourceEfficiency} 
-                  onChange={(e) => setResourceEfficiency(Number(e.target.value))}
-                  className={cn(
-                    "w-full h-1 appearance-none cursor-pointer transition-colors duration-300",
-                    isDarkMode ? "bg-[#E4E3E0]/10 accent-[#E4E3E0]" : "bg-[#E4E3E0] accent-[#141414]"
-                  )}
-                />
               </div>
 
               <div className="space-y-3">
@@ -841,25 +774,25 @@ export default function App() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 group relative">
-                    <span data-term="density" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest">1. Синерг. плотность (C ≥ 15%)</span>
-                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
-                    <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                      C≥15% — это уровень связности экосистемы, при котором не менее 15% потенциально возможных симбиотических связей между участниками кластера фактически реализованы (начало экосистемного режима).
-                    </div>
-                  </div>
-                  {metrics.constraints.density ? (
+                  <span data-term="C_min" className="text-[length:calc(12px*var(--ui,1))] font-bold tracking-wide">1. ОКУПАЕМОСТЬ (C_инд ≥ C_min, 3.34)</span>
+                  {metrics.constraints.cmin ? (
                     <CheckCircle2 size={14} className="text-emerald-500" />
                   ) : (
                     <AlertCircle size={14} className="text-red-500" />
                   )}
                 </div>
+                <div className="flex justify-between text-[length:calc(10px*var(--ui,1))] font-mono opacity-60">
+                  <span>C_инд: {metrics.c_ind.toFixed(3)}</span>
+                  <span>C_min: {Number.isFinite(metrics.cMin) ? metrics.cMin.toFixed(3) : '—'}</span>
+                  <span>ΔE(t): {metrics.deltaE_t.toFixed(1)}</span>
+                </div>
                 <div className="h-1 w-full bg-gray-500/20 rounded-full overflow-hidden">
-                  <div 
-                    className={cn("h-full transition-all duration-500", metrics.constraints.density ? "bg-emerald-500" : "bg-red-500")}
-                    style={{ width: `${Math.min(100, (metrics.c / 15) * 100)}%` }}
+                  <div
+                    className={cn("h-full transition-all duration-500", metrics.constraints.cmin ? "bg-emerald-500" : "bg-red-500")}
+                    style={{ width: `${Math.min(100, (metrics.c_ind / (metrics.cMin || 1)) * 100)}%` }}
                   />
                 </div>
+                <p className="text-[length:calc(10px*var(--ui,1))] font-mono opacity-50 leading-tight">Пороги 5 % и 15 % — сценарные ориентиры главы 2; экономическая граница — C_min (§ 3.3.2).</p>
               </div>
 
               <div data-nov="N6" data-nov-tag="Н6" className="space-y-2">
@@ -906,82 +839,14 @@ export default function App() {
             "p-5 space-y-4 transition-colors duration-300",
             "bg-[#064e3b] text-[#E4E3E0]"
           )}>
-            <div className="flex items-center gap-1.5 group relative">
-              <h3 className="text-xs font-bold uppercase tracking-widest opacity-50">Устойчивость экосистемы</h3>
-              <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
-              <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                Устойчивость экосистемы — это экран мониторинга, который в реальном времени показывает техническое состояние ключевого оборудования кластера (турбина, теплообменник, фильтр выбросов и др.) на основе датчиков и IoT-систем.
-              </div>
-            </div>
+            <h3 data-term="flows" className="text-xs font-bold uppercase tracking-widest opacity-60">Параметры потоков (табл. 2.5, класс C)</h3>
             <div className="space-y-4">
-              <div className="space-y-2 group relative">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 size={14} className={getIconColor(turbineEff)} />
-                  <span data-term="Er" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest cursor-help">Эффективность турбины (Er): {turbineEff}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="50" max="95" step="15"
-                  value={turbineEff} 
-                  onChange={(e) => setTurbineEff(Number(e.target.value))}
-                  className={cn("w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer", getStatusColor(turbineEff))}
-                />
-                <div className="flex justify-between text-[length:calc(9px*var(--ui,1))] font-mono opacity-40">
-                  <span>50%</span>
-                  <span>65%</span>
-                  <span>80%</span>
-                  <span>95%</span>
-                </div>
-                <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                  Эффективность турбины — это текущий КПД турбины, показывающий, какую долю подведённой энергии она превращает в полезную работу; значение берётся из потока телеметрии оборудования, подключённого к экоплатформе.
-                </div>
-              </div>
-
-              <div className="space-y-2 group relative">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 size={14} className={getIconColor(heatExchanger)} />
-                  <span data-term="Er" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest cursor-help">Теплообменник (Ew): {heatExchanger}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="50" max="95" step="15"
-                  value={heatExchanger} 
-                  onChange={(e) => setHeatExchanger(Number(e.target.value))}
-                  className={cn("w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer", getStatusColor(heatExchanger))}
-                />
-                <div className="flex justify-between text-[length:calc(9px*var(--ui,1))] font-mono opacity-40">
-                  <span>50%</span>
-                  <span>65%</span>
-                  <span>80%</span>
-                  <span>95%</span>
-                </div>
-                <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                  Теплообменник — это узел, который сейчас работает в штатном режиме и задействован в контуре теплосети; статус поступает из системы оперативного дистекчерского управления и IoT-датчиков.
-                </div>
-              </div>
-
-              <div className="space-y-2 group relative">
-                <div className="flex items-center gap-3">
-                  <AlertCircle size={14} className={getIconColor(filterResource)} />
-                  <span className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest cursor-help">Фильтр выбросов (Ef): {filterResource}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="50" max="95" step="15"
-                  value={filterResource} 
-                  onChange={(e) => setFilterResource(Number(e.target.value))}
-                  className={cn("w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer", getStatusColor(filterResource))}
-                />
-                <div className="flex justify-between text-[length:calc(9px*var(--ui,1))] font-mono opacity-40">
-                  <span>50%</span>
-                  <span>65%</span>
-                  <span>80%</span>
-                  <span>95%</span>
-                </div>
-                <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                  Фильтр выбросов — это показатель расчётного срока службы или пропускной способности до регламентной замены/обслуживания; рассчитывается по наработке, загрузке и данным датчиков экоплатформы.
-                </div>
-              </div>
+              <MiniSlider term="flows" label="a — доступность тепла ГРЭС" value={heatAvail} min={0.3} max={0.7} step={0.05}
+                onChange={setHeatAvail} fmt={(v) => v.toFixed(2)} note="нижний 0,3 · базовый 0,5 · верхний 0,7" />
+              <MiniSlider term="flows" label="Экономия на логистике вторсырья" value={recycleSaving} min={1000} max={3000} step={100}
+                onChange={setRecycleSaving} fmt={(v) => `${v} руб./т`} note="1000 · 2000 · 3000 руб./т; объём 30 тыс. т" />
+              <MiniSlider term="nvos" label="Отходы, выведенные из размещения" value={wasteOut} min={40} max={80} step={5}
+                onChange={setWasteOut} fmt={(v) => `${v} тыс. т`} note="40 · 60 · 80 тыс. т; ставка НВОС 663,2 руб./т" />
             </div>
           </section>
         </aside>
@@ -990,13 +855,13 @@ export default function App() {
         <div className="col-span-12 lg:col-span-9">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            {/* ═══ ЛЕВАЯ КОЛОНКА: Научная цепочка показателей φ→ΔE→SD→U→SD_e→ИУ ═══ */}
+            {/* ═══ ЛЕВАЯ КОЛОНКА: цепочка показателей φ → ΔE → SD → SD_e ═══ */}
             <div className="lg:col-span-4 flex flex-col gap-3">
 
               {/* Заголовок цепочки */}
               <div className={cn("px-3 py-2 border-l-2 border-emerald-500", isDarkMode ? "bg-emerald-500/5" : "bg-emerald-50")}>
                 <p className="text-[length:calc(10px*var(--ui,1))] font-bold uppercase tracking-widest opacity-60">Причинно-следственная цепочка</p>
-                <p className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-40">φ → ΔE → SD → U → ИУ</p>
+                <p className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-40">φ → ΔE → SD → SD_e (бюджет и экофонд)</p>
               </div>
 
               {/* 1. φ — Синергия (механизм) */}
@@ -1048,27 +913,8 @@ export default function App() {
                 icon={<TrendingUp size={16} />}
                 trend={metrics.trends.sd}
                 isDarkMode={isDarkMode}
-                formula={<span>SD<sub className="text-[length:calc(12px*var(--ui,1))]">t</sub> = α · ΔE(t) · M<sub className="text-[length:calc(12px*var(--ui,1))]">режим</sub></span>}
+                formula={<span>SD<sub className="text-[length:calc(12px*var(--ui,1))]">t</sub> = α · max(0; ΔE(t)) (2.11)</span>}
                 trendLarge={true}
-              />
-
-              {/* Стрелка */}
-              <div className="flex items-center gap-2 px-2 opacity-30">
-                <div className="flex-1 h-[1px] bg-emerald-500" />
-                <ArrowRight size={10} className="text-emerald-500" />
-              </div>
-
-              {/* 4. U — Целевая функция */}
-              <KPICard
-                label="④ Целевая функция U"
-                term="U"
-                value={metrics.u.toFixed(2)}
-                icon={<Gauge size={16} />}
-                trend={metrics.trends.u}
-                isDarkMode={isDarkMode}
-                formula="max U = φ·0.5 + SD·0.3 + EcoSafety·0.2"
-                trendLarge={true}
-                tooltip="Интегральный показатель полезности экоплатформы. Объединяет синергию, дивиденд и экобезопасность."
               />
 
               {/* Стрелка */}
@@ -1090,50 +936,6 @@ export default function App() {
                 trendLarge={true}
               />
 
-              {/* Стрелка */}
-              <div className="flex items-center gap-2 px-2 opacity-30">
-                <div className="flex-1 h-[1px] bg-emerald-500" />
-                <ArrowRight size={10} className="text-emerald-500" />
-              </div>
-
-              {/* 6. ИУ — Индекс Устойчивости (финальный интегратор) */}
-              <div className={cn(
-                "border p-4 space-y-3 transition-all duration-300 hover:-translate-y-1 relative group",
-                isDarkMode ? "bg-[#1A1A1A] border-[#E4E3E0]/20" : "bg-white border-[#141414]"
-              )}>
-                <div className="flex items-center justify-between opacity-50">
-                  <div className="flex items-center gap-1.5 group/tooltip relative">
-                    <span className="text-xs font-bold uppercase tracking-widest">⑥ Индекс Устойчивости (ИУ)</span>
-                    <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
-                    <div className="absolute bottom-full left-0 mb-2 w-72 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover/tooltip:visible z-50 shadow-xl">
-                      ИУ = φ·0.35 + (EcoSafety/1.2)·0.30 + E_it·0.20 + E_f·0.15 — интегральный индекс: &lt;45 Критический, 45–70 Умеренный, 70–85 Устойчивый, &gt;85 Стабильно устойчивый.
-                    </div>
-                  </div>
-                  <Shield size={16} className={metrics.iu >= 85 ? "text-cyan-400" : metrics.iu >= 70 ? "text-emerald-500" : metrics.iu >= 45 ? "text-orange-400" : "text-red-500"} />
-                </div>
-                <div className="text-xl font-serif italic text-emerald-600 leading-none py-1 opacity-100">
-                  ИУ = φ·0.35 + ES·0.30 + E_it·0.20 + E_f·0.15
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={cn("text-2xl font-bold tracking-tighter", metrics.iu >= 85 ? "text-cyan-400" : metrics.iu >= 70 ? "text-emerald-500" : metrics.iu >= 45 ? "text-orange-400" : "text-red-500")}>
-                    {metrics.iu.toFixed(1)}
-                  </span>
-                  <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase opacity-50">/ 100</span>
-                  <span className={cn("flex items-center gap-1 font-bold uppercase tracking-tighter text-emerald-600 text-base")}>
-                    <TrendingUp size={14} />({metrics.trends.iu})
-                  </span>
-                </div>
-                <div className="h-2 w-full bg-gray-500/20 rounded-full overflow-hidden">
-                  <div
-                    className={cn("h-full transition-all duration-700 rounded-full", metrics.iu >= 85 ? "bg-cyan-400" : metrics.iu >= 70 ? "bg-emerald-500" : metrics.iu >= 45 ? "bg-orange-400" : "bg-red-500")}
-                    style={{ width: `${Math.min(100, metrics.iu)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[length:calc(9px*var(--ui,1))] font-mono opacity-30">
-                  <span>Критич.</span><span>Умерен.</span><span>Устойч.</span><span className="text-cyan-400">Стабильно</span>
-                </div>
-              </div>
-
             </div>
 
             {/* ═══ ПРАВАЯ ЧАСТЬ: Графики и визуализации ═══ */}
@@ -1150,24 +952,24 @@ export default function App() {
                   <h3 className="text-xs font-bold uppercase tracking-widest leading-tight">
                     Граф функционирования<br />экосистемы G = (V, E)
                   </h3>
-                  <p className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 uppercase mt-1">Ориентированные потоки ресурсов (Er), отходов (Ew) и финансов (Ef)</p>
+                  <p className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 uppercase mt-1">Потоки табл. 2.5: тепло, CO₂, вторсырьё, отходы; финансовый поток — дивиденд</p>
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-1">
                   <div className="flex items-center gap-2 group relative">
                     <div className="w-3 h-[2px] bg-red-500" />
-                    <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase">Ресурсы (Er)</span>
+                    <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase">Ресурсы и энергия</span>
                     <HelpCircle size={10} className="opacity-30 hover:opacity-100 cursor-help transition-opacity" />
                     <div className="absolute bottom-full left-0 mb-2 w-64 p-2 bg-[#141414] text-[#E4E3E0] text-[length:calc(11px*var(--ui,1))] font-mono leading-tight border border-[#E4E3E0]/20 invisible group-hover:visible z-50 shadow-xl">
-                      Эффективность ресурсов (Er) — это показатель, отражающий, насколько полно и результативно используются материальные и энергетические ресурсы кластера в результате симбиоза (с учётом предотвращённых потерь и экономии)
+                      Тепло и CO₂ — потоки табл. 2.5 с чистыми вкладами 28,4 и 58,9 млн руб./год (всего с вторсырьём и НВОС — 187,1); рисунок поясняет схему, расчёт ведётся по формулам (2.11), (3.34)
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-[2px] border-b border-dashed border-blue-500" />
-                    <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase">Отходы (Ew)</span>
+                    <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase">Отходы и вторсырьё</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-[2px] bg-emerald-500" />
-                    <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase">Финансы (Ef)</span>
+                    <span className="text-[length:calc(12px*var(--ui,1))] font-mono uppercase">Финансы</span>
                   </div>
                 </div>
               </div>
@@ -1219,7 +1021,7 @@ export default function App() {
                     avatar={<AvatarEPP />}
                     label="ЭПП" 
                     sub={metrics.sd === 0 ? "Отходы" : "Вторсырьё"} 
-                    active={resourceEfficiency > 40 || metrics.sd === 0} 
+                    active={recycleSaving > 1000 || metrics.sd === 0} 
                     isDarkMode={isDarkMode} 
                   />
                 </div>
@@ -1240,7 +1042,7 @@ export default function App() {
                     icon={<Cpu />} 
                     avatar={<AvatarOperator />}
                     label="ОПЕРАТОР" 
-                    sub={metrics.sd === 0 ? "Бездействие" : "AI-Матчинг"} 
+                    sub={metrics.sd === 0 ? "Без дивиденда" : "Учёт и расчёт"} 
                     active={metrics.sd > 0} 
                     isDarkMode={isDarkMode} 
                   />
@@ -1284,7 +1086,7 @@ export default function App() {
                     d="M 85 22 L 56 46"
                     color="#3b82f6"
                     width={0.4}
-                    active={resourceEfficiency < 90 || metrics.sd === 0}
+                    active={metrics.sd >= 0}
                     duration="3s"
                   />
 
@@ -1293,8 +1095,8 @@ export default function App() {
                     id="flow-epp"
                     d="M 15 80 L 45 55"
                     color="#3b82f6"
-                    width={0.5 + resourceEfficiency/200}
-                    active={resourceEfficiency > 30 || metrics.sd === 0}
+                    width={0.5 + recycleSaving/4000}
+                    active={recycleSaving > 1000 || metrics.sd === 0}
                     duration="3s"
                   />
 
@@ -1332,16 +1134,16 @@ export default function App() {
 
                 {/* Labels for flows */}
                 <div className="absolute z-20 top-[33%] left-[30%] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[length:calc(10px*var(--ui,1))] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
-                  {metrics.sd === 0 ? "Ew: Отходы" : "Er: Тепло"}
+                  {metrics.sd === 0 ? "Отходы" : "Тепло"}
                 </div>
                 <div className="absolute z-20 top-[33%] right-[30%] translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[length:calc(10px*var(--ui,1))] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
-                  {metrics.sd === 0 ? "Ew: Отходы" : "Er: CO2"}
+                  {metrics.sd === 0 ? "Отходы" : "CO₂"}
                 </div>
                 <div className="absolute z-20 bottom-[33%] left-[30%] -translate-x-1/2 translate-y-1/2 whitespace-nowrap text-[length:calc(10px*var(--ui,1))] font-bold uppercase text-[#3b82f6] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
-                  {metrics.sd === 0 ? "Ew: Отходы" : "Ew: Вторсырьё"}
+                  {metrics.sd === 0 ? "Отходы" : "Вторсырьё"}
                 </div>
                 <div className="absolute z-20 bottom-[33%] right-[30%] translate-x-1/2 translate-y-1/2 whitespace-nowrap text-[length:calc(10px*var(--ui,1))] font-bold uppercase text-[#ef4444] bg-white/80 dark:bg-[#141414]/80 px-1 py-0.5 rounded">
-                  {metrics.sd === 0 ? "Ew: Отходы" : "Er: Ресурсы"}
+                  {metrics.sd === 0 ? "Отходы" : "НВОС"}
                 </div>
                               </div>
             </div>
@@ -1371,85 +1173,37 @@ export default function App() {
 
           {/* Bottom Row: Charts */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <ChartContainer 
-              title="Целевая функция полезности U(t)" 
-              subtitle="Динамический отклик эффективности системы"
+            <ChartContainer
+              title="Дополнительный эффект ΔE(t) по годам"
+              subtitle="2026–2036 гг. при текущей связности; k растёт на 2,5 за 10 лет (3.32)"
               isDarkMode={isDarkMode}
-              tooltip="Целевая функция U — это интегральный показатель полезности экоплатформы, который экоплатформа максимизирует, одновременно учитывая четыре ключевых фактора: синергетическую плотность (связность) C_инд, эффективность ресурсов V (через Er, Ew, Ef) и уровень цифрового управления M."
+              tooltip="ΔE(t) = φ(C_инд)·Σ(E_i − A_i) − Z_пл при росте k(t). Ниже нуля — переходное состояние, платформа не окупается."
             >
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={history}>
-                  <defs>
-                    <linearGradient id="colorU" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={chartColors.area} stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor={chartColors.area} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
+                <LineChart data={yearPath} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
-                  <XAxis 
-                    dataKey="time" 
-                    hide 
-                  />
-                  <YAxis 
-                    domain={['auto', 'auto']} 
-                    tick={{fontSize: 20, fontFamily: 'monospace', fill: chartColors.text}} 
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: chartColors.tooltipBg, 
-                      border: 'none', 
-                      color: chartColors.tooltipText, 
-                      fontSize: '13px', 
-                      fontFamily: 'monospace' 
-                    }}
-                    itemStyle={{ color: chartColors.tooltipText }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="u" 
-                    stroke={chartColors.area} 
-                    strokeWidth={2}
-                    fillOpacity={1} 
-                    fill="url(#colorU)" 
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
+                  <XAxis dataKey="year" tick={{ fontSize: 12, fill: chartColors.text }} />
+                  <YAxis tick={{ fontSize: 12, fontFamily: 'monospace', fill: chartColors.text }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v: any) => Number(v).toFixed(1)} contentStyle={{ backgroundColor: chartColors.tooltipBg, border: 'none', color: chartColors.tooltipText, fontSize: '13px', fontFamily: 'monospace' }} />
+                  <ReferenceLine y={0} stroke={chartColors.text} />
+                  <Line type="monotone" dataKey="dE" name="ΔE(t), млн руб." stroke="var(--c-part)" strokeWidth={2} dot isAnimationActive={false} />
+                </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
 
-            <ChartContainer 
-              title="Симбиотический Дивиденд SD" 
-              subtitle="Экономический эффект экосистемы"
+            <ChartContainer
+              title="Дивиденд SD(t) и доля бюджета"
+              subtitle="SD = α·max(0; ΔE) (2.11); доля бюджета β(C) по схеме В (2.18)"
               isDarkMode={isDarkMode}
             >
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={history}>
+                <LineChart data={yearPath} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.grid} />
-                  <XAxis dataKey="time" hide />
-                  <YAxis 
-                    tick={{fontSize: 20, fontFamily: 'monospace', fill: chartColors.text}} 
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: chartColors.tooltipBg, 
-                      border: 'none', 
-                      color: chartColors.tooltipText, 
-                      fontSize: '13px', 
-                      fontFamily: 'monospace' 
-                    }}
-                  />
-                  <Line 
-                    type="stepAfter" 
-                    dataKey="sdt" 
-                    stroke={chartColors.area} 
-                    strokeWidth={2} 
-                    dot={false}
-                    isAnimationActive={false}
-                  />
+                  <XAxis dataKey="year" tick={{ fontSize: 12, fill: chartColors.text }} />
+                  <YAxis tick={{ fontSize: 12, fontFamily: 'monospace', fill: chartColors.text }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v: any) => Number(v).toFixed(2)} contentStyle={{ backgroundColor: chartColors.tooltipBg, border: 'none', color: chartColors.tooltipText, fontSize: '13px', fontFamily: 'monospace' }} />
+                  <Line type="monotone" dataKey="sd" name="SD, млн руб." stroke="var(--c-nov)" strokeWidth={2} dot isAnimationActive={false} />
+                  <Line type="monotone" dataKey="budget" name="Доля бюджета, млн руб." stroke="var(--c-bud)" strokeWidth={2} strokeDasharray="5 3" dot={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -1548,8 +1302,8 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <div data-term="SD" className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-50 uppercase">Симб. дивиденд (15)</div>
-                <div className="text-xs font-bold font-mono">SD(t) = α · ΔE(t) · M<sub>режим</sub> = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
-                <p className="text-[length:calc(11px*var(--ui,1))] opacity-70 italic leading-tight">Распределяемый доход при α={metrics.alpha}, M={metrics.distribution.shares.multiplier}.</p>
+                <div className="text-xs font-bold font-mono">SD(t) = α · max(0; ΔE(t)) = <span className="is-number">{metrics.sd.toFixed(2)}</span></div>
+                <p className="text-[length:calc(11px*var(--ui,1))] opacity-70 italic leading-tight">Распределяемый доход при α = {metrics.alpha}; отрицательный эффект дивиденда не образует.</p>
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-dashed border-gray-500/30">
@@ -1778,8 +1532,8 @@ export default function App() {
                 <div className="flex gap-2">
                   {[
                     { id: 'fiscal', label: 'Фискальный', sub: 'Приоритет бюджета' },
-                    { id: 'tech', label: 'Технологический', sub: 'Приоритет оператора' },
-                    { id: 'industrial', label: 'Промышленный', sub: 'Приоритет резидентов' }
+                    { id: 'tech', label: 'Технологический', sub: 'Приоритет оператора · пропорции вне текста' },
+                    { id: 'industrial', label: 'Промышленный', sub: 'Приоритет резидентов · пропорции вне текста' }
                   ].map((r) => (
                     <button
                       key={r.id}
@@ -1797,15 +1551,10 @@ export default function App() {
                   ))}
                 </div>
                 <div className="text-right">
-                  <span className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase opacity-50">Текущий SD (с учетом режима):</span>
+                  <span className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase opacity-50">Текущий SD = α·max(0; ΔE(t)):</span>
                   <div className="text-2xl font-bold font-mono text-emerald-500">
                     <span className="is-number">{metrics.sd.toFixed(2)}</span> млн.руб
                   </div>
-                  {metrics.distribution.shares.multiplier > 1.0 && (
-                    <div className="text-[length:calc(11px*var(--ui,1))] font-mono text-emerald-400 uppercase mt-1">
-                      Эффект режима: +{((metrics.distribution.shares.multiplier - 1) * 100).toFixed(0)}% к синергии
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -1818,7 +1567,6 @@ export default function App() {
                       <th className="pb-4 pr-6">Что вносит</th>
                       <th className="pb-4 pr-6 text-right">Доля SD, %</th>
                       <th className="pb-4 pr-6 text-right">Сумма SD*, млн руб./год</th>
-                      <th className="pb-4 text-right text-red-400">Долг перед экоплатформой, млн руб.</th>
                     </tr>
                   </thead>
                   <tbody className="text-[length:calc(13px*var(--ui,1))] leading-relaxed">
@@ -1852,16 +1600,6 @@ export default function App() {
                           <td className="py-5 pr-6 text-right font-bold text-emerald-500 font-mono">
                             <span className="is-number">{(metrics.sd * currentShare / 100).toFixed(2)}</span>
                           </td>
-                          <td className="py-5 text-right font-mono">
-                            {(() => {
-                              const received = metrics.sd * currentShare / 100;
-                              const potential = metrics.deltaE_base * (currentShare / 100) * metrics.alpha;
-                              const debt = Math.max(0, potential - received);
-                              return debt > 0.01
-                                ? <span className="text-red-400">−{debt.toFixed(2)}</span>
-                                : <span className="text-emerald-500 opacity-60">0.00</span>;
-                            })()}
-                          </td>
                         </tr>
                       );
                     })}
@@ -1872,9 +1610,6 @@ export default function App() {
                       </td>
                       <td className="py-6 pr-6 text-right font-mono text-xs text-emerald-500">
                         <span className="is-number">{metrics.sd.toFixed(2)}</span>
-                      </td>
-                      <td className="py-6 text-right font-mono text-xs text-red-400">
-                        <span className="is-number">{Math.max(0, metrics.deltaE_base * metrics.alpha - metrics.sd).toFixed(2)}</span>
                       </td>
                     </tr>
                   </tbody>
@@ -1893,8 +1628,8 @@ export default function App() {
               )}>
                 <h4 className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-4 opacity-50">Стратегический приоритет</h4>
                 <p className="text-xs leading-relaxed">
-                  Основной фокус распределения SD направлен на <span className="font-bold">Бюджет дестинации (β = {(metrics.distribution.shares.budget * 100).toFixed(1)}%)</span>, 
-                  что обеспечивает легитимность платформы и финансирование критической инфраструктуры.
+                  Наибольшая доля дивиденда — <span className="font-bold">бюджету города (β = {(metrics.distribution.shares.budget * 100).toFixed(1)} %)</span>.
+                  Она растёт со связностью (2.18), но не покрывает ни потерю платы за НВОС, ни ликвидацию ущерба (вывод 6 главы 3).
                 </p>
               </div>
               <div className={cn(
@@ -1903,8 +1638,8 @@ export default function App() {
               )}>
                 <h4 className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-4 opacity-50">Технологическое ядро</h4>
                 <p className="text-xs leading-relaxed">
-                  <span className="font-bold">Оператор платформы (25%)</span> получает ресурсы для непрерывного совершенствования 
-                  AI-алгоритмов матчинга и поддержания цифрового двойника потоков.
+                  <span className="font-bold">Оператор платформы ({(metrics.distribution.shares.operator * 100).toFixed(1)} %)</span>: дивиденд — премия за результат;
+                  затраты на учёт, расчёт и аудит покрывает сервисный платёж (§ 2.5.4).
                 </p>
               </div>
               <div className={cn(
@@ -1913,8 +1648,8 @@ export default function App() {
               )}>
                 <h4 className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-4 opacity-50">Экологический эффект</h4>
                 <p className="text-xs leading-relaxed">
-                  <span className="font-bold">Экофонд (8%)</span> гарантирует целевое использование части прибыли на ликвидацию 
-                  исторического ущерба, накопленного в регионе.
+                  <span className="font-bold">Экофонд (8 %)</span> направляет часть дивиденда на ликвидацию накопленного ущерба;
+                  дивиденд в целом покрывает 9–14 % потребности, остальное — внешний источник (3.21).
                 </p>
               </div>
             </div>

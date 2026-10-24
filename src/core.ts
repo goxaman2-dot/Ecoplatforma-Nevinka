@@ -1,5 +1,6 @@
 // Расчётное ядро модели (главы 2–3): общие функции для Лаборатории, паспорта и страниц тезисов.
-// Вынесено из App.tsx без изменения формул (версия 5.0).
+// Вынесено из App.tsx (версия 5.0). Параметры потоков — по табл. 2.5; множитель M, индексы U и ИУ
+// и параметры оборудования Er/Ew/Ef исключены как отсутствующие в тексте диссертации.
 
 // ─── Калибровка § 3.1 (редакция 14.10.2026), таблица 3.7 «Перенос в симулятор» ───
 // Класс качества: A — нормативный или наблюдаемый факт, B — перенос по аналогам, C — допущение.
@@ -70,10 +71,9 @@ export function calcAnchor(p: AnchorParams) {
 
 
 export type MetricsParams = {
-  resourceEfficiency: number,
-  turbineEff: number,
-  heatExchanger: number,
-  filterResource: number,
+  heatAvail: number,      // a — коэффициент доступности тепла (табл. 2.5: 0,3–0,7)
+  recycleSaving: number,  // экономия на логистике вторсырья, руб./т (табл. 2.5: 1000–3000)
+  wasteOut: number,       // отходы, выведенные из размещения, тыс. т/год (табл. 2.5: 40–80)
   investment: number,
   year: number,
   kScenario: number,
@@ -87,7 +87,7 @@ export type MetricsParams = {
 };
 
 export function calcMetrics(params: MetricsParams) {
-  const { resourceEfficiency, turbineEff, heatExchanger, filterResource, investment, year, kScenario, alpha, distRegime } = params;
+  const { heatAvail, recycleSaving, wasteOut, investment, year, kScenario, alpha, distRegime } = params;
   const dQ = params.dQ ?? 12;
   const switchShare = params.switchShare ?? 0;
   const downDays = params.downDays ?? 0;
@@ -110,13 +110,6 @@ export function calcMetrics(params: MetricsParams) {
   }
   const phi = phi_val * 100; // in percent for display
   
-  // Resource Efficiency Effect (E_it)
-  // Er (turbine) and Ew (heat exchanger) influence energy savings
-  const e_it_factor = (turbineEff / 100) * 0.6 + (heatExchanger / 100) * 0.4;
-  
-  // Ecological Effect (E_f)
-  // Ef (filter) influences fines and emissions
-  const e_f_factor = filterResource / 100;
 
   // Calibration Anchors for k=5:
   // phi(0.10) ≈ 0.39
@@ -130,7 +123,7 @@ export function calcMetrics(params: MetricsParams) {
   // фильтр Ef — сокращение платы за НВОС; при значениях по умолчанию ΔE_base = 117,4.
   const ANN15 = 0.1315, ANN7 = 0.2054;
   const downFactor = year === 2026 ? 1 - downDays / 365 : 1; // d_t: простой «Азота» в 2026 г.
-  const heatGross = 438 * 0.5 * (360 - 50) / 1000 * (e_it_factor / 0.8);
+  const heatGross = 438 * heatAvail * (360 - 50) / 1000;
   const heatNet = heatGross - 300 * ANN15;
   // (3.11): ΔE_CO2 = (Q_1 − Q_0)·(p_альт − c) − A_CO2; засчитывается только прирост сверх Q_0 = 32 тыс. т,
   // переключение прежних покупателей прироста не даёт
@@ -139,8 +132,8 @@ export function calcMetrics(params: MetricsParams) {
   // (3.12): углеродная часть μ·q·p_C; для всех каналов CO2 Невинномысска μ = 0 (CBAM)
   const co2Carbon = CALIB.mu * dQ * 0;
   const co2Net = co2Gross - co2Capex + co2Carbon;
-  const recycleNet = 30 * 2000 / 1000 * (1 + (resourceEfficiency - 40) / 100);
-  const nvosNet = 60 * 663.2 / 1000 * (e_f_factor / 0.8);
+  const recycleNet = 30 * recycleSaving / 1000;
+  const nvosNet = wasteOut * 663.2 / 1000;
   const platformCost = 120 * ANN7 + 30 + 15;
   const deltaE_base = heatNet + co2Net + recycleNet + nvosNet - platformCost;
   const flows = { heatGross, heatNet, co2Gross, co2Capex, co2Carbon, co2Net, recycleNet, nvosNet, platformCost };
@@ -162,9 +155,10 @@ export function calcMetrics(params: MetricsParams) {
   
   // Distribution Regimes
   const shares = {
+    // Множитель M исключён (версия 5.0): по (2.11) SD = α·max(0; ΔE), режимы различаются только пропорциями
     fiscal: { budget: 0.40, operator: 0.25, suppliers: 0.15, corporation: 0.12, multiplier: 1.0 },
-    tech: { budget: 0.25, operator: 0.40, suppliers: 0.15, corporation: 0.12, multiplier: 1.12 },
-    industrial: { budget: 0.25, operator: 0.15, suppliers: 0.40, corporation: 0.12, multiplier: 1.18 }
+    tech: { budget: 0.25, operator: 0.40, suppliers: 0.15, corporation: 0.12, multiplier: 1.0 },
+    industrial: { budget: 0.25, operator: 0.15, suppliers: 0.40, corporation: 0.12, multiplier: 1.0 }
   };
 
   const currentShares = shares[distRegime];
@@ -209,22 +203,19 @@ export function calcMetrics(params: MetricsParams) {
 
   // Constraints check
   const constraints = {
-    density: investment >= 15, // C_ind >= 15%
+    cmin: c_ind >= cMin, // C_инд ≥ C_min — порог окупаемости платформы (3.34)
     budget: sd_budget + bExt >= c_liq
   };
 
-  // U: Utility Function (Target)
-  // Экологическая безопасность: покрытие C_ликв дивидендом бюджета и внешним источником B_внеш
-  const ecoSafety = Math.min(1.2, (sd_budget + bExt) / (c_liq || 1));
-  const u = (phi * 0.5 + (sd / 9.75 * 100) * 0.3 + (ecoSafety * 20));
-
-  // Индекс Устойчивости Экоплатформы (ИУ)
-  // ИУ = (φ·0.35 + EcoSafety/1.2·0.30 + E_it·0.20 + E_f·0.15) · 100
-  const iu = (phi_val * 0.35 + (ecoSafety / 1.2) * 0.30 + e_it_factor * 0.20 + e_f_factor * 0.15) * 100;
-
   return {
-    sd, phi, distribution, u, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
-    anchor10, anchor25, c_liq, sd_budget, constraints, ecoSafety, iu,
+    sd, phi, distribution, c: investment, deltaE_base, deltaE_t, alpha, k, c_ind,
+    anchor10, anchor25, c_liq, sd_budget, constraints,
     flows, deltaE_exp, anchorShare, anchorShareRisk, bExt, piA, cMin, flowsNetSum
   };
 }
+
+// Параметры по умолчанию (базовый сценарий глав 2–3)
+export const BASE_PARAMS: MetricsParams = {
+  heatAvail: 0.5, recycleSaving: 2000, wasteOut: 60,
+  investment: 15, year: 2026, kScenario: 5, alpha: 0.10, distRegime: 'fiscal',
+};

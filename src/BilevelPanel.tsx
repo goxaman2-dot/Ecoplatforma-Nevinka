@@ -32,7 +32,7 @@ interface Props {
   n2oAbated: boolean;     // вариант N2O из вкладки «Симуляция»
 }
 
-const MULT = { fiscal: 1.0, tech: 1.12, industrial: 1.18 };
+const MULT = { fiscal: 1.0, tech: 1.0, industrial: 1.0 }; // множитель M исключён: (2.11) без множителя
 
 const Slider = ({ label, value, min, max, step, onChange, fmt, note, term }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
@@ -275,7 +275,7 @@ export default function BilevelPanel(p: Props) {
               <Stat term="SD" label="SD(C**) — дивиденд" value={ru(sdEq, 2)} sub={`φ(C**) = ${ru(phiEq, 3)}`} />
             </div>
             <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 leading-relaxed">
-                Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
+                Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; k(t) = {ru(p.k, 2)};
                 Σ вкладов потоков = {ru(p.flowsNet, 1)}, Z_пл = {ru(p.platformCost, 1)} млн руб.<br />
                 Механизм: k = {ru(mp.k, 2)} (одно значение для SD и Π), τ = {mp.tau}, G = {PI.G}, T₀ = {PI.T0}; N_доп = {N_DOP}.<br />
                 Γ(C) {mono.ok ? 'не убывает — условие Тарского выполнено' : `убывает на ${ru(mono.worst, 3)} — условие Тарского нарушено`}.
@@ -406,7 +406,7 @@ export default function BilevelPanel(p: Props) {
           </button>
         </div>
         <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
-          Критерий — W = Π(C**) − Z (3.20), млн руб./год, а не дивиденд: SD растёт просто от роста α. В ячейке: C** / W; лучший механизм в строке выделен.
+          Критерий — W = Π(C**) − Z (3.20), млн руб./год, а не дивиденд: SD растёт просто от роста α. В ячейке: C** / W; лучший механизм в строке выделен. Та же матрица для 2027 г. на 1000 испытаниях — табл. 3.11а § 3.3.3 (σ лучший в 54–81 % испытаний).
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono min-w-[760px]">

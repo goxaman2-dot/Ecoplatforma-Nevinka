@@ -1,8 +1,9 @@
 // Самопроверка: модель пересчитывает контрольные числа глав 2–3 теми же функциями,
 // что и Лаборатория. Совпадение — при округлении до числа знаков, приведённого в тексте.
 
-import { CALIB, calcMetrics, type MetricsParams } from './core';
+import { CALIB, calcMetrics, BASE_PARAMS } from './core';
 import { cStar, shares, makePopulation, equilibrium, evaluate, type Context } from './bilevel';
+import { barrierMin, barrierBreakEven, p0At, grid05 } from './thesisLab';
 
 export interface Check {
   id: string;
@@ -14,10 +15,7 @@ export interface Check {
   ok: boolean;
 }
 
-export const BASE_PARAMS: MetricsParams = {
-  resourceEfficiency: 40, turbineEff: 80, heatExchanger: 80, filterResource: 80,
-  investment: 15, year: 2026, kScenario: 5, alpha: 0.10, distRegime: 'fiscal',
-};
+export { BASE_PARAMS } from './core';
 
 const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 
@@ -61,6 +59,10 @@ export function runSelfCheck(): Check[] {
     { id: 'pubA', label: 'Доля бюджета в дивиденде, схема А, 2036 г., млн руб.', expected: 2.20, digits: 2, actual: pub36('divA'), source: 'табл. 3.14' },
     { id: 'pubB', label: 'То же, схема Б, 2036 г., млн руб.', expected: 1.53, digits: 2, actual: pub36('divB'), source: 'табл. 3.14' },
     { id: 'pubC', label: 'То же, схема В, 2036 г., млн руб.', expected: 2.95, digits: 2, actual: pub36('divC'), source: 'табл. 3.14' },
+    { id: 'p0dE', label: 'ΔE режима Р0 без барьера, 2027 г., млн руб.', expected: 79.1, digits: 1, actual: p0At(ctx, 0).dE, source: 'табл. 3.11' },
+    { id: 'p0cs', label: 'C* без платформы, 2027 г.', expected: 0.181, digits: 3, actual: p0At(ctx, 0).cs, source: 'табл. 3.11' },
+    { id: 'xmin', label: 'Информационный барьер x_min, млн руб./год (сетка 0,05)', expected: 1.75, digits: 2, actual: grid05(barrierMin(ctx)), source: '(3.35), § 3.3.3' },
+    { id: 'be27', label: 'Порог барьера, выше которого платформа лучше, 2027 г.', expected: 0.90, digits: 2, actual: grid05(barrierBreakEven(ctx, 'coord')), source: '§ 3.3.3' },
     { id: 'sig', label: 'Прирост участников при σ = 0,3 против Р2, 2027 г.', expected: 4, digits: 0, actual: eqS.part.length - eqP2.part.length, source: 'вывод 5, табл. 3.14' },
   ];
   return rows.map((r) => ({ ...r, ok: round(r.actual, r.digits) === round(r.expected, r.digits) }));

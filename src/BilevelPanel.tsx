@@ -32,7 +32,7 @@ interface Props {
   n2oAbated: boolean;     // вариант N2O из вкладки «Симуляция»
 }
 
-const MULT = { fiscal: 1.0, tech: 1.12, industrial: 1.18 };
+const MULT = { fiscal: 1.0, tech: 1.0, industrial: 1.0 }; // множитель M исключён: (2.11) без множителя
 
 const Slider = ({ label, value, min, max, step, onChange, fmt, note, term }: {
   label: React.ReactNode; value: number; min: number; max: number; step: number;
@@ -174,7 +174,7 @@ export default function BilevelPanel(p: Props) {
 
   return (
     <div className="space-y-6">
-      <div className={box} data-nov="N1" data-nov-tag="Н1">
+      <div className={box} data-nov="N1" data-nov-tag="Н3а">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-dashed border-gray-500/30 pb-3 mb-4">
           <h2 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
             <Layers size={16} /> Двухуровневая модель равновесной связности (§ 3.2)
@@ -215,7 +215,7 @@ export default function BilevelPanel(p: Props) {
               </div>
             </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 pt-4 border-t border-dashed border-gray-500/30">
-              <div data-nov="N1" data-nov-tag="Н1" className="min-w-0">
+              <div data-nov="N1" data-nov-tag="Н3а" className="min-w-0">
                 <div data-term="Gamma" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Отображение Γ(C; θ) и неподвижная точка</div>
                 <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.17)–(3.18): C** — первое пересечение Γ с биссектрисой при старте из нуля</div>
                 <div className="h-64">
@@ -233,7 +233,7 @@ export default function BilevelPanel(p: Props) {
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div data-nov="N2" data-nov-tag="Н2" className="min-w-0">
+              <div data-nov="N2" data-nov-tag="Н3б" className="min-w-0">
                 <div data-term="Z_min" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Цена закрытия разрыва</div>
                 <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Формулы (3.22)–(3.23): Π(C̃), Z_min(C̃) и их разность на отрезке [C**(θ₀); C*], млн руб./год</div>
                 <div className="h-64">
@@ -275,7 +275,7 @@ export default function BilevelPanel(p: Props) {
               <Stat term="SD" label="SD(C**) — дивиденд" value={ru(sdEq, 2)} sub={`φ(C**) = ${ru(phiEq, 3)}`} />
             </div>
             <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 leading-relaxed">
-                Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; M = {ru(MULT[p.regime], 2)}; k(t) = {ru(p.k, 2)};
+                Из вкладки «Симуляция»: α = {ru(p.alpha, 3)}; k(t) = {ru(p.k, 2)};
                 Σ вкладов потоков = {ru(p.flowsNet, 1)}, Z_пл = {ru(p.platformCost, 1)} млн руб.<br />
                 Механизм: k = {ru(mp.k, 2)} (одно значение для SD и Π), τ = {mp.tau}, G = {PI.G}, T₀ = {PI.T0}; N_доп = {N_DOP}.<br />
                 Γ(C) {mono.ok ? 'не убывает — условие Тарского выполнено' : `убывает на ${ru(mono.worst, 3)} — условие Тарского нарушено`}.
@@ -285,7 +285,7 @@ export default function BilevelPanel(p: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className={box} data-nov="N1" data-nov-tag="Н1">
+        <div className={box} data-nov="N1" data-nov-tag="Н3а">
           <div data-term="N_dop" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Участие резидентов по типам при C**</div>
           <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
             <thead><tr className="opacity-50 border-b border-gray-500/20 text-left">
@@ -301,7 +301,7 @@ export default function BilevelPanel(p: Props) {
           </table>
         </div>
 
-        <div className={box} data-nov="N2" data-nov-tag="Н2">
+        <div className={box} data-nov="N2" data-nov-tag="Н3б">
           <div className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-2">Вывод о целевой связности</div>
           <p className="text-[length:calc(13px*var(--ui,1))] opacity-80 leading-relaxed">
             {curve.hat.c < cs - 0.0025
@@ -313,7 +313,7 @@ export default function BilevelPanel(p: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className={box} data-nov="N3" data-nov-tag="Н3">
+        <div className={box} data-nov="N3" data-nov-tag="Н3в">
           <div data-term="lambda_star" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Резиденты-поставщики якоря</div>
           <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">Условие (3.16) и критическая доля λ*_j = 1 − FC_j/(m_j·R_j) (3.27)</div>
           <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono">
@@ -397,7 +397,7 @@ export default function BilevelPanel(p: Props) {
         </div>
       </div>
 
-      <div className={box} data-nov="N5" data-nov-tag="Н5">
+      <div className={box} data-nov="N5" data-nov-tag="Н4б">
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
           <div data-term="W" className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest">Какой механизм даёт наибольший эффект: поведение × механизм</div>
           <button data-term="mc" onClick={runMc} disabled={mcRunning}
@@ -406,7 +406,7 @@ export default function BilevelPanel(p: Props) {
           </button>
         </div>
         <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
-          Критерий — W = Π(C**) − Z (3.20), млн руб./год, а не дивиденд: SD растёт просто от роста α. В ячейке: C** / W; лучший механизм в строке выделен.
+          Критерий — W = Π(C**) − Z (3.20), млн руб./год, а не дивиденд: SD растёт просто от роста α. В ячейке: C** / W; лучший механизм в строке выделен. Та же матрица для 2027 г. на 1000 испытаниях — табл. 3.11а § 3.3.3 (σ лучший в 54–81 % испытаний).
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-[length:calc(12px*var(--ui,1))] font-mono min-w-[760px]">

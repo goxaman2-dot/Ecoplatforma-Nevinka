@@ -127,7 +127,7 @@ export default function BeneficiaryPanel(p: Props) {
 
   return (
     <div className="space-y-6">
-      <div className={box} data-nov="N6" data-nov-tag="Н6">
+      <div className={box} data-nov="N6" data-nov-tag="Н5">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-dashed border-gray-500/30 pb-3 mb-4">
           <h2 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
             <Landmark size={16} /> Бенефициары экоплатформы и стратегический контур, 2026–2040 гг.
@@ -155,7 +155,7 @@ export default function BeneficiaryPanel(p: Props) {
               <span className="text-[length:calc(12px*var(--ui,1))] font-bold opacity-70">Год для годового баланса:</span>
               <input type="range" min={2026} max={2040} value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-48 h-1 accent-emerald-500" />
               <span className="text-sm font-bold font-mono text-emerald-500">{year}</span>
-              {year > 2036 && <span data-term="extrap" className="text-[length:calc(11px*var(--ui,1))] font-mono px-2 py-0.5 border border-amber-500/50 text-amber-500">за горизонтом стратегических документов — экстраполяция</span>}
+              {year > 2036 && <span data-term="extrap" className="text-[length:calc(11px*var(--ui,1))] font-mono px-2 py-0.5 border border-amber-500/50 text-amber-500">за горизонтом стратегических документов и главы 3 (2027–2036) — экстраполяция, вне текста диссертации</span>}
             </div>
             <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60">
               C = {ru(y.C, 3)}; k = {ru(y.k, 2)}; φ = {ru(y.phi, 3)}; Σ вкладов = {ru(y.G, 1)}; ΔE(t) = {ru(y.dE, 1)}; SD = {ru(y.sd, 2)}; ΔНВОС = {ru(y.nvos, 1)} млн руб.
@@ -277,7 +277,7 @@ export default function BeneficiaryPanel(p: Props) {
       <div className={box}>
         <div className="text-[length:calc(12px*var(--ui,1))] font-bold uppercase tracking-widest mb-1">Стратегии: включение и согласованность целей</div>
         <div className="text-[length:calc(11px*var(--ui,1))] font-mono opacity-60 mb-3">
-          Стратегии задают направления и параметры (класс C); числовые цели документов сверить по полным текстам. 2037–2040 гг. — экстраполяция за горизонтом документов.
+          Стратегии задают направления и параметры (класс C); числовые цели документов сверить по полным текстам. Вне текста диссертации: 2037–2040 гг. (горизонт главы 3 — 2036 г.) и приказ Минпромторга № 651 / Минэнерго № 172 (в главе 3 рост выпуска 2 % в год обоснован без ссылки на него). Налог на прибыль разнесён по ст. 284 НК РФ: 8 % — федеральный, 17 % — краевой бюджет; в главе 3 разбивка не приводится.
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
           {STRATEGIES.map((s) => (

@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Промышленная экоплатформа Невинномысска — Симулятор научной новизны</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #111a2b;
+    --accent: #0ea5e9;
+    --accent2: #10b981;
+    --accent3: #f59e0b;
+    --accent4: #8b5cf6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #1e293b;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 1.05rem;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  header .subtitle {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+  .stage-tabs {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .stage-btn {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+  .stage-btn:hover { border-color: var(--accent); color: var(--text); }
+  .stage-btn.active {
+    background: linear-gradient(135deg, var(--accent), #0284c7);
+    color: #fff;
+    border-color: transparent;
+    font-weight: 600;
+  }
+
+  .main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* Левая панель — слои */
+  .sidebar {
+    width: 220px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex-shrink: 0;
+  }
+  .sidebar h3 {
+    margin: 0 0 0.3rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .layer-btn {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 0.7rem;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.82rem;
+    position: relative;
+    padding-left: 1.6rem;
+    transition: 0.2s;
+  }
+  .layer-btn::before {
+    content: "";
+    position: absolute;
+    left: 0.55rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .layer-btn.physical::before { background: var(--accent); }
+  .layer-btn.info::before { background: var(--accent4); }
+  .layer-btn.econ::before { background: var(--accent2); }
+  .layer-btn.org::before { background: var(--accent3); }
+  .layer-btn:hover { border-color: #334155; }
+  .layer-btn.active { background: #1e293b; border-color: #475569; }
+
+  /* Центр — canvas */
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(circle at 50% 30%, #0f1c32 0%, #0b1220 70%);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Оверлей метрик */
+  .metrics {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    background: rgba(17, 26, 43, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: space-around;
+    backdrop-filter: blur(6px);
+  }
+  .metric { text-align: center; }
+  .metric-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent2);
+    transition: color 0.4s;
+  }
+  .metric-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  /* Правая панель — научная новизна */
+  .info-panel {
+    width: 300px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 1rem;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .info-panel h2 {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+    color: var(--accent);
+  }
+  .novelty-box {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    padding: 0.7rem;
+    margin-bottom: 0.8rem;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .novelty-box h4 {
+    margin: 0 0 0.3rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--accent3);
+    letter-spacing: 0.04em;
+  }
+  .novelty-box ul {
+    margin: 0.3rem 0 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+  }
+  .novelty-box li { margin-bottom: 0.25rem; }
+
+  .legend {
+    margin-top: auto;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+  }
+  .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
+
+  /* Анимация появления */
+  .fade-in { animation: fadeIn 0.5s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+
+  /* Тултип на canvas */
+  #tooltip {
+    position: absolute;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.3rem;
+    font-size: 0.75rem;
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+    max-width: 220px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Промышленная экоплатформа моногорода Невинномысск</h1>
+    <div class="subtitle">Симулятор динамики участников и демонстрация научной новизны диссертации</div>
+  </div>
+  <div class="stage-tabs">
+    <button class="stage-btn active" data-stage="0">1. Baseline</button>
+    <button class="stage-btn" data-stage="1">2. Внедрение</button>
+    <button class="stage-btn" data-stage="2">3. Каскад</button>
+    <button class="stage-btn" data-stage="3">4. Экосистема</button>
+  </div>
+</header>
+
+<div class="main">
+  <aside class="sidebar">
+    <h3>Слои платформы</h3>
+    <button class="layer-btn physical active" data-layer="physical">Физический (потоки)</button>
+    <button class="layer-btn info" data-layer="info">Информационный (данные)</button>
+    <button class="layer-btn econ" data-layer="econ">Экономический (эффект)</button>
+    <button class="layer-btn org" data-layer="org">Организационный (связи)</button>
+
+    <div class="legend" style="margin-top:1.5rem;">
+      <div style="font-weight:600; color:var(--text); margin-bottom:0.4rem;">Участники</div>
+      <div class="legend-row"><div class="dot" style="background:#ef4444"></div>Невинномысский Азот</div>
+      <div class="legend-row"><div class="dot" style="background:#f97316"></div>ТЭЦ / Энергетика</div>
+      <div class="legend-row"><div class="dot" style="background:#84cc16"></div>Агрохолдинги Ставрополья</div>
+      <div class="legend-row"><div class="dot" style="background:#06b6d4"></div>Муниципалитет / Очистные</div>
+      <div class="legend-row"><div class="dot" style="background:#a855f7"></div>Строительный кластер</div>
+      <div class="legend-row"><div class="dot" style="background:#ec4899"></div>Центр рекавери / Переработка</div>
+    </div>
+  </aside>
+
+  <div class="canvas-wrap">
+    <canvas id="simCanvas"></canvas>
+    <div id="tooltip"></div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value" id="m-links">2</div>
+        <div class="metric-label">Симбиотических связей</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-phos">0</div>
+        <div class="metric-label">Фосфор рециркул., тыс. т/год</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-co2">0%</div>
+        <div class="metric-label">Снижение CO₂-экв.</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-econ">0</div>
+        <div class="metric-label">Экономия, млн руб/год</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" id="m-sri">0.12</div>
+        <div class="metric-label">Индес симбиотич. готовности</div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="info-panel" id="infoPanel">
+    <!-- Заполняется JS -->
+  </aside>
+</div>
+
+<script>
+/* ===================== ДАННЫЕ ===================== */
+const stages = [
+  {
+    name: "Baseline: Изолированные участники",
+    year: "Год 0",
+    metrics: { links: 2, phos: 0, co2: "0%", econ: 0, sri: "0.12" },
+    edges: [
+      { from: 0, to: 4, type: "physical", label: "Фосфогипс (захоронение)", value: 0.2, active: true, dashed: false },
+      { from: 0, to: 2, type: "physical", label: "Традиц. удобрения", value: 0.3, active: true, dashed: false }
+    ],
+    info: `
+      <h2>Этап 1: Baseline (линейная модель)</h2>
+      <div class="novelty-box">
+        <h4>Проблема</h4>
+        Участники функционируют изолированно. Фосфогипс уходит на захоронение. Сточные воды теряют фосфор. Тепло ТЭЦ сбрасывается. Отсутствует межотраслевой обмен.
+      </div>
+      <div class="novelty-box">
+        <h4>Научный дефицит</h4>
+        <ul>
+          <li>Нет инструмента оценки «симбиотической готовности» моногорода</li>
+          <li>Отсутствует количественная модель фосфорного баланса территории</li>
+          <li>Не учитываются транзакционные издержки доверия между конкурентами</li>
+        </ul>
+      </div>
+    `
+  },
+  {
+    name: "Внедрение платформы: первичный мэтчинг",
+    year: "Год 1",
+    metrics: { links: 5, phos: 4.2, co2: "4%", econ: 89, sri: "0.34" },
+    edges: [
+      { from: 0, to: 4, type: "physical", label: "Фосфогипс → цемент", value: 0.7, active: true },
+      { from: 3, to: 2, type: "physical", label: "Струвит → агро", value: 0.5, active: true },
+      { from: 0, to: 5, type: "info", label: "Данные о составе шлама", value: 0.4, active: true },
+      { from: 3, to: 5, type: "info", label: "Данные сточных вод", value: 0.4, active: true },
+      { from: 5, to: 2, type: "physical", label: "Рекавери-удобрения", value: 0.4, active: true }
+    ],
+    info: `
+      <h2>Этап 2: Внедрение платформы</h2>
+      <div class="novelty-box">
+        <h4>Научная новизна — предиктивный мэтчинг</h4>
+        Платформа <b>предвосхищает</b> возникновение симбиозов, сопоставляя профили отходов и потребностей до момента их спонтанного обнаружения. Впервые для моногорода применен алгоритм ранжирования пар по индексу симбиотической готовности (SRI).
+      </div>
+      <div class="novelty-box">
+        <h4>Что появилось</h4>
+        <ul>
+          <li>Фосфогипс направлен в строительный кластер вместо шламонакопителя</li>
+          <li>Струвит из городских стоков — в ставропольское сельское хозяйство</li>
+          <li>Центр рекавери получает цифровой профиль отходов от Азота и очистных</li>
+        </ul>
+      </div>
+    `
+  },
+  {
+    name: "Каскадный эффект: многослойный симбиоз",
+    year: "Год 3",
+    metrics: { links: 10, phos: 11.5, co2: "14%", econ: 240, sri: "0.61" },
+    edges: [
+      { from: 0, to: 4, type: "physical", label: "Фосфогипс → цемент", value: 0.9, active: true },
+      { from: 0, to: 5, type: "physical", label: "Фосфорсодержащий шлам", value: 0.6, active: true },
+      { from: 5, to: 2, type: "physical", label: "Восстановленные удобрения", value: 0.7, active: true },
+      { from: 5, to: 4, type: "physical", label: "Вторичный гипс", value: 0.4, active: true },
+      { from: 1, to: 2, type: "physical", label: "Низкопотенц. тепло → теплицы", value: 0.6, active: true },
+      { from: 1, to: 0, type: "econ", label: "Совместное планирование нагрузки", value: 0.5, active: true },
+      { from: 0, to: 2, type: "physical", label: "CO₂ + аммиак → карбамид", value: 0.5, active: true },
+      { from: 3, to: 0, type: "info", label: "Прогноз спроса агро", value: 0.35, active: true },
+      { from: 2, to: 0, type: "econ", label: "Обратная связь по качеству", value: 0.3, active: true },
+      { from: 1, to: 3, type: "physical", label: "Тепло → очистные (ферменты)", value: 0.3, active: true }
+    ],
+    info: `
+      <h2>Этап 3: Каскадный эффект</h2>
+      <div class="novelty-box">
+        <h4>Научная новизна — многослойная оптимизация</h4>
+        Впервые интегрированы <b>физические</b> (фосфор, тепло, CO₂), <b>информационные</b> (прогнозы, профили отходов) и <b>экономические</b> (совместное планирование) потоки. Одна связь активирует следующую: рекавери порождает вторичное сырье для строительства.
+      </div>
+      <div class="novelty-box">
+        <h4>Каскадные эффекты</h4>
+        <ul>
+          <li>ТЭЦ → Агро: низкопотенциальное тепло замыкает энергетический цикл</li>
+          <li>Азот → Агро: CO₂-симбиоз через производство карбамида</li>
+          <li>Переработчик → Стройка: вторичный гипс снижает добычу природного</li>
+          <li>Муниципалитет → Азот: прогнозный спрос агро оптимизирует выпуск</li>
+        </ul>
+      </div>
+    `
+  },
+  {
+    name: "Устойчивая экосистема: цифровой двойник",
+    year: "Год 5",
+    metrics: { links: 16, phos: 18.7, co2: "23%", econ: 410, sri: "0.84" },
+    edges: [
+      { from: 0, to: 4, type: "physical", label: "Фосфогипс → цемент", value: 1.0, active: true },
+      { from: 0, to: 5, type: "physical", label: "Шлам + CO₂", value: 0.8, active: true },
+      { from: 5, to: 2, type: "physical", label: "N-P удобрения", value: 0.9, active: true },
+      { from: 5, to: 4, type: "physical", label: "Вторичные вяжущие", value: 0.7, active: true },
+      { from: 1, to: 2, type: "physical", label: "Тепло + CO₂ → теплицы", value: 0.8, active: true },
+      { from: 1, to: 0, type: "econ", label: "Баланс нагрузки (smart grid)", value: 0.7, active: true },
+      { from: 0, to: 2, type: "physical", label: "Карбамид + рекавери-P", value: 0.8, active: true },
+      { from: 3, to: 0, type: "info", label: "Real-time спрос", value: 0.6, active: true },
+      { from: 3, to: 5, type: "info", label: "Автоматический профиль стоков", value: 0.6, active: true },
+      { from: 2, to: 0, type: "econ", label: "Контракты на сезон", value: 0.6, active: true },
+      { from: 2, to: 1, type: "econ", label: "Тарифы на тепло", value: 0.5, active: true },
+      { from: 4, to: 0, type: "info", label: "Спрос на вторичные материалы", value: 0.4, active: true },
+      { from: 0, to: 1, type: "physical", label: "Пар для генерации", value: 0.5, active: true },
+      { from: 5, to: 3, type: "econ", label: "Экологический офсет", value: 0.4, active: true },
+      { from: 1, to: 3, type: "physical", label: "Тепло → очистные", value: 0.5, active: true },
+      { from: 4, to: 2, type: "econ", label: "Дороги → логистика агро", value: 0.3, active: true }
+    ],
+    info: `
+      <h2>Этап 4: Устойчивая экосистема</h2>
+      <div class="novelty-box">
+        <h4>Научная новизна — самоорганизующаяся экосистема</h4>
+        Платформа трансформируется из инструмента мэтчинга в <b>цифрового двойника территориального фосфорного метаболизма</b>. Сеть приобретает устойчивость: удаление одной связи компенсируется альтернативными маршрутами.
+      </div>
+      <div class="novelty-box">
+        <h4>Институциональная новизна</h4>
+        <ul>
+          <li>Внедрен механизм «симбиотического офсета» в экологические платежи</li>
+          <li>Трастовая архитектура данных: предприятия обмениваются профилями без раскрытия коммерческих тайн</li>
+          <li>Предиктивная аналитика заменяет реактивный мэтчинг на proactive планирование</li>
+        </ul>
+      </div>
+      <div class="novelty-box">
+        <h4>Количественный эффект</h4>
+        Рециркуляция фосфора выросла с 0 до 18,7 тыс. т/год. Снижение CO₂-эквивалента достигло 23% за счет замещения первичного сырья и энергетической интеграции.
+      </div>
+    `
+  }
+];
+
+const nodes = [
+  { id: 0, label: "Невинномысский Азот", x: 0.5, y: 0.35, color: "#ef4444", role: "Артериальное предприятие. Источник фосфогипса, аммиака, CO₂, фосфорсодержащих шламов." },
+  { id: 1, label: "ТЭЦ / Энергетика", x: 0.25, y: 0.25, color: "#f97316", role: "Источник низкопотенциального тепла и паровой энергии. Потребляет CO₂-линки для баланса." },
+  { id: 2, label: "Агрохолдинги Ставрополья", x: 0.75, y: 0.70, color: "#84cc16", role: "Потребитель удобрений и тепла. Обратная связь по качеству продукции." },
+  { id: 3, label: "Муниципалитет / Очистные", x: 0.20, y: 0.65, color: "#06b6d4", role: "Источник струвита и сточных вод. Поставщик прогнозов спроса." },
+  { id: 4, label: "Строительный кластер", x: 0.80, y: 0.30, color: "#a855f7", role: "Потребитель фосфогипса и вторичных вяжущих." },
+  { id: 5, label: "Центр рекавери", x: 0.50, y: 0.55, color: "#ec4899", role: "Посредник переработки. Получает потоки данных и физические отходы, производит вторичные продукты." }
+];
+
+/* ===================== СОСТОНИЕ ===================== */
+let currentStage = 0;
+let currentLayer = 'physical';
+let canvas, ctx, tooltip;
+let particles = [];
+let width, height;
+
+/* ===================== ИНИЦИАЛИЗАЦИЯ ===================== */
+window.addEventListener('DOMContentLoaded', () => {
+  canvas = document.getElementById('simCanvas');
+  ctx = canvas.getContext('2d');
+  tooltip = document.getElementById('tooltip');
+
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Этапы
+  document.querySelectorAll('.stage-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.stage-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentStage = +btn.dataset.stage;
+      updateUI();
+    });
+  });
+
+  // Слои
+  document.querySelectorAll('.layer-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentLayer = btn.dataset.layer;
+      updateUI();
+    });
+  });
+
+  // Тултипы
+  canvas.addEventListener('mousemove', onHover);
+  canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+  updateUI();
+  requestAnimationFrame(loop);
+});
+
+function resize() {
+  const wrap = document.querySelector('.canvas-wrap');
+  width = wrap.clientWidth;
+  height = wrap.clientHeight;
+  canvas.width = width * window.devicePixelRatio;
+  canvas.height = height * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+}
+
+function updateUI() {
+  const st = stages[currentStage];
+
+  // Метрики
+  document.getElementById('m-links').textContent = st.metrics.links;
+  document.getElementById('m-phos').textContent = st.metrics.phos;
+  document.getElementById('m-co2').textContent = st.metrics.co2;
+  document.getElementById('m-econ').textContent = st.metrics.econ;
+  document.getElementById('m-sri').textContent = st.metrics.sri;
+
+  // Инфо-панель
+  const panel = document.getElementById('infoPanel');
+  panel.innerHTML = '<div class="fade-in">' + st.info + '</div>';
+
+  // Частицы для активных ребер
+  particles = [];
+  st.edges.forEach((e, idx) => {
+    if (!edgeVisible(e)) return;
+    const n1 = nodes[e.from];
+    const n2 = nodes[e.to];
+    const x1 = n1.x * width, y1 = n1.y * height;
+    const x2 = n2.x * width, y2 = n2.y * height;
+    for (let i = 0; i < 3; i++) {
+      particles.push({
+        edgeIdx: idx,
+        t: Math.random(),
+        speed: 0.003 + Math.random() * 0.004,
+        x1, y1, x2, y2,
+        color: edgeColor(e.type),
+        size: 2 + e.value * 2
+      });
+    }
+  });
+}
+
+function edgeVisible(e) {
+  if (currentLayer === 'physical') return e.type === 'physical';
+  if (currentLayer === 'info') return e.type === 'info';
+  if (currentLayer === 'econ') return e.type === 'econ';
+  if (currentLayer === 'org') return true; // организационный = все связи
+  return true;
+}
+
+function edgeColor(type) {
+  if (type === 'physical') return '#0ea5e9';
+  if (type === 'info') return '#8b5cf6';
+  if (type === 'econ') return '#10b981';
+  return '#94a3b8';
+}
+
+/* ===================== ОТРИСОВКА ===================== */
+function loop() {
+  ctx.clearRect(0, 0, width, height);
+
+  const st = stages[currentStage];
+
+  // Фоновая сетка (легкая)
+  drawGrid();
+
+  // Ребра
+  st.edges.forEach(e => {
+    if (!edgeVisible(e)) return;
+    drawEdge(e);
+  });
+
+  // Частицы
+  particles.forEach(p => {
+    p.t += p.speed;
+    if (p.t > 1) p.t = 0;
+    const x = p.x1 + (p.x2 - p.x1) * p.t;
+    const y = p.y1 + (p.y2 - p.y1) * p.t;
+    ctx.beginPath();
+    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = 0.85;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  // Ноды
+  nodes.forEach(n => drawNode(n));
+
+  // Подпись этапа на canvas
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '600 14px Segoe UI, sans-serif';
+  ctx.fillText(st.year + ': ' + st.name, 20, 30);
+
+  requestAnimationFrame(loop);
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+  ctx.lineWidth = 1;
+  const step = 40;
+  for (let x = 0; x < width; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+  }
+  for (let y = 0; y < height; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+  }
+}
+
+function drawEdge(e) {
+  const n1 = nodes[e.from];
+  const n2 = nodes[e.to];
+  const x1 = n1.x * width, y1 = n1.y * height;
+  const x2 = n2.x * width, y2 = n2.y * height;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+
+  const col = edgeColor(e.type);
+  ctx.strokeStyle = col;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = 1 + e.value * 4;
+
+  if (e.dashed || currentLayer === 'info') {
+    ctx.setLineDash([6, 4]);
+  } else {
+    ctx.setLineDash([]);
+  }
+
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  // Подпись ребра (если толщина достаточна)
+  if (e.value > 0.4) {
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    ctx.fillStyle = col;
+    ctx.globalAlpha = 0.9;
+    ctx.font = '11px Segoe UI, sans-serif';
+    ctx.fillText(e.label, mx + 6, my - 6);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawNode(n) {
+  const x = n.x * width;
+  const y = n.y * height;
+  const r = 22;
+
+  // Свечение
+  const grad = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * 1.6);
+  grad.addColorStop(0, n.color);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.arc(x, y, r * 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Круг
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#0b1220';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = n.color;
+  ctx.stroke();
+
+  // Иконка (первая буква)
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(n.label.charAt(0), x, y);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  // Подпись
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '12px Segoe UI, sans-serif';
+  ctx.fillText(n.label, x + r + 8, y + 4);
+}
+
+/* ===================== ТУЛТИП ===================== */
+function onHover(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (width / rect.width);
+  const my = (e.clientY - rect.top) * (height / rect.height);
+
+  let hovered = null;
+  for (let n of nodes) {
+    const nx = n.x * width, ny = n.y * height;
+    const dx = mx - nx, dy = my - ny;
+    if (dx * dx + dy * dy < 24 * 24) { hovered = n; break; }
+  }
+
+  if (hovered) {
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY + 12) + 'px';
+    tooltip.innerHTML = `<strong style="color:${hovered.color}">${hovered.label}</strong><br/><span style="color:#94a3b8;font-size:0.75rem">${hovered.role}</span>`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>

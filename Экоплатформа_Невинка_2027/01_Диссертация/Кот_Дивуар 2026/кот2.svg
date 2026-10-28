@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1050" viewBox="0 0 1700 1050">
+  <defs>
+    <style>
+      .title { font: 800 30px Arial, sans-serif; }
+      .subtitle { font: 700 21px Arial, sans-serif; }
+      .label { font: 18px Arial, sans-serif; }
+      .small { font: 16px Arial, sans-serif; }
+
+      .box { fill:#ffffff; stroke:#000; stroke-width:2.5; rx:18; ry:18; }
+      .soft { fill:#f5f5f5; stroke:#000; stroke-width:2.5; rx:18; ry:18; }
+      .dash { fill:#ffffff; stroke:#000; stroke-width:2.5; stroke-dasharray:10 8; rx:18; ry:18; }
+
+      .arrow { stroke:#000; stroke-width:2.5; fill:none; marker-end:url(#ah); }
+    </style>
+
+    <marker id="ah" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M0,0 L14,7 L0,14 Z" fill="#000"/>
+    </marker>
+  </defs>
+
+  <!-- Header -->
+  <text x="80" y="60" class="title">
+    Рисунок 1. Двухконтурная целевая функция государства в платформе предпринимательства
+  </text>
+  <text x="80" y="95" class="label">
+    Агро-ориентированная страна: рост эффективности предпринимательской среды и рост благосостояния населения
+  </text>
+
+  <!-- Mission -->
+  <rect x="250" y="130" width="1200" height="120" class="soft"/>
+  <text x="300" y="175" class="subtitle">Миссия государства</text>
+  <text x="300" y="210" class="label">
+    Обеспечить устойчивый экономический рост через предпринимательство
+  </text>
+  <text x="300" y="238" class="label">
+    без ухудшения уровня и структуры благосостояния населения
+  </text>
+
+  <!-- Contour A -->
+  <rect x="120" y="320" width="650" height="380" class="box"/>
+  <text x="160" y="365" class="subtitle">Контур A — Экономический (производственный)</text>
+  <text x="160" y="400" class="label"><b>Цель:</b> прирост добавленной стоимости</text>
+
+  <text x="160" y="440" class="subtitle">Объекты</text>
+  <text x="160" y="470" class="label">• агро-предприниматели, кооперативы</text>
+  <text x="160" y="500" class="label">• переработка, логистика, рынки</text>
+
+  <text x="160" y="545" class="subtitle">KPI</text>
+  <text x="160" y="575" class="label">• добавленная стоимость, производительность</text>
+  <text x="160" y="605" class="label">• выживаемость бизнеса, формализация</text>
+  <text x="160" y="635" class="label">• экспортная способность, налоговая база</text>
+
+  <!-- Contour B -->
+  <rect x="930" y="320" width="650" height="380" class="box"/>
+  <text x="970" y="365" class="subtitle">Контур B — Социальный (распределительный)</text>
+  <text x="970" y="400" class="label"><b>Цель:</b> рост благосостояния населения</text>
+
+  <text x="970" y="440" class="subtitle">Объекты</text>
+  <text x="970" y="470" class="label">• домохозяйства, сельское население</text>
+  <text x="970" y="500" class="label">• наёмные работники, мелкие фермеры</text>
+
+  <text x="970" y="545" class="subtitle">KPI</text>
+  <text x="970" y="575" class="label">• доходы и устойчивость доходов</text>
+  <text x="970" y="605" class="label">• занятость / самозанятость</text>
+  <text x="970" y="635" class="label">• доступность продовольствия, неравенство</text>
+
+  <!-- Arbitration -->
+  <rect x="120" y="750" width="420" height="230" class="dash"/>
+  <text x="150" y="795" class="subtitle">Узел согласования контуров</text>
+
+  <text x="150" y="830" class="label">
+    <tspan x="150" dy="0">Рост допустим, если социальные KPI</tspan>
+    <tspan x="150" dy="28">не ухудшаются или компенсируются мерами</tspan>
+  </text>
+
+  <text x="150" y="900" class="label">
+    <tspan x="150" dy="0">Решения государства:</tspan>
+    <tspan x="150" dy="28">разрешение / коррекция / ограничение / запрет</tspan>
+  </text>
+
+  <!-- Platform -->
+  <rect x="620" y="750" width="540" height="230" class="soft"/>
+  <text x="660" y="795" class="subtitle">Цифровая платформа предпринимательства</text>
+
+  <text x="660" y="830" class="label">
+    Роль: связать Контур A и Контур B
+  </text>
+
+  <text x="660" y="870" class="label">
+    <tspan x="660" dy="0">• сбор и стандартизация метаданных</tspan>
+    <tspan x="660" dy="28">• лучшие практики и мониторинг</tspan>
+    <tspan x="660" dy="28">• обратная связь и коррекция решений</tspan>
+  </text>
+
+  <!-- Final Effect -->
+  <rect x="1210" y="750" width="400" height="230" class="box"/>
+  <text x="1240" y="795" class="subtitle">Конечный эффект государства</text>
+  <text x="1240" y="835" class="label">
+    Конверсия экономического роста
+  </text>
+  <text x="1240" y="865" class="label">
+    в рост благосостояния населения
+  </text>
+  <text x="1240" y="905" class="small">
+    Платформа — «орган чувств» государства
+  </text>
+
+  <!-- Arrows -->
+  <path d="M 850 250 L 445 320" class="arrow"/>
+  <path d="M 850 250 L 1255 320" class="arrow"/>
+
+  <path d="M 445 700 L 760 750" class="arrow"/>
+  <path d="M 1255 700 L 1020 750" class="arrow"/>
+
+  <path d="M 540 865 L 620 865" class="arrow"/>
+  <path d="M 620 905 L 540 905" class="arrow"/>
+
+  <path d="M 1160 865 L 1210 865" class="arrow"/>
+</svg>

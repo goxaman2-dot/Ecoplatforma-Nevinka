@@ -1,0 +1,100 @@
+<mxfile host="app.diagrams.net" agent="Claude">
+  <diagram name="Фронтир" id="frontier-diagram">
+    <mxGraphModel dx="2060" dy="1104" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1.25" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frontier" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f5fb;strokeColor=#5b8fc9;strokeWidth=3;arcSize=4;" value="" vertex="1">
+          <mxGeometry height="1056" width="697" x="415" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="frontier_title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=20;fontColor=#1a4a7a;" value="&lt;b&gt;Фронтир (адаптационный контур)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="623" x="446" y="54" as="geometry" />
+        </mxCell>
+        <mxCell id="frontier_sub" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=12;fontColor=#34495e;" value="&lt;i&gt;Регулирует воздействие цифровой культуры: снимает риски взаимонепонимания&lt;br&gt;и поддерживает рост благосостояния через предпринимательство&lt;/i&gt;" vertex="1">
+          <mxGeometry height="44" width="625" x="453" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="factor1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;strokeWidth=2;fontSize=14;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Фактор 1&lt;/b&gt;&lt;br&gt;&lt;br&gt;Риск&lt;br&gt;(вероятность × ущерб)" vertex="1">
+          <mxGeometry height="120" width="166" x="453" y="153" as="geometry" />
+        </mxCell>
+        <mxCell id="factor2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;strokeWidth=2;fontSize=14;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Фактор 2&lt;/b&gt;&lt;br&gt;&lt;br&gt;Бюджет&lt;br&gt;(ресурсное ограничение)" vertex="1">
+          <mxGeometry height="120" width="183" x="663.5" y="153" as="geometry" />
+        </mxCell>
+        <mxCell id="factor3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;strokeWidth=2;fontSize=13;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Фактор 3&lt;/b&gt;&lt;br&gt;&lt;br&gt;Фронтир&lt;br&gt;(неясность /&lt;br&gt;&amp;nbsp;непредсказуемость)" vertex="1">
+          <mxGeometry height="120" width="205" x="873" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="func_label" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#1a4a7a;" value="&lt;b&gt;Функции фронтира&lt;/b&gt;" vertex="1">
+          <mxGeometry height="30" width="1060" x="300" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="func1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b7280;strokeWidth=1.5;fontSize=14;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Регистрация&lt;/b&gt;&lt;br&gt;&lt;br&gt;Где растёт напряжение?&lt;br&gt;Какие разрывы&lt;br&gt;в институтах?" vertex="1">
+          <mxGeometry height="150" width="168" x="469" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="func2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b7280;strokeWidth=1.5;fontSize=14;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Перевод&lt;/b&gt;&lt;br&gt;&lt;br&gt;Гибридные институты&lt;br&gt;и практики&lt;br&gt;совместимости" vertex="1">
+          <mxGeometry height="150" width="168" x="668" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="func3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6b7280;strokeWidth=1.5;fontSize=14;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Темп&lt;/b&gt;&lt;br&gt;&lt;br&gt;Управление скоростью&lt;br&gt;и порядком&lt;br&gt;внедрения" vertex="1">
+          <mxGeometry height="150" width="175" x="873" y="338" as="geometry" />
+        </mxCell>
+        <mxCell id="palabr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f4fd;strokeColor=#2980b9;strokeWidth=2;fontSize=15;verticalAlign=middle;align=left;spacingLeft=16;arcSize=4;" value="&lt;b&gt;Палабр-контур (palabre): публичное слушание и примирение&lt;/b&gt;&lt;br&gt;&lt;br&gt;Решение возникает как восстановление согласия (а не как «вердикт»):&lt;br&gt;• слушание нарративов и признание мотивов&lt;br&gt;• признание ущерба: символического и практического&lt;br&gt;• выработка консенсуса и локальная легитимация&lt;br&gt;• согласование темпа / пределов внедрения и распределения выгод" vertex="1">
+          <mxGeometry height="170" width="520" x="495" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="metrics" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9ca3af;strokeWidth=1.5;fontSize=15;verticalAlign=top;align=left;spacingLeft=16;spacingTop=12;arcSize=4;" value="&lt;b&gt;Метрики фронтира&lt;/b&gt;&lt;br&gt;&lt;br&gt;По природе несовершенны: используются как сигналы (раннее обнаружение), а не как «судебные доказательства»;&lt;br&gt;требуют интерпретации и согласования в палабр-контуре.&lt;br&gt;&lt;br&gt;Ключевые индикаторы:&lt;br&gt;• Индекс когнитивного разрыва (gap score) по секторам&lt;br&gt;• Темп институциональной адаптации vs темп внедрения платформ&lt;br&gt;• Доля неформальных практик в цифровых транзакциях&lt;br&gt;• Уровень доверия к платформам среди малого бизнеса&lt;br&gt;• Распределение выгод: Джини-метрика цифрового дохода" vertex="1">
+          <mxGeometry height="254" width="506" x="503" y="741" as="geometry" />
+        </mxCell>
+        <mxCell id="gov" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde8e8;strokeColor=#c0392b;strokeWidth=2;fontSize=15;verticalAlign=top;align=left;spacingLeft=12;spacingTop=12;arcSize=5;" value="&lt;b&gt;Платформа государственного регулирования&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Нормы, право, стандарты&lt;br&gt;• Институты: образование, занятость, финансы&lt;br&gt;• Защита прав, «красные линии» (sanpret nacimas)&lt;br&gt;• Инструменты: стимулы, ограничения, услуги&lt;br&gt;&lt;br&gt;&lt;i&gt;Роль: рамка, безопасность, предсказуемость&lt;/i&gt;" vertex="1">
+          <mxGeometry height="290" width="332" x="35.5" y="89" as="geometry" />
+        </mxCell>
+        <mxCell id="risks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#d4ac0d;strokeWidth=2;fontSize=15;verticalAlign=top;align=left;spacingLeft=12;spacingTop=12;arcSize=5;" value="&lt;b&gt;Риски фронтира&lt;br&gt;(болезненность процесса)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Несогласование когнитивных режимов и кодов обучения&lt;br&gt;• Институциональные разрывы (школа, рынок труда, финансы)&lt;br&gt;• Темп внедрения &amp;gt; темпа адаптации практик&lt;br&gt;• Нормативное сопротивление и недоверие к институтам&lt;br&gt;• Уход в теневые практики и неформальные посредники&lt;br&gt;• Эскалация из-за «метрик-вердиктов» и санкционной логики&lt;br&gt;&lt;br&gt;&lt;i&gt;Смысл: риск — в несостыковке систем; «когнитивные слабости» проявляются как структурная несовместимость&lt;/i&gt;" vertex="1">
+          <mxGeometry height="414" width="323" x="40" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="entrep" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#27ae60;strokeWidth=2;fontSize=15;verticalAlign=top;align=left;spacingLeft=12;spacingTop=12;arcSize=5;" value="&lt;b&gt;Платформа предпринимательства&lt;/b&gt;&lt;br&gt;&lt;br&gt;• МСП, самозанятость, кооперации&lt;br&gt;• Цифровые сервисы: платежи, торговля, логистика&lt;br&gt;• Новые практики труда и обмена&lt;br&gt;• Каналы роста доходов и доверия&lt;br&gt;&lt;br&gt;&lt;i&gt;Роль: экономическая интеграция и благосостояние&lt;/i&gt;" vertex="1">
+          <mxGeometry height="246" width="326" x="1163" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="social" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e67e22;strokeWidth=2;fontSize=15;verticalAlign=top;align=left;spacingLeft=12;spacingTop=12;arcSize=5;" value="&lt;b&gt;Социально-культурная основа (общество)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Общинность, устная традиция, контекстность&lt;br&gt;• Идентичности, ритуалы, доверие&lt;br&gt;• Неформальные институты и солидарность&lt;br&gt;&lt;br&gt;&lt;i&gt;Роль: почва, на которой растёт или отвергается цифровая платформа&lt;/i&gt;" vertex="1">
+          <mxGeometry height="257" width="318" x="1168" y="425" as="geometry" />
+        </mxCell>
+        <mxCell id="effect" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#8e44ad;strokeWidth=2;fontSize=15;verticalAlign=top;align=left;spacingLeft=12;spacingTop=12;arcSize=5;" value="&lt;b&gt;Целевой эффект&lt;br&gt;(выход фронтира)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Рост предпринимательской активности&lt;br&gt;• Рост доходов и благосостояния&lt;br&gt;• Рост доверия к институтам (ксрес результат)&lt;br&gt;• Снижение остроты культурных конфликтов&lt;br&gt;&lt;br&gt;&lt;i&gt;Принцип: платформа учится культуре быстрее, чем культура — платформе; выгоды распределяются прозрачно&lt;/i&gt;" vertex="1">
+          <mxGeometry height="292" width="308" x="1168" y="755" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_f1_fn1" edge="1" parent="1" source="factor1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#2563eb;strokeWidth=2;" target="func1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_f2_fn2" edge="1" parent="1" source="factor2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#2563eb;strokeWidth=2;" target="func2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_f3_fn3" edge="1" parent="1" source="factor3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#2563eb;strokeWidth=2;" target="func3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_fn1_p" edge="1" parent="1" source="func1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.17;entryY=0;entryDx=0;entryDy=0;strokeColor=#555555;strokeWidth=1.5;" target="palabr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_fn2_p" edge="1" parent="1" source="func2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#555555;strokeWidth=1.5;" target="palabr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_fn3_p" edge="1" parent="1" source="func3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.83;entryY=0;entryDx=0;entryDy=0;strokeColor=#555555;strokeWidth=1.5;" target="palabr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_p_m" edge="1" parent="1" source="palabr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#555555;strokeWidth=1.5;" target="metrics">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_gov_fr" edge="1" parent="1" source="gov" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.15;entryDx=0;entryDy=0;strokeColor=#c0392b;strokeWidth=2;" target="frontier">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_risk_fr" edge="1" parent="1" source="risks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.55;entryDx=0;entryDy=0;strokeColor=#d4ac0d;strokeWidth=1.5;dashed=1;dashPattern=8 4;" target="frontier">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_entr_fr" edge="1" parent="1" source="entrep" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.15;entryDx=0;entryDy=0;strokeColor=#27ae60;strokeWidth=2;" target="frontier">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_soc_fr" edge="1" parent="1" source="social" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.45;entryDx=0;entryDy=0;strokeColor=#e67e22;strokeWidth=1.5;dashed=1;dashPattern=8 4;" target="frontier">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arr_fr_eff" edge="1" parent="1" source="frontier" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#8e44ad;strokeWidth=2;" target="effect">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="caption" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#444444;" value="&lt;i&gt;Рисунок 1 – Философия фронтира как механизма регулирования внедрения цифровых платформ через предпринимательство и рост благосостояния в Республике Кот-д&#39;Ивуар (составлено автором)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="40" width="497" x="506" y="1026" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

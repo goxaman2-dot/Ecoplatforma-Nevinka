@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<!-- saved from url=(0319)file:///C:/Users/d_art/Desktop/%D0%9A%D0%BE%D1%82_%D0%94%D0%B8%D0%B2%D1%83%D0%B0%D1%80%202026/%D0%BC%D0%B0%D1%82%D0%B5%D0%BC%D0%B0%D1%82%D0%B8%D0%BA%D0%B0%20%D0%BF%D0%BB%D0%B0%D1%82%D1%84%D0%BE%D1%80%D0%BC%D1%8B%20%D0%91%D0%B5%D1%80%D0%B5%D0%B3%20%D0%92%D0%BE%D1%81%D1%85%D0%BE%D0%B4%D0%B0/simulator_bereg_voskhoda.html -->
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Симулятор потоков — Берег Восхода</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;600&display=swap');
+
+:root {
+  --bg:       #0b0f0d;
+  --bg2:      #111812;
+  --bg3:      #162018;
+  --panel:    #1a2a1c;
+  --border:   #2a3f2c;
+  --green:    #4ade80;
+  --green2:   #22c55e;
+  --teal:     #2dd4bf;
+  --amber:    #fbbf24;
+  --red:      #f87171;
+  --blue:     #60a5fa;
+  --muted:    #6b7280;
+  --text:     #e2efe3;
+  --text2:    #9ab89c;
+  --math:     #a5f3c0;
+  --glow-g:   rgba(74,222,128,0.15);
+  --glow-r:   rgba(248,113,113,0.2);
+  --glow-a:   rgba(251,191,36,0.15);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Grain overlay ── */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:0; opacity:0.6;
+}
+
+.page { position:relative; z-index:1; max-width:1600px; margin:0 auto; padding:28px 24px 60px; }
+
+/* ── Header ── */
+.header {
+  display:flex; align-items:flex-end; justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  padding-bottom:18px; margin-bottom:24px;
+}
+.header-left h1 {
+  font-size:28px; font-weight:800; letter-spacing:-0.5px;
+  background: linear-gradient(135deg, #4ade80, #2dd4bf);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.header-left p { font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:4px; }
+.header-right { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); text-align:right; }
+
+/* ── Layout ── */
+.main-grid {
+  display:grid;
+  grid-template-columns: 340px 1fr 300px;
+  gap:16px;
+  align-items:start;
+}
+
+/* ── Panels ── */
+.panel {
+  background: var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:18px;
+}
+.panel-title {
+  font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:14px; padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ── Sliders panel ── */
+.cluster-row {
+  margin-bottom:14px;
+}
+.cluster-header {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:6px;
+}
+.cluster-name {
+  font-size:12px; font-weight:600; color:var(--text);
+  display:flex; align-items:center; gap:6px;
+}
+.cluster-badge {
+  font-size:9px; font-family:'JetBrains Mono',monospace;
+  padding:1px 5px; border-radius:3px;
+  background:var(--bg3); color:var(--teal); border:1px solid var(--border);
+}
+.badge-crit {
+  background: rgba(248,113,113,0.12); color:var(--red); border-color:rgba(248,113,113,0.3);
+}
+.cluster-val {
+  font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600;
+  min-width:36px; text-align:right;
+}
+.slider-wrap { position:relative; }
+input[type=range] {
+  -webkit-appearance:none; width:100%; height:5px;
+  border-radius:3px; outline:none; cursor:pointer;
+  background: linear-gradient(to right, var(--green2) 0%, var(--green2) var(--pct,50%), var(--bg3) var(--pct,50%), var(--bg3) 100%);
+  transition: background 0.1s;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:white; border:2px solid var(--green2);
+  box-shadow: 0 0 8px rgba(74,222,128,0.4);
+  transition: box-shadow 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 14px rgba(74,222,128,0.7); }
+input[type=range].violated { background: linear-gradient(to right, var(--red) 0%, var(--red) var(--pct,50%), var(--bg3) var(--pct,50%), var(--bg3) 100%) !important; }
+input[type=range].violated::-webkit-slider-thumb { border-color:var(--red); box-shadow:0 0 8px rgba(248,113,113,0.5); }
+
+/* Min marker on slider track */
+.slider-track-wrap { position:relative; }
+.min-marker {
+  position:absolute; top:-2px; width:3px; height:9px;
+  background:var(--amber); border-radius:1px; pointer-events:none;
+  z-index:2;
+}
+.min-label {
+  position:absolute; top:10px; font-size:9px;
+  font-family:'JetBrains Mono',monospace; color:var(--amber);
+  transform:translateX(-50%); white-space:nowrap;
+}
+
+/* Constraint pills */
+.constraints { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.constraint-pill {
+  font-size:9px; font-family:'JetBrains Mono',monospace;
+  padding:2px 6px; border-radius:3px;
+  border:1px solid;
+  transition: all 0.2s;
+}
+.pill-ok   { background:rgba(74,222,128,0.08); color:var(--green); border-color:rgba(74,222,128,0.25); }
+.pill-warn { background:rgba(251,191,36,0.12); color:var(--amber); border-color:rgba(251,191,36,0.35); }
+.pill-err  { background:rgba(248,113,113,0.14); color:var(--red);   border-color:rgba(248,113,113,0.4);
+             animation: pulse-err 1.4s ease-in-out infinite; }
+
+@keyframes pulse-err {
+  0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(248,113,113,0.2); }
+}
+
+/* ── Flow map (SVG canvas) ── */
+.flow-panel { position:relative; padding:0; overflow:hidden; border-radius:10px; }
+#flowSvg { width:100%; display:block; }
+
+/* ── Right panel ── */
+.metric-block { margin-bottom:18px; }
+.metric-label {
+  font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:8px;
+}
+.big-number {
+  font-size:32px; font-weight:800; font-family:'JetBrains Mono',monospace;
+  line-height:1;
+  transition: color 0.3s;
+}
+.big-unit { font-size:13px; color:var(--muted); margin-left:4px; }
+
+.mini-bar-row {
+  display:flex; align-items:center; gap:8px; margin-bottom:7px;
+}
+.mini-bar-label { font-size:11px; color:var(--text2); width:80px; flex-shrink:0; }
+.mini-bar-track {
+  flex:1; height:5px; background:var(--bg3); border-radius:3px; overflow:hidden;
+}
+.mini-bar-fill {
+  height:100%; border-radius:3px;
+  transition: width 0.35s cubic-bezier(.4,0,.2,1);
+}
+.mini-bar-val { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text2); width:42px; text-align:right; }
+
+/* F(x) decomposition */
+.fx-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:5px 0; border-bottom:1px solid var(--border);
+}
+.fx-row:last-child { border-bottom:none; }
+.fx-label { font-size:11px; color:var(--text2); font-family:'JetBrains Mono',monospace; }
+.fx-val   { font-size:12px; font-weight:600; font-family:'JetBrains Mono',monospace; }
+
+/* Bottleneck list */
+.bottleneck-item {
+  display:flex; gap:8px; align-items:flex-start;
+  padding:7px 9px; border-radius:6px; margin-bottom:6px;
+  border:1px solid;
+  animation: fadein 0.3s ease;
+}
+@keyframes fadein { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+.bn-sev-high { background:rgba(248,113,113,0.08); border-color:rgba(248,113,113,0.3); }
+.bn-sev-med  { background:rgba(251,191,36,0.07);  border-color:rgba(251,191,36,0.25); }
+.bn-sev-low  { background:rgba(74,222,128,0.06);  border-color:rgba(74,222,128,0.2); }
+.bn-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.bn-text { font-size:11px; color:var(--text2); line-height:1.4; }
+.bn-text strong { color:var(--text); font-size:11px; }
+
+/* Scenario buttons */
+.scenario-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.scenario-btn {
+  font-size:11px; font-family:'Syne',sans-serif; font-weight:600;
+  padding:7px 14px; border-radius:6px; border:1px solid var(--border);
+  cursor:pointer; transition:all 0.2s; color:var(--text2); background:var(--bg3);
+}
+.scenario-btn:hover { background:var(--panel); border-color:var(--green); color:var(--green); }
+.scenario-btn.active { background:rgba(74,222,128,0.12); border-color:var(--green2); color:var(--green); }
+
+/* ── Tooltip ── */
+#tooltip {
+  position:fixed; pointer-events:none;
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:8px; padding:10px 14px; font-size:12px;
+  max-width:220px; z-index:100;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  transition:opacity 0.15s;
+  opacity:0;
+}
+#tooltip.show { opacity:1; }
+#tooltip strong { color:var(--green); display:block; margin-bottom:4px; font-size:13px; }
+#tooltip .tt-math { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--math); margin-top:4px; }
+
+/* ── Legend ── */
+.legend { display:flex; gap:20px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-top:12px; padding:12px 18px; background:var(--bg2); border-radius:8px; border:1px solid var(--border); }
+.legend-item { display:flex; align-items:center; gap:6px; }
+.legend-line { width:28px; height:3px; border-radius:2px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>«Берег Восхода» — Симулятор потоков ВДС</h1>
+      <p>// Платформенная модель · K = {1,…,9} · F(x) → max · Узкие места в реальном времени</p>
+    </div>
+    <div class="header-right">
+      Раздел 3.3 · Интегральная модель<br>Экономика 2035 · Кот-д'Ивуар
+    </div>
+  </div>
+
+  <!-- Scenario presets -->
+  <div class="scenario-row" id="scenarioRow">
+    <button class="scenario-btn" data-scenario="balanced">⬡ Сбалансированный</button>
+    <button class="scenario-btn" data-scenario="inertial">↘ Инерционный</button>
+    <button class="scenario-btn" data-scenario="digital">◈ Цифровой приоритет</button>
+    <button class="scenario-btn" data-scenario="industrial">⚙ Индустриальный акцент</button>
+    <button class="scenario-btn" data-scenario="noinfra">⚠ Без инфраструктуры</button>
+    <button class="scenario-btn active" data-scenario="optimal">★ Оптимальный x*</button>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- LEFT: Sliders -->
+    <div class="panel" id="slidersPanel">
+      <div class="panel-title">Управляющие переменные  xₖ ∈ [0; 1]</div>
+      <div id="clusterSliders"><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Агро</span>
+          <span class="cluster-badge">k=1</span>
+        </div>
+        <div class="cluster-val" id="val-0" style="color: rgb(74, 222, 128);">0.82</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-0" min="0" max="1" step="0.01" value="0.7" style="--pct: 82%;" class="">
+        
+      </div>
+      <div class="constraints" id="cons-0"><span class="constraint-pill pill-ok">x₁≤x₂ ✓</span><span class="constraint-pill pill-ok">x₁≤x₄ ✓</span><span class="constraint-pill pill-ok">x₁≤x₆ ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Порт</span>
+          <span class="cluster-badge">k=2</span>
+        </div>
+        <div class="cluster-val" id="val-1" style="color: rgb(74, 222, 128);">0.85</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-1" min="0" max="1" step="0.01" value="0.7" style="--pct: 85%;" class="">
+        
+      </div>
+      <div class="constraints" id="cons-1"><span class="constraint-pill pill-ok">x₂≤x₄ ✓</span><span class="constraint-pill pill-ok">x₂≤x₆ ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>СЭЗ</span>
+          <span class="cluster-badge">k=3</span>
+        </div>
+        <div class="cluster-val" id="val-2" style="color:#4ade80">0.80</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-2" min="0" max="1" step="0.01" value="0.65" style="--pct: 80%;">
+        
+      </div>
+      <div class="constraints" id="cons-2"><span class="constraint-pill pill-ok">x₃≤x₂ ✓</span><span class="constraint-pill pill-ok">x₃≤x₆ ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Цифра</span>
+          <span class="cluster-badge badge-crit">★ КРИТИЧ.</span>
+        </div>
+        <div class="cluster-val" id="val-3" style="color: rgb(96, 165, 250);">0.88</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-3" min="0" max="1" step="0.01" value="0.75" style="--pct: 88%;" class="">
+        <div class="min-marker" id="mm-3" style="left:calc(30% - 1px)"></div>
+          <div class="min-label" id="ml-3" style="left:30%">x4ᵐⁱⁿ=0.3</div>
+      </div>
+      <div class="constraints" id="cons-3"><span class="constraint-pill pill-ok">x4≥0.3 ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Образ.</span>
+          <span class="cluster-badge badge-crit">★ КРИТИЧ.</span>
+        </div>
+        <div class="cluster-val" id="val-4" style="color: rgb(96, 165, 250);">0.78</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-4" min="0" max="1" step="0.01" value="0.65" style="--pct: 78%;" class="">
+        <div class="min-marker" id="mm-4" style="left:calc(25% - 1px)"></div>
+          <div class="min-label" id="ml-4" style="left:25%">x5ᵐⁱⁿ=0.25</div>
+      </div>
+      <div class="constraints" id="cons-4"><span class="constraint-pill pill-ok">x5≥0.25 ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Энерг.</span>
+          <span class="cluster-badge badge-crit">★ КРИТИЧ.</span>
+        </div>
+        <div class="cluster-val" id="val-5" style="color: rgb(96, 165, 250);">0.90</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-5" min="0" max="1" step="0.01" value="0.75" style="--pct: 90%;" class="">
+        <div class="min-marker" id="mm-5" style="left:calc(35% - 1px)"></div>
+          <div class="min-label" id="ml-5" style="left:35%">x6ᵐⁱⁿ=0.35</div>
+      </div>
+      <div class="constraints" id="cons-5"><span class="constraint-pill pill-ok">x6≥0.35 ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Фин.</span>
+          <span class="cluster-badge">k=7</span>
+        </div>
+        <div class="cluster-val" id="val-6" style="color:#a78bfa">0.72</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-6" min="0" max="1" step="0.01" value="0.6" style="--pct: 72%;">
+        
+      </div>
+      <div class="constraints" id="cons-6"></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Соц.</span>
+          <span class="cluster-badge">k=8</span>
+        </div>
+        <div class="cluster-val" id="val-7" style="color:#fb923c">0.68</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-7" min="0" max="1" step="0.01" value="0.55" style="--pct: 68%;">
+        
+      </div>
+      <div class="constraints" id="cons-7"><span class="constraint-pill pill-ok">x₈≤(x₁+x₂+x₃)/3 ✓</span></div>
+    </div><div class="cluster-row">
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>Эко.</span>
+          <span class="cluster-badge">k=9</span>
+        </div>
+        <div class="cluster-val" id="val-8" style="color:#34d399">0.62</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-8" min="0" max="1" step="0.01" value="0.5" style="--pct: 62%;">
+        
+      </div>
+      <div class="constraints" id="cons-8"></div>
+    </div></div>
+    </div>
+
+    <!-- CENTER: Flow map -->
+    <div class="flow-panel panel">
+      <div style="padding:14px 18px 10px;">
+        <div class="panel-title" style="margin-bottom:0;">Карта потоков добавленной стоимости</div>
+      </div>
+      <svg id="flowSvg" viewBox="0 0 700 560"><defs>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22c55e"></polygon></marker>
+    <marker id="arr-amber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"></polygon></marker>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#f87171"></polygon></marker>
+    <marker id="arr-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#374151"></polygon></marker>
+    <filter id="glow-green"><fegaussianblur stdDeviation="3" result="blur"></fegaussianblur><femerge><femergenode in="blur"></femergenode><femergenode in="SourceGraphic"></femergenode></femerge></filter>
+    <filter id="glow-red"><fegaussianblur stdDeviation="4" result="blur"></fegaussianblur><femerge><femergenode in="blur"></femergenode><femergenode in="SourceGraphic"></femergenode></femerge></filter>
+  </defs><text x="100" y="22" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="700" fill="#4b5563" letter-spacing="1">ЭКОНОМИЧЕСКОЕ ЯДРО</text><text x="100" y="35" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#374151">K_core</text><text x="350" y="22" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="700" fill="#4b5563" letter-spacing="1">ИНФРАСТРУКТУРНЫЙ КАРКАС</text><text x="350" y="35" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#374151">★ Критические</text><text x="580" y="22" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="700" fill="#4b5563" letter-spacing="1">КАЧЕСТВО РОСТА</text><text x="580" y="35" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#374151">K_ext</text><path d="M100,136 Q100,165 100,190" fill="none" stroke="#22c55e" stroke-width="2.6399999999999997" opacity="0.946" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M134.53715805656574,89.8420123363042 Q219,65 310.25967181094506,75.44958074171126" fill="none" stroke="#22c55e" stroke-width="2.6399999999999997" opacity="0.946" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M126.49351642342586,124.3740351095518 Q225,215 325.8456924801815,348.1163140738396" fill="none" stroke="#22c55e" stroke-width="2.6399999999999997" opacity="0.946" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M134.28726929917568,110.97192617573621 Q225,140 317.53862634194024,206.62781096619696" fill="none" stroke="#22c55e" stroke-width="2.56" opacity="0.9339999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M100,266 Q100,295 100,320" fill="none" stroke="#22c55e" stroke-width="2.6" opacity="0.94" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M128.1112771399491,207.51097828804072 Q225,130 312.86093236458964,94.85562705416415" fill="none" stroke="#22c55e" stroke-width="2.7" opacity="0.955" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M133.42516087186934,243.37006434874775 Q225,280 318.76524762227876,355.01219809782305" fill="none" stroke="#22c55e" stroke-width="2.7" opacity="0.955" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M100,324 Q100,295 100,270" fill="none" stroke="#22c55e" stroke-width="2.6" opacity="0.94" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M135.76629537014946,355.90462266754014 Q231,345 311.6253799371492,368.713347040338" fill="none" stroke="#22c55e" stroke-width="2.6" opacity="0.94" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M133.79954737191792,347.60683263029676 Q340,272 540.0222037208339,278.6674067906945" fill="none" stroke="#22c55e" stroke-width="2.3600000000000003" opacity="0.9039999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><path d="M314.2826331689926,75.49781090365454 Q231,65 138.64449702099174,89.6751343837045" fill="none" stroke="#22c55e" stroke-width="2.6399999999999997" opacity="0.946" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M316.57483912813063,93.37006434874773 Q225,130 131.2347523777212,205.01219809782305" fill="none" stroke="#22c55e" stroke-width="2.7" opacity="0.955" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M323.5064835765741,104.3740351095518 Q225,195 124.1543075198185,328.1163140738396" fill="none" stroke="#22c55e" stroke-width="2.6" opacity="0.94" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M350,116 Q350,155 350,190" fill="none" stroke="#22c55e" stroke-width="2.56" opacity="0.9339999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M350,116 Q350,230 350,340" fill="none" stroke="#22c55e" stroke-width="2.76" opacity="0.964" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M385.99574040109735,80.55378062155535 Q480,82 543.9390777012691,112.69075729660915" fill="none" stroke="#22c55e" stroke-width="2.44" opacity="0.9159999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M379.91373207769857,100.02919452158946 Q465,157 552.6818890734596,250.78149874813505" fill="none" stroke="#22c55e" stroke-width="2.3600000000000003" opacity="0.9039999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><path d="M372.1818961328273,108.35424983935319 Q465,227 559.524997192065,385.6376039832049" fill="none" stroke="#22c55e" stroke-width="2.24" opacity="0.8859999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><path d="M320.7847637077462,208.96502986957728 Q225,140 138.09696588797297,112.19102908415135" fill="none" stroke="#22c55e" stroke-width="2.56" opacity="0.9339999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M315.71273070082435,240.9719261757362 Q225,270 132.46137365805978,336.627810966197" fill="none" stroke="#22c55e" stroke-width="2.56" opacity="0.9339999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M350,194 Q350,155 350,120" fill="none" stroke="#22c55e" stroke-width="2.56" opacity="0.9339999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M350,266 Q350,305 350,340" fill="none" stroke="#22c55e" stroke-width="2.56" opacity="0.9339999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M328.26112323216336,351.3046826664556 Q225,215 129.4372404704732,127.08226123283532" fill="none" stroke="#22c55e" stroke-width="2.6399999999999997" opacity="0.946" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M321.8887228600509,357.51097828804075 Q225,280 137.13906763541036,244.85562705416416" fill="none" stroke="#22c55e" stroke-width="2.7" opacity="0.955" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M315.21995268110743,370.70762094533404 Q219,345 139.6859631455638,354.9975676707273" fill="none" stroke="#22c55e" stroke-width="2.6" opacity="0.94" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M380.39355950906946,360.7066970072863 Q465,307 541.0588769431644,289.1426984568223" fill="none" stroke="#22c55e" stroke-width="2.3600000000000003" opacity="0.9039999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><path d="M372.0885622044832,351.5729808150999 Q465,232 550.0749309948645,156.54223511759847" fill="none" stroke="#22c55e" stroke-width="2.44" opacity="0.9159999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M545.0997445448862,121.16981488485075 Q331,67 139.59797974644667,94.34314575050762" fill="none" stroke="#22c55e" stroke-width="2.44" opacity="0.9159999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M544.0012499348996,130.29998958387583 Q340,132 137.03170187331804,214.8787217350618" fill="none" stroke="#22c55e" stroke-width="2.44" opacity="0.9159999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M545.3258031916786,139.67987994232308 Q340,197 133.08987673381432,337.5264587182844" fill="none" stroke="#22c55e" stroke-width="2.44" opacity="0.9159999999999999" stroke-dasharray="" marker-end="url(#arr-green)" filter="url(#glow-green)"></path><path d="M580,166 Q580,205 580,240" fill="none" stroke="#22c55e" stroke-width="2.3600000000000003" opacity="0.9039999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><path d="M580,244 Q580,205 580,170" fill="none" stroke="#22c55e" stroke-width="2.3600000000000003" opacity="0.9039999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><path d="M580,384 Q580,275 580,170" fill="none" stroke="#22c55e" stroke-width="2.24" opacity="0.8859999999999999" stroke-dasharray="" marker-end="url(#arr-green)"></path><circle cx="100" cy="100" r="46" fill="#4ade80" opacity="0.09839999999999999"></circle><circle cx="100" cy="100" r="34" fill="none" stroke="#4ade80" stroke-width="2.5" opacity="0.25"></circle><circle cx="100" cy="100" r="34" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-dasharray="175.17520636416685 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="100" cy="100" r="33" fill="#4ade80" opacity="0.2476"></circle><text x="100" y="92" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#4ade80">Агро</text><text x="100" y="106" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.82</text><text x="100" y="119" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+2.9B$</text><circle cx="100" cy="100" r="34" fill="transparent" class="node-hit" data-idx="0" style="cursor:pointer"></circle><circle cx="100" cy="230" r="46" fill="#4ade80" opacity="0.102"></circle><circle cx="100" cy="230" r="34" fill="none" stroke="#4ade80" stroke-width="2.5" opacity="0.25"></circle><circle cx="100" cy="230" r="34" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-dasharray="181.58405537749005 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="100" cy="230" r="33" fill="#4ade80" opacity="0.253"></circle><text x="100" y="222" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#4ade80">Порт</text><text x="100" y="236" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.85</text><text x="100" y="249" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+2.1B$</text><circle cx="100" cy="230" r="34" fill="transparent" class="node-hit" data-idx="1" style="cursor:pointer"></circle><circle cx="100" cy="360" r="46" fill="#4ade80" opacity="0.096"></circle><circle cx="100" cy="360" r="34" fill="none" stroke="#4ade80" stroke-width="2.5" opacity="0.25"></circle><circle cx="100" cy="360" r="34" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-dasharray="170.90264035528477 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="100" cy="360" r="33" fill="#4ade80" opacity="0.244"></circle><text x="100" y="352" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#4ade80">СЭЗ</text><text x="100" y="366" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.80</text><text x="100" y="379" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+3.6B$</text><circle cx="100" cy="360" r="34" fill="transparent" class="node-hit" data-idx="2" style="cursor:pointer"></circle><circle cx="350" cy="80" r="46" fill="#60a5fa" opacity="0.1056"></circle><circle cx="350" cy="80" r="34" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.25"></circle><circle cx="350" cy="80" r="34" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-dasharray="187.99290439081324 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="350" cy="80" r="33" fill="#60a5fa" opacity="0.25839999999999996"></circle><text x="378" y="54" font-size="13" fill="#fbbf24" text-anchor="middle">★</text><text x="350" y="72" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#60a5fa">Цифра</text><text x="350" y="86" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.88</text><text x="350" y="99" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+2.2B$</text><circle cx="350" cy="80" r="34" fill="transparent" class="node-hit" data-idx="3" style="cursor:pointer"></circle><circle cx="350" cy="230" r="46" fill="#60a5fa" opacity="0.0936"></circle><circle cx="350" cy="230" r="34" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.25"></circle><circle cx="350" cy="230" r="34" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-dasharray="166.63007434640264 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="350" cy="230" r="33" fill="#60a5fa" opacity="0.2404"></circle><text x="378" y="204" font-size="13" fill="#fbbf24" text-anchor="middle">★</text><text x="350" y="222" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#60a5fa">Образ.</text><text x="350" y="236" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.78</text><text x="350" y="249" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+0.9B$</text><circle cx="350" cy="230" r="34" fill="transparent" class="node-hit" data-idx="4" style="cursor:pointer"></circle><circle cx="350" cy="380" r="46" fill="#60a5fa" opacity="0.108"></circle><circle cx="350" cy="380" r="34" fill="none" stroke="#60a5fa" stroke-width="2.5" opacity="0.25"></circle><circle cx="350" cy="380" r="34" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-dasharray="192.26547039969535 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="350" cy="380" r="33" fill="#60a5fa" opacity="0.262"></circle><text x="378" y="354" font-size="13" fill="#fbbf24" text-anchor="middle">★</text><text x="350" y="372" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#60a5fa">Энерг.</text><text x="350" y="386" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.90</text><text x="350" y="399" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+1.6B$</text><circle cx="350" cy="380" r="34" fill="transparent" class="node-hit" data-idx="5" style="cursor:pointer"></circle><circle cx="580" cy="130" r="46" fill="#a78bfa" opacity="0.08639999999999999"></circle><circle cx="580" cy="130" r="34" fill="none" stroke="#a78bfa" stroke-width="2.5" opacity="0.25"></circle><circle cx="580" cy="130" r="34" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-dasharray="153.81237631975628 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="580" cy="130" r="33" fill="#a78bfa" opacity="0.2296"></circle><text x="580" y="122" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#a78bfa">Фин.</text><text x="580" y="136" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.72</text><text x="580" y="149" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+1.3B$</text><circle cx="580" cy="130" r="34" fill="transparent" class="node-hit" data-idx="6" style="cursor:pointer"></circle><circle cx="580" cy="280" r="46" fill="#fb923c" opacity="0.0816"></circle><circle cx="580" cy="280" r="34" fill="none" stroke="#fb923c" stroke-width="2.5" opacity="0.25"></circle><circle cx="580" cy="280" r="34" fill="none" stroke="#fb923c" stroke-width="2.5" stroke-dasharray="145.26724430199206 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="580" cy="280" r="33" fill="#fb923c" opacity="0.22240000000000001"></circle><text x="580" y="272" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#fb923c">Соц.</text><text x="580" y="286" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.68</text><text x="580" y="299" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+1.0B$</text><circle cx="580" cy="280" r="34" fill="transparent" class="node-hit" data-idx="7" style="cursor:pointer"></circle><circle cx="580" cy="420" r="46" fill="#34d399" opacity="0.0744"></circle><circle cx="580" cy="420" r="34" fill="none" stroke="#34d399" stroke-width="2.5" opacity="0.25"></circle><circle cx="580" cy="420" r="34" fill="none" stroke="#34d399" stroke-width="2.5" stroke-dasharray="132.44954627534568 213.62830044410595" stroke-dashoffset="53.40707511102649" style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"></circle><circle cx="580" cy="420" r="33" fill="#34d399" opacity="0.2116"></circle><text x="580" y="412" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="#34d399">Эко.</text><text x="580" y="426" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="#e2efe3">x=0.62</text><text x="580" y="439" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9ab89c">+0.5B$</text><circle cx="580" cy="420" r="34" fill="transparent" class="node-hit" data-idx="8" style="cursor:pointer"></circle><rect x="30" y="535" width="640" height="6" rx="3" fill="#1f2f21"></rect><rect x="30" y="535" width="640" height="6" rx="3" fill="#f87171" style="transition:width 0.4s"></rect><text x="30" y="530" font-family="JetBrains Mono,monospace" font-size="9" fill="#4b5563">Бюджет: 12.68 / 12.5 млрд USD</text><text x="670" y="530" font-family="JetBrains Mono,monospace" font-size="9" fill="#f87171" text-anchor="end">100%</text></svg>
+      <div style="padding:0 18px 14px;">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line" style="background:var(--green2);"></div> Активный поток</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--red); height:2px; border:1px dashed var(--red); background:none;"></div> Узкое место</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--amber); opacity:0.7;"></div> Частичный поток</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--border);"></div> Нет потока</div>
+          <div class="legend-item"><span style="color:var(--red);font-size:14px;">★</span>&nbsp;Критический кластер</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Metrics -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- F(x) -->
+      <div class="panel">
+        <div class="panel-title">F(x) — Интегральный эффект</div>
+        <div class="metric-block">
+          <div class="big-number" id="fxTotal" style="color: rgb(74, 222, 128);">0.471</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:&#39;JetBrains Mono&#39;,monospace;">нормированный индекс [0–1]</div>
+        </div>
+        <div id="fxDecomp">
+    <div class="fx-row">
+      <span class="fx-label">wY·ΔY/Y₀</span>
+      <span class="fx-val" style="color:#4ade80">+0.350</span>
+    </div>
+  
+    <div class="fx-row">
+      <span class="fx-label">wL·ΔL/L₀</span>
+      <span class="fx-val" style="color:#2dd4bf">+0.200</span>
+    </div>
+  
+    <div class="fx-row">
+      <span class="fx-label">wS·ΔS/S₀</span>
+      <span class="fx-val" style="color:#a78bfa">+0.106</span>
+    </div>
+  
+    <div class="fx-row">
+      <span class="fx-label">wE·ΔE/E₀</span>
+      <span class="fx-val" style="color:#f87171">−0.119</span>
+    </div>
+  
+    <div class="fx-row">
+      <span class="fx-label">wR·RΣ/R₀</span>
+      <span class="fx-val" style="color:#fb923c">−0.066</span>
+    </div>
+  </div>
+      </div>
+
+      <!-- ΔY -->
+      <div class="panel">
+        <div class="panel-title">Приросты ВДС по кластерам</div>
+        <div id="dyBars">
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="I · Агропереработка">Агро</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:63.8%;background:#4ade80;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#4ade80">+2.9B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="II · Порт-Логистика">Порт</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:47.2%;background:#4ade80;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#4ade80">+2.1B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="III · Индустрия (СЭЗ)">СЭЗ</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:80.0%;background:#4ade80;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#4ade80">+3.6B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="IV · Цифровая платформа">Цифра</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:48.9%;background:#60a5fa;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#60a5fa">+2.2B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="V · Образование / R&amp;D">Образ.</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:20.8%;background:#60a5fa;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#60a5fa">+0.9B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="VI · Энергетика / ESG">Энерг.</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:36.0%;background:#60a5fa;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#60a5fa">+1.6B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="VII · Финансовый">Фин.</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:28.8%;background:#a78bfa;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#a78bfa">+1.3B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="VIII · Социально-урбан.">Соц.</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:21.2%;background:#fb923c;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#fb923c">+1.0B</div>
+    </div>
+  
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="IX · Экологический">Эко.</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:11.0%;background:#34d399;opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:#34d399">+0.5B</div>
+    </div>
+  </div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:var(--muted);">ΔY суммарный</span>
+            <span class="big-number" id="dyTotal" style="font-size:22px;color:var(--teal);">17.9 B$</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+            <span style="font-size:11px;color:var(--muted);">Синергия Σγₖⱼ·xₖ·xⱼ</span>
+            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:12px;color:var(--amber);" id="synTotal">+1.82 B$</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottlenecks -->
+      <div class="panel">
+        <div class="panel-title">Узкие места / Нарушения ограничений</div>
+        <div id="bottlenecks">
+      <div class="bottleneck-item bn-sev-high">
+        <div class="bn-dot" style="background:#f87171"></div>
+        <div class="bn-text"><strong>Σ xₖ·Iₖ = 12.68 &gt; 12.5 млрд USD</strong> — превышен глобальный бюджет</div>
+      </div>
+    
+      <div class="bottleneck-item bn-sev-med">
+        <div class="bn-dot" style="background:#fbbf24"></div>
+        <div class="bn-text"><strong>x₁≤x₂</strong> на пределе: Агро≈Порт — малый запас устойчивости</div>
+      </div>
+    
+      <div class="bottleneck-item bn-sev-med">
+        <div class="bn-dot" style="background:#fbbf24"></div>
+        <div class="bn-text"><strong>x₂≤x₄</strong> на пределе: Порт≈Цифра — малый запас устойчивости</div>
+      </div>
+    
+      <div class="bottleneck-item bn-sev-med">
+        <div class="bn-dot" style="background:#fbbf24"></div>
+        <div class="bn-text"><strong>x₃≤x₂</strong> на пределе: СЭЗ≈Порт — малый запас устойчивости</div>
+      </div>
+    </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip" class="" style="left: 1114px; top: 290px;"><strong>VII · Финансовый</strong>
+    <div>x7 = <span style="color:var(--green)">0.72</span></div>
+    <div>ΔY7 = <span style="color:var(--teal)">1.30 млрд USD</span></div>
+    <div>CAPEX = 0.58 / 0.8 млрд USD</div>
+    <div>Мультипликатор k7 = 1.65</div>
+    
+    </div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// MODEL DATA
+// ═══════════════════════════════════════════════════════════════
+const CLUSTERS = [
+  { id:1, key:'x1', name:'I · Агропереработка',      short:'Агро',    capex:2.75, dyMax:3.5, lMax:35, ki:1.80, critical:false, xMin:0.0, color:'#4ade80',  col:0 },
+  { id:2, key:'x2', name:'II · Порт-Логистика',       short:'Порт',    capex:2.20, dyMax:2.5, lMax:22, ki:1.78, critical:false, xMin:0.0, color:'#4ade80',  col:0 },
+  { id:3, key:'x3', name:'III · Индустрия (СЭЗ)',     short:'СЭЗ',     capex:3.50, dyMax:4.5, lMax:50, ki:1.90, critical:false, xMin:0.0, color:'#4ade80',  col:0 },
+  { id:4, key:'x4', name:'IV · Цифровая платформа',   short:'Цифра',   capex:1.25, dyMax:2.5, lMax:15, ki:2.05, critical:true,  xMin:0.3, color:'#60a5fa',  col:1 },
+  { id:5, key:'x5', name:'V · Образование / R&D',     short:'Образ.',  capex:0.90, dyMax:1.2, lMax:12, ki:1.55, critical:true,  xMin:0.25,color:'#60a5fa',  col:1 },
+  { id:6, key:'x6', name:'VI · Энергетика / ESG',     short:'Энерг.',  capex:2.50, dyMax:1.8, lMax:18, ki:1.70, critical:true,  xMin:0.35,color:'#60a5fa',  col:1 },
+  { id:7, key:'x7', name:'VII · Финансовый',          short:'Фин.',    capex:0.80, dyMax:1.8, lMax:10, ki:1.65, critical:false, xMin:0.0, color:'#a78bfa',  col:2 },
+  { id:8, key:'x8', name:'VIII · Социально-урбан.',   short:'Соц.',    capex:1.20, dyMax:1.4, lMax:20, ki:1.45, critical:false, xMin:0.0, color:'#fb923c',  col:2 },
+  { id:9, key:'x9', name:'IX · Экологический',        short:'Эко.',    capex:0.50, dyMax:0.8, lMax:8,  ki:1.40, critical:false, xMin:0.0, color:'#34d399',  col:2 },
+];
+
+// Synergy matrix (k<j pairs): [k-1, j-1, gamma]
+const SYNERGY = [
+  [0,1,0.18],[0,3,0.22],[0,5,0.14],[0,4,0.08],
+  [1,2,0.16],[1,3,0.19],[1,5,0.12],
+  [2,5,0.17],[2,3,0.20],[2,7,0.10],
+  [3,4,0.15],[3,5,0.13],[3,6,0.18],[3,7,0.12],[3,8,0.09],
+  [4,5,0.11],[4,3,0.14],
+  [5,6,0.16],
+];
+
+// Flow edges: [from(0-idx), to(0-idx), type, label]
+// type: 'value'=ΔY flow, 'resource'=energy/infra, 'data'=digital, 'labor'=HR, 'finance'=capital
+const EDGES = [
+  [0,1,'value','готовая продукция'],[0,3,'data','трейсабилити'],[0,5,'resource','электроэнергия'],
+  [0,4,'labor','агротехники'],[0,5,'value','биомасса→биоэнергетика'],
+  [1,2,'value','логистика СЭЗ'],[1,3,'data','Single Window'],[1,5,'resource','электроэнергия'],
+  [2,1,'resource','порт-экспорт'],[2,5,'resource','600-800 МВт'],[2,7,'labor','рабочие места'],
+  [3,0,'data','цифровые услуги'],[3,1,'data','AI-оптимизация'],[3,2,'data','мониторинг'],[3,4,'data','HR-платформа'],
+  [3,5,'data','IoT-сети'],[3,6,'finance','финтех'],[3,7,'data','GovTech'],[3,8,'data','IoT-эко'],
+  [4,0,'labor','кадры'],[4,2,'labor','инженеры'],[4,3,'labor','IT-кадры'],[4,5,'labor','ESG-кадры'],
+  [5,0,'resource','энергия'],[5,1,'resource','энергия'],[5,2,'resource','энергия'],[5,7,'resource','энергия'],
+  [5,6,'finance','ESG→зел.бонды'],
+  [6,0,'finance','капитал'],[6,1,'finance','капитал'],[6,2,'finance','капитал'],[6,7,'resource','карбон'],
+  [7,6,'value','демография'],[8,6,'value','карбон→финансы'],
+];
+
+// Precedence constraints: [dependent(0-idx), required(0-idx), label]
+const PREC = [
+  [0,1,'x₁≤x₂'],[0,3,'x₁≤x₄'],[0,5,'x₁≤x₆'],
+  [1,3,'x₂≤x₄'],[1,5,'x₂≤x₆'],
+  [2,1,'x₃≤x₂'],[2,5,'x₃≤x₆'],
+];
+
+// Weights for F(x)
+const W = { Y:0.35, L:0.20, S:0.15, E:0.15, R:0.15 };
+const I_BUDGET = 12.5; // млрд USD
+
+// Scenarios
+const SCENARIOS = {
+  balanced:    [0.70,0.70,0.65,0.75,0.65,0.75,0.60,0.55,0.50],
+  inertial:    [0.40,0.35,0.30,0.25,0.20,0.30,0.20,0.25,0.20],
+  digital:     [0.55,0.60,0.50,0.95,0.80,0.70,0.75,0.45,0.40],
+  industrial:  [0.85,0.90,0.95,0.50,0.40,0.90,0.45,0.70,0.35],
+  noinfra:     [0.80,0.80,0.80,0.10,0.10,0.15,0.30,0.60,0.40],
+  optimal:     [0.82,0.85,0.80,0.88,0.78,0.90,0.72,0.68,0.62],
+};
+
+// State
+let X = [...SCENARIOS.balanced];
+
+// ═══════════════════════════════════════════════════════════════
+// SVG FLOW MAP — node positions
+// ═══════════════════════════════════════════════════════════════
+const SVG_W = 700, SVG_H = 560;
+
+const NODE_POS = [
+  // col=0 (economic) — left
+  {x:100,y:100},{x:100,y:230},{x:100,y:360},
+  // col=1 (infra) — center
+  {x:350,y:80},{x:350,y:230},{x:350,y:380},
+  // col=2 (ext) — right
+  {x:580,y:130},{x:580,y:280},{x:580,y:420},
+];
+const NODE_R = 34;
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD SLIDERS
+// ═══════════════════════════════════════════════════════════════
+function buildSliders() {
+  const container = document.getElementById('clusterSliders');
+  container.innerHTML = '';
+  CLUSTERS.forEach((c,i) => {
+    const val = X[i];
+    const div = document.createElement('div');
+    div.className = 'cluster-row';
+    div.innerHTML = `
+      <div class="cluster-header">
+        <div class="cluster-name">
+          <span>${c.short}</span>
+          ${c.critical ? '<span class="cluster-badge badge-crit">★ КРИТИЧ.</span>' : '<span class="cluster-badge">k='+c.id+'</span>'}
+        </div>
+        <div class="cluster-val" id="val-${i}" style="color:${c.color}">${val.toFixed(2)}</div>
+      </div>
+      <div class="slider-track-wrap">
+        <input type="range" id="sl-${i}" min="0" max="1" step="0.01" value="${val}"
+          style="--pct:${val*100}%"/>
+        ${c.critical ? `<div class="min-marker" id="mm-${i}" style="left:calc(${c.xMin*100}% - 1px)"></div>
+          <div class="min-label" id="ml-${i}" style="left:${c.xMin*100}%">x${c.id}ᵐⁱⁿ=${c.xMin}</div>` : ''}
+      </div>
+      <div class="constraints" id="cons-${i}"></div>
+    `;
+    container.appendChild(div);
+    document.getElementById(`sl-${i}`).addEventListener('input', e => {
+      X[i] = parseFloat(e.target.value);
+      // deactivate scenario buttons
+      document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active'));
+      update();
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPUTE MODEL
+// ═══════════════════════════════════════════════════════════════
+function compute() {
+  const x = X;
+  // Direct ΔY
+  const dy = CLUSTERS.map((c,i) => x[i] * c.dyMax);
+  // Synergy
+  let syn = 0;
+  SYNERGY.forEach(([k,j,g]) => { syn += g * x[k] * x[j]; });
+  const dyTotal = dy.reduce((a,b)=>a+b,0) + syn;
+
+  // ΔL
+  const dl = CLUSTERS.reduce((s,c,i)=>s+x[i]*c.lMax,0);
+  // ΔS (social) — driven by k8
+  const ds = x[7]*0.8 + x[6]*0.3 + x[4]*0.2;
+  // ΔE (eco load — lower is better) — driven by industry
+  const de = x[0]*0.15 + x[1]*0.12 + x[2]*0.20 + x[7]*0.10;
+  // R_Σ — risk
+  let risk = CLUSTERS.reduce((s,c,i)=>s+x[i]*(1-c.ki/2.1),0);
+  let riskSyn = 0;
+  SYNERGY.forEach(([k,j]) => { riskSyn += 0.02 * x[k] * x[j]; });
+  risk = Math.max(0, risk + riskSyn);
+
+  // Budget
+  const budget = CLUSTERS.reduce((s,c,i)=>s+x[i]*c.capex,0);
+
+  // Normalised components (Y0=17.6,L0=133,S0=1.3,E0=0.57,R0=3.5)
+  const Y0=17.6, L0=133, S0=1.3, E0=0.57, R0=3.5;
+  const fY = Math.min(dyTotal/Y0, 1.0);
+  const fL = Math.min(dl/L0, 1.0);
+  const fS = Math.min(ds/S0, 1.0);
+  const fE = Math.min(de/E0, 1.0);
+  const fR = Math.min(risk/R0, 1.0);
+
+  const fx = W.Y*fY + W.L*fL + W.S*fS - W.E*fE - W.R*fR;
+
+  // Check constraints
+  const violations = [];
+  const warnings = [];
+
+  // Critical xMin
+  CLUSTERS.forEach((c,i) => {
+    if(c.critical && x[i] < c.xMin) {
+      violations.push({ sev:'high', text:`<strong>x${c.id} = ${x[i].toFixed(2)} < x${c.id}ᵐⁱⁿ = ${c.xMin}</strong> — ${c.short}: критический кластер ниже минимума`, edge:null, cluster:i });
+    }
+  });
+  // Precedence
+  PREC.forEach(([dep,req,label]) => {
+    const delta = x[dep] - x[req];
+    if(delta > 0.001) {
+      violations.push({ sev:'high', text:`<strong>${label}</strong> нарушено: ${CLUSTERS[dep].short} (${x[dep].toFixed(2)}) > ${CLUSTERS[req].short} (${x[req].toFixed(2)}) — технологическая зависимость`, dep, req });
+    } else if(delta > -0.05) {
+      warnings.push({ sev:'med', text:`<strong>${label}</strong> на пределе: ${CLUSTERS[dep].short}≈${CLUSTERS[req].short} — малый запас устойчивости` });
+    }
+  });
+  // x8 ≤ (x1+x2+x3)/3
+  const x8max = (x[0]+x[1]+x[2])/3;
+  if(x[7] > x8max + 0.001) {
+    violations.push({ sev:'high', text:`<strong>x₈ ≤ (x₁+x₂+x₃)/3</strong> нарушено: x₈=${x[7].toFixed(2)} > ${x8max.toFixed(2)} — социальное развитие опережает экономическую базу` });
+  }
+  // x9 min requirement
+  const x9min = 0.1*(x[0]+x[1]+x[2]+x[7]);
+  if(x[8] < x9min) {
+    warnings.push({ sev:'med', text:`<strong>x₉ ≥ x₉ᵐⁱⁿ(…)</strong> — экологический кластер недостаточен при текущей нагрузке: нужно ≥${x9min.toFixed(2)}` });
+  }
+  // Budget
+  if(budget > I_BUDGET) {
+    violations.push({ sev:'high', text:`<strong>Σ xₖ·Iₖ = ${budget.toFixed(2)} > ${I_BUDGET} млрд USD</strong> — превышен глобальный бюджет` });
+  } else if(budget > I_BUDGET*0.9) {
+    warnings.push({ sev:'med', text:`<strong>Бюджет использован на ${(budget/I_BUDGET*100).toFixed(0)}%</strong> (${budget.toFixed(2)} / ${I_BUDGET} млрд USD) — малый резерв` });
+  }
+  // Good signs
+  if(violations.length===0 && warnings.length===0) {
+    warnings.push({ sev:'low', text:`Все ограничения выполнены · Система в допустимой области · Бюджет: ${budget.toFixed(2)} млрд USD` });
+  }
+
+  return { x, dy, dyTotal, syn, dl, ds, de, risk, budget, fY, fL, fS, fE, fR, fx, violations, warnings, x8max };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER SVG FLOW MAP
+// ═══════════════════════════════════════════════════════════════
+function renderFlow(m) {
+  const svg = document.getElementById('flowSvg');
+
+  // Build violation set for quick lookup
+  const violSet = new Set();
+  m.violations.forEach(v => {
+    if(v.dep !== undefined) violSet.add(`${v.dep}-${v.req}`);
+    if(v.cluster !== undefined) violSet.add(`c${v.cluster}`);
+  });
+
+  let html = `<defs>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/></marker>
+    <marker id="arr-amber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/></marker>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#f87171"/></marker>
+    <marker id="arr-muted" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#374151"/></marker>
+    <filter id="glow-green"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-red"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  // Column labels
+  const colLabels = [['LEFT','Экономическое ядро','K_core'],['CENTER','Инфраструктурный каркас','★ Критические'],['RIGHT','Качество роста','K_ext']];
+  const colX = [100,350,580];
+  colLabels.forEach(([,label,sub],i) => {
+    html += `<text x="${colX[i]}" y="22" text-anchor="middle" font-family="Syne,sans-serif" font-size="9" font-weight="700" fill="#4b5563" letter-spacing="1">${label.toUpperCase()}</text>`;
+    html += `<text x="${colX[i]}" y="35" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#374151">${sub}</text>`;
+  });
+
+  // Draw edges
+  const drawnEdges = new Set();
+  EDGES.forEach(([from, to, type]) => {
+    const key = `${from}-${to}`;
+    if(drawnEdges.has(key)) return;
+    drawnEdges.add(key);
+
+    const p1 = NODE_POS[from], p2 = NODE_POS[to];
+    const xFrom = m.x[from], xTo = m.x[to];
+    const strength = Math.min(xFrom, xTo);
+    const isViolation = violSet.has(key) || (PREC.some(([d,r])=>d===from&&r===to) && xFrom > xTo + 0.001);
+
+    if(strength < 0.05) return; // invisible
+
+    let color, marker, dash='', opacity, strokeW;
+    if(isViolation) {
+      color='#f87171'; marker='url(#arr-red)'; dash='5,3'; opacity=0.9; strokeW=2;
+    } else if(strength > 0.6) {
+      color='#22c55e'; marker='url(#arr-green)'; opacity=0.7+strength*0.3; strokeW=1+strength*2;
+    } else if(strength > 0.3) {
+      color='#fbbf24'; marker='url(#arr-amber)'; opacity=0.6; strokeW=1.2;
+    } else {
+      color='#374151'; marker='url(#arr-muted)'; opacity=0.4; strokeW=0.8;
+    }
+
+    // Bezier control point
+    const dx = p2.x - p1.x, dy2 = p2.y - p1.y;
+    const cx = (p1.x+p2.x)/2 + (Math.abs(dy2)>50 ? 0 : dy2*0.3);
+    const cy = (p1.y+p2.y)/2 - Math.abs(dx)*0.1;
+
+    // Shorten to node radius
+    const angle1 = Math.atan2(cy-p1.y, cx-p1.x);
+    const angle2 = Math.atan2(p2.y-cy, p2.x-cx);
+    const sx = p1.x + Math.cos(angle1)*(NODE_R+2);
+    const sy = p1.y + Math.sin(angle1)*(NODE_R+2);
+    const ex = p2.x - Math.cos(angle2)*(NODE_R+6);
+    const ey = p2.y - Math.sin(angle2)*(NODE_R+6);
+
+    const filter = isViolation ? 'filter="url(#glow-red)"' : (strength>0.7 ? 'filter="url(#glow-green)"' : '');
+    html += `<path d="M${sx},${sy} Q${cx},${cy} ${ex},${ey}" fill="none"
+      stroke="${color}" stroke-width="${strokeW}" opacity="${opacity}"
+      stroke-dasharray="${dash}" marker-end="${marker}" ${filter}/>`;
+  });
+
+  // Draw nodes
+  CLUSTERS.forEach((c,i) => {
+    const p = NODE_POS[i];
+    const xi = m.x[i];
+    const dyi = m.dy[i];
+    const isViol = violSet.has(`c${i}`);
+    const isCrit = c.critical;
+
+    // Glow
+    if(xi > 0.6 && !isViol) {
+      html += `<circle cx="${p.x}" cy="${p.y}" r="${NODE_R+12}" fill="${c.color}" opacity="${xi*0.12}"/>`;
+    }
+    if(isViol) {
+      html += `<circle cx="${p.x}" cy="${p.y}" r="${NODE_R+14}" fill="#f87171" opacity="0.12"/>
+               <circle cx="${p.x}" cy="${p.y}" r="${NODE_R+8}" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,3" opacity="0.6"/>`;
+    }
+
+    // Border ring showing x_k
+    const circumf = 2*Math.PI*NODE_R;
+    const dash2 = xi * circumf;
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${NODE_R}" fill="none" stroke="${c.color}" stroke-width="2.5" opacity="0.25"/>`;
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${NODE_R}" fill="none" stroke="${c.color}" stroke-width="2.5"
+      stroke-dasharray="${dash2} ${circumf}" stroke-dashoffset="${circumf/4}"
+      style="transition:stroke-dasharray 0.4s cubic-bezier(.4,0,.2,1)" opacity="0.9"/>`;
+
+    // Fill
+    const fillAlpha = 0.1 + xi*0.18;
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${NODE_R-1}" fill="${c.color}" opacity="${fillAlpha}"/>`;
+
+    // Critical star
+    if(isCrit) {
+      html += `<text x="${p.x+NODE_R-6}" y="${p.y-NODE_R+8}" font-size="13" fill="${isViol?'#f87171':'#fbbf24'}" text-anchor="middle">★</text>`;
+    }
+
+    // Label
+    html += `<text x="${p.x}" y="${p.y-8}" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="700" fill="${isViol?'#f87171':c.color}">${c.short}</text>`;
+    html += `<text x="${p.x}" y="${p.y+6}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="600" fill="${isViol?'#f87171':'#e2efe3'}">x=${xi.toFixed(2)}</text>`;
+    html += `<text x="${p.x}" y="${p.y+19}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="${isViol?'#f87171':'#9ab89c'}">+${dyi.toFixed(1)}B$</text>`;
+
+    // Invisible hit target for tooltip
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${NODE_R}" fill="transparent" class="node-hit"
+      data-idx="${i}" style="cursor:pointer"/>`;
+  });
+
+  // Budget bar at bottom
+  const budgetPct = Math.min(m.budget / I_BUDGET, 1.0);
+  const budgetColor = budgetPct > 0.95 ? '#f87171' : budgetPct > 0.8 ? '#fbbf24' : '#4ade80';
+  html += `<rect x="30" y="535" width="640" height="6" rx="3" fill="#1f2f21"/>`;
+  html += `<rect x="30" y="535" width="${budgetPct*640}" height="6" rx="3" fill="${budgetColor}" style="transition:width 0.4s"/>`;
+  html += `<text x="30" y="530" font-family="JetBrains Mono,monospace" font-size="9" fill="#4b5563">Бюджет: ${m.budget.toFixed(2)} / ${I_BUDGET} млрд USD</text>`;
+  html += `<text x="670" y="530" font-family="JetBrains Mono,monospace" font-size="9" fill="${budgetColor}" text-anchor="end">${(budgetPct*100).toFixed(0)}%</text>`;
+
+  svg.innerHTML = html;
+
+  // Tooltip events
+  svg.querySelectorAll('.node-hit').forEach(el => {
+    el.addEventListener('mouseenter', e => showTooltip(e, parseInt(el.dataset.idx)));
+    el.addEventListener('mousemove', e => moveTooltip(e));
+    el.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER RIGHT PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderMetrics(m) {
+  // F(x)
+  const fxEl = document.getElementById('fxTotal');
+  fxEl.textContent = m.fx.toFixed(3);
+  fxEl.style.color = m.fx > 0.45 ? '#4ade80' : m.fx > 0.25 ? '#fbbf24' : '#f87171';
+
+  document.getElementById('fxDecomp').innerHTML = [
+    ['wY·ΔY/Y₀', m.fY, '+', '#4ade80', W.Y*m.fY],
+    ['wL·ΔL/L₀', m.fL, '+', '#2dd4bf', W.L*m.fL],
+    ['wS·ΔS/S₀', m.fS, '+', '#a78bfa', W.S*m.fS],
+    ['wE·ΔE/E₀', m.fE, '−', '#f87171', -W.E*m.fE],
+    ['wR·RΣ/R₀', m.fR, '−', '#fb923c', -W.R*m.fR],
+  ].map(([label, raw, sign, col, contrib]) => `
+    <div class="fx-row">
+      <span class="fx-label">${label}</span>
+      <span class="fx-val" style="color:${col}">${sign}${Math.abs(contrib).toFixed(3)}</span>
+    </div>
+  `).join('');
+
+  // ΔY bars
+  const dyMax = Math.max(...m.dy, 1);
+  document.getElementById('dyBars').innerHTML = CLUSTERS.map((c,i) => `
+    <div class="mini-bar-row">
+      <div class="mini-bar-label" title="${c.name}">${c.short}</div>
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill" style="width:${(m.dy[i]/4.5*100).toFixed(1)}%;background:${c.color};opacity:0.85"></div>
+      </div>
+      <div class="mini-bar-val" style="color:${c.color}">+${m.dy[i].toFixed(1)}B</div>
+    </div>
+  `).join('');
+  document.getElementById('dyTotal').textContent = m.dyTotal.toFixed(1) + ' B$';
+  document.getElementById('synTotal').textContent = '+' + m.syn.toFixed(2) + ' B$';
+
+  // Bottlenecks
+  const bn = [...m.violations, ...m.warnings];
+  document.getElementById('bottlenecks').innerHTML = bn.length === 0
+    ? '<div style="font-size:12px;color:var(--green);padding:8px;">✓ Нет нарушений ограничений</div>'
+    : bn.map(v => `
+      <div class="bottleneck-item bn-sev-${v.sev}">
+        <div class="bn-dot" style="background:${v.sev==='high'?'#f87171':v.sev==='med'?'#fbbf24':'#4ade80'}"></div>
+        <div class="bn-text">${v.text}</div>
+      </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER SLIDERS (update only)
+// ═══════════════════════════════════════════════════════════════
+function updateSliders(m) {
+  // Build violation sets
+  const violClusters = new Set();
+  m.violations.forEach(v => {
+    if(v.cluster !== undefined) violClusters.add(v.cluster);
+    if(v.dep !== undefined) violClusters.add(v.dep);
+  });
+
+  CLUSTERS.forEach((c,i) => {
+    const sl = document.getElementById(`sl-${i}`);
+    const vv = document.getElementById(`val-${i}`);
+    const cs = document.getElementById(`cons-${i}`);
+    const xi = m.x[i];
+    if(!sl) return;
+    sl.value = xi;
+    sl.style.setProperty('--pct', (xi*100)+'%');
+    vv.textContent = xi.toFixed(2);
+    vv.style.color = violClusters.has(i) ? '#f87171' : c.color;
+    sl.classList.toggle('violated', violClusters.has(i));
+
+    // Constraint pills
+    const pills = [];
+    if(c.critical) {
+      const ok = xi >= c.xMin;
+      pills.push(`<span class="constraint-pill ${ok?'pill-ok':'pill-err'}">x${c.id}≥${c.xMin} ${ok?'✓':'✗'}</span>`);
+    }
+    PREC.forEach(([dep,req,label]) => {
+      if(dep === i) {
+        const ok = xi <= m.x[req]+0.001;
+        pills.push(`<span class="constraint-pill ${ok?'pill-ok':(xi>m.x[req]+0.05?'pill-err':'pill-warn')}">${label} ${ok?'✓':'✗'}</span>`);
+      }
+    });
+    if(i===7) {
+      const ok = xi <= m.x8max+0.001;
+      pills.push(`<span class="constraint-pill ${ok?'pill-ok':'pill-err'}">x₈≤(x₁+x₂+x₃)/3 ${ok?'✓':'✗'}</span>`);
+    }
+    cs.innerHTML = pills.join('');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════════════
+function showTooltip(e, idx) {
+  const m = compute();
+  const c = CLUSTERS[idx];
+  const xi = m.x[idx];
+  const dyi = m.dy[idx];
+  const tt = document.getElementById('tooltip');
+  const deps = PREC.filter(([d])=>d===idx).map(([d,r,l])=>l).join(', ');
+  tt.innerHTML = `<strong>${c.name}</strong>
+    <div>x${c.id} = <span style="color:var(--green)">${xi.toFixed(2)}</span></div>
+    <div>ΔY${c.id} = <span style="color:var(--teal)">${dyi.toFixed(2)} млрд USD</span></div>
+    <div>CAPEX = ${(xi*c.capex).toFixed(2)} / ${c.capex} млрд USD</div>
+    <div>Мультипликатор k${c.id} = ${c.ki}</div>
+    ${c.critical ? `<div style="color:var(--amber)">★ Критич.: x${c.id}ᵐⁱⁿ = ${c.xMin}</div>` : ''}
+    ${deps ? `<div class="tt-math">Ограничения: ${deps}</div>` : ''}`;
+  tt.classList.add('show');
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const tt = document.getElementById('tooltip');
+  let left = e.clientX + 14, top = e.clientY - 10;
+  if(left + 240 > window.innerWidth) left = e.clientX - 240;
+  tt.style.left = left+'px'; tt.style.top = top+'px';
+}
+function hideTooltip() { document.getElementById('tooltip').classList.remove('show'); }
+
+// ═══════════════════════════════════════════════════════════════
+// SCENARIOS
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('scenarioRow').addEventListener('click', e => {
+  const btn = e.target.closest('.scenario-btn');
+  if(!btn) return;
+  const sc = btn.dataset.scenario;
+  if(!SCENARIOS[sc]) return;
+  document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  X = [...SCENARIOS[sc]];
+  update();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN UPDATE
+// ═══════════════════════════════════════════════════════════════
+function update() {
+  const m = compute();
+  updateSliders(m);
+  renderFlow(m);
+  renderMetrics(m);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+buildSliders();
+update();
+</script>
+
+
+</body></html>

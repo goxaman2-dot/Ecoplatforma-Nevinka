@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <style>
+      .title { font: 700 26px "Arial", sans-serif; }
+      .subtitle { font: 600 16px "Arial", sans-serif; }
+      .label { font: 14px "Arial", sans-serif; }
+      .small { font: 12px "Arial", sans-serif; }
+      .box { fill: #ffffff; stroke: #111111; stroke-width: 2; rx: 14; ry: 14; }
+      .soft { fill: #f7f7f7; stroke: #111111; stroke-width: 2; rx: 14; ry: 14; }
+      .dash { fill: #ffffff; stroke: #111111; stroke-width: 2; stroke-dasharray: 8 6; rx: 14; ry: 14; }
+      .arrow { stroke: #111111; stroke-width: 2.2; fill: none; }
+      .thin { stroke: #111111; stroke-width: 1.6; fill: none; }
+      .note { fill: #ffffff; stroke: #111111; stroke-width: 1.6; rx: 12; ry: 12; }
+    </style>
+
+    <marker id="arrowHead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#111111"/>
+    </marker>
+
+    <marker id="arrowHeadThin" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111111"/>
+    </marker>
+  </defs>
+
+  <!-- Header -->
+  <text x="70" y="70" class="title">Рисунок 0. Двухконтурная целевая функция государства в платформе предпринимательства</text>
+  <text x="70" y="98" class="label">Агро-ориентированная страна: рост эффективности предпринимательской среды + прирост благосостояния населения</text>
+
+  <!-- Mission -->
+  <rect x="70" y="130" width="1260" height="90" class="soft"/>
+  <text x="95" y="165" class="subtitle">Миссия государства</text>
+  <text x="95" y="192" class="label">Обеспечить устойчивый экономический рост через предпринимательство без ухудшения уровня и структуры благосостояния населения</text>
+
+  <!-- Left: Contour A -->
+  <rect x="70" y="260" width="560" height="320" class="box"/>
+  <text x="95" y="295" class="subtitle">Контур A — Экономический (производственный)</text>
+  <text x="95" y="325" class="label">Цель A: прирост добавленной стоимости (прибавочного продукта)</text>
+
+  <text x="95" y="360" class="subtitle" style="font-size:15px;">Объекты</text>
+  <text x="95" y="382" class="label">• агро-предприниматели, кооперативы</text>
+  <text x="95" y="404" class="label">• переработка, логистика, рынки</text>
+
+  <text x="95" y="438" class="subtitle" style="font-size:15px;">KPI (пример)</text>
+  <text x="95" y="460" class="label">• добавленная стоимость, производительность</text>
+  <text x="95" y="482" class="label">• выживаемость бизнеса, формализация</text>
+  <text x="95" y="504" class="label">• экспортная способность, налоговая база</text>
+
+  <text x="95" y="538" class="subtitle" style="font-size:15px;">Результат</text>
+  <text x="95" y="560" class="label">Управляемый рост, измеримый и повторяемый</text>
+
+  <!-- Right: Contour B -->
+  <rect x="770" y="260" width="560" height="320" class="box"/>
+  <text x="795" y="295" class="subtitle">Контур B — Социальный (распределительный)</text>
+  <text x="795" y="325" class="label">Цель B: прирост благосостояния населения</text>
+
+  <text x="795" y="360" class="subtitle" style="font-size:15px;">Объекты</text>
+  <text x="795" y="382" class="label">• домохозяйства, сельское население</text>
+  <text x="795" y="404" class="label">• наёмные работники, мелкие фермеры</text>
+
+  <text x="795" y="438" class="subtitle" style="font-size:15px;">KPI</text>
+  <text x="795" y="460" class="label">• доходы и устойчивость доходов</text>
+  <text x="795" y="482" class="label">• занятость / самозанятость</text>
+  <text x="795" y="504" class="label">• доступность продовольствия, неравенство</text>
+
+  <text x="795" y="538" class="subtitle" style="font-size:15px;">Результат</text>
+  <text x="795" y="560" class="label">Рост уровня жизни без социальной эрозии</text>
+
+  <!-- Center: Platform -->
+  <rect x="520" y="610" width="360" height="220" class="soft"/>
+  <text x="545" y="645" class="subtitle">Цифровая платформа предпринимательства</text>
+  <text x="545" y="675" class="label">Роль: связать Контур A и Контур B</text>
+
+  <text x="545" y="708" class="subtitle" style="font-size:15px;">Функции</text>
+  <text x="545" y="730" class="label">• сбор и стандартизация метаданных</text>
+  <text x="545" y="752" class="label">• распространение лучших практик</text>
+  <text x="545" y="774" class="label">• снижение транзакционных издержек</text>
+  <text x="545" y="796" class="label">• мониторинг эффектов и обратная связь</text>
+
+  <!-- Constraint / Arbitration Node -->
+  <rect x="70" y="610" width="430" height="220" class="dash"/>
+  <text x="95" y="645" class="subtitle">Узел согласования контуров (арбитраж)</text>
+  <text x="95" y="675" class="label">Правило допустимости:</text>
+  <text x="95" y="698" class="label">Экономический рост разрешён, если</text>
+  <text x="95" y="721" class="label">социальные KPI не ухудшаются</text>
+  <text x="95" y="744" class="label">или компенсируются мерами.</text>
+
+  <text x="95" y="780" class="subtitle" style="font-size:15px;">Решения государства</text>
+  <text x="95" y="802" class="label">Разрешение / Коррекция / Ограничение / Запрет</text>
+
+  <!-- Outcome note -->
+  <rect x="900" y="610" width="430" height="220" class="note"/>
+  <text x="925" y="645" class="subtitle">Конечный эффект государства</text>
+  <text x="925" y="675" class="label">Конверсия экономического роста</text>
+  <text x="925" y="698" class="label">в рост благосостояния населения</text>
+  <text x="925" y="734" class="small">Платформа — «орган чувств» государства:</text>
+  <text x="925" y="754" class="small">видит перекосы, предотвращает “рост без жизни”.</text>
+
+  <!-- Arrows from Mission to contours -->
+  <path d="M 700 220 L 350 260" class="arrow" marker-end="url(#arrowHead)"/>
+  <path d="M 700 220 L 1050 260" class="arrow" marker-end="url(#arrowHead)"/>
+
+  <!-- Arrows from contours to platform -->
+  <path d="M 350 580 L 610 610" class="arrow" marker-end="url(#arrowHead)"/>
+  <path d="M 1050 580 L 790 610" class="arrow" marker-end="url(#arrowHead)"/>
+
+  <!-- Arrows between platform and arbitration node -->
+  <path d="M 520 720 L 500 720" class="arrow" marker-end="url(#arrowHead)"/>
+  <path d="M 500 750 L 520 750" class="thin" marker-end="url(#arrowHeadThin)"/>
+
+  <!-- Arrows from platform to outcome -->
+  <path d="M 880 720 L 900 720" class="arrow" marker-end="url(#arrowHead)"/>
+
+  <!-- Feedback arrows from outcome to contours (thin) -->
+  <path d="M 900 800 C 780 860, 520 860, 350 580" class="thin" marker-end="url(#arrowHeadThin)"/>
+  <path d="M 900 780 C 980 860, 1120 860, 1050 580" class="thin" marker-end="url(#arrowHeadThin)"/>
+
+  <!-- Footer -->
+  <text x="70" y="875" class="small">Примечание: эта схема задаёт государственное целеполагание; ваши матрицы доверия/репутации и блоки метаданных вставляются внутрь “Платформы” и “Узла согласования”.</text>
+</svg>

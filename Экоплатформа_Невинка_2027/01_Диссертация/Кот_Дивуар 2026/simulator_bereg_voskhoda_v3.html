@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Симулятор потоков — Берег Восхода</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#d8eef7;--bg2:#c8e5f2;--bg3:#b5d9ec;
+  --panel:rgba(240,250,255,0.92);--panel2:rgba(230,245,252,0.95);
+  --text:#0c2233;--text2:#1e4d6b;--text3:#5a8fa8;
+  --border:rgba(100,170,210,0.45);--border2:rgba(80,150,200,0.6);
+  --green:#1a7a44;--blue:#0e5f82;--purple:#5a4e9a;
+  --amber:#9a6a00;--red:#b02020;--teal:#0e7a5a;
+  --accent:#0a7eb0;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;overflow-x:hidden}
+
+/* ── GEOGRAPHIC BACKGROUND MAP ── */
+.geo-bg{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 110%, rgba(14,94,138,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 40% at 20% 90%, rgba(10,120,170,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 35% at 80% 95%, rgba(10,100,155,0.10) 0%, transparent 50%),
+    linear-gradient(180deg, #cce7f5 0%, #b8ddf0 40%, #a8d5ec 70%, #8fc8e8 100%);
+  pointer-events:none;
+}
+.geo-svg{position:fixed;inset:0;z-index:0;opacity:0.13;pointer-events:none;width:100%;height:100%}
+
+/* ── HEADER ── */
+.header{
+  position:relative;z-index:10;
+  background:linear-gradient(135deg,rgba(8,42,64,0.96) 0%,rgba(12,80,118,0.96) 55%,rgba(8,115,160,0.96) 100%);
+  backdrop-filter:blur(8px);
+  padding:14px 24px 12px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  border-bottom:2px solid rgba(100,180,220,0.4);
+  box-shadow:0 2px 16px rgba(8,40,70,0.3);
+}
+.header h1{font-size:19px;font-weight:700;color:#e4f4fc;letter-spacing:-.2px}
+.header p{font-size:10px;color:#7dc8e8;margin-top:2px;font-family:monospace}
+.header-meta{text-align:right;font-size:10px;color:#7dc8e8;font-family:monospace;line-height:1.7}
+.header-badge{display:inline-block;padding:2px 8px;border-radius:3px;background:rgba(14,126,176,0.3);border:1px solid rgba(100,200,240,0.3);font-size:9px;color:#a8ddf0;margin-top:3px}
+
+/* ── MAIN LAYOUT ── */
+.sim{
+  position:relative;z-index:5;
+  display:grid;
+  grid-template-columns:285px 1fr 338px;
+  gap:11px;padding:12px;
+  min-height:calc(100vh - 68px);
+  align-items:start;
+}
+
+/* ── GLASSMORPHISM PANELS ── */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 16px rgba(8,50,90,0.12),0 1px 4px rgba(8,50,90,0.08),inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.panel-hdr{
+  font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:12px;padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;
+}
+.panel-hdr::before{content:'';width:3px;height:12px;background:linear-gradient(180deg,var(--accent),#0a9bd4);border-radius:2px;flex-shrink:0}
+
+/* ── SCENARIO BUTTONS ── */
+.scen-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:13px}
+.scen-btn{
+  font-size:10px;padding:4px 9px;border-radius:20px;
+  border:1px solid var(--border2);
+  background:rgba(220,240,252,0.7);
+  color:var(--text2);cursor:pointer;transition:all .18s;font-weight:500;
+  backdrop-filter:blur(4px);
+}
+.scen-btn:hover{background:rgba(190,228,248,0.9);border-color:var(--accent);color:var(--text)}
+.scen-btn.active{
+  background:linear-gradient(135deg,#0a5070,#0a8ab5);
+  color:#fff;border-color:#0a5070;
+  box-shadow:0 2px 8px rgba(10,80,112,0.35);
+}
+
+/* ── SLIDERS ── */
+.cl-row{margin-bottom:10px}
+.cl-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.cl-name{font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;color:var(--text);line-height:1.3}
+.cl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1.5px rgba(255,255,255,0.6)}
+.cl-badge{font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(14,95,130,0.12);color:#0a5c7a;border:1px solid rgba(14,95,130,.3);font-weight:700}
+.cl-val{font-size:13px;font-weight:700;font-family:monospace;color:var(--accent);min-width:32px;text-align:right}
+.sl-wrap{position:relative}
+.min-tick{position:absolute;top:-2px;width:2px;height:10px;background:var(--amber);border-radius:1px;pointer-events:none;z-index:2;opacity:.8}
+input[type=range]{
+  width:100%;height:5px;border-radius:3px;outline:none;cursor:pointer;
+  -webkit-appearance:none;appearance:none;background:rgba(150,200,230,0.4);
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  cursor:pointer;transition:transform .12s;
+  border:2px solid rgba(255,255,255,0.9);
+  box-shadow:0 1px 5px rgba(0,0,0,0.2);
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25)}
+input[type=range].ok::-webkit-slider-thumb{background:var(--green)}
+input[type=range].warn::-webkit-slider-thumb{background:var(--amber)}
+input[type=range].err::-webkit-slider-thumb{background:var(--red)}
+
+/* ── CENTER ── */
+.center-wrap{
+  background:rgba(210,238,252,0.55);
+  border:1px solid var(--border);border-radius:14px;overflow:hidden;
+  backdrop-filter:blur(8px);
+  box-shadow:0 4px 16px rgba(8,50,90,0.12),inset 0 1px 0 rgba(255,255,255,0.5);
+  display:flex;flex-direction:column;
+}
+.center-hdr{
+  background:linear-gradient(135deg,rgba(8,42,64,0.92),rgba(10,90,130,0.92));
+  backdrop-filter:blur(8px);
+  padding:9px 16px;font-size:9px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:#a0d8f0;
+  display:flex;align-items:center;gap:6px;
+}
+.center-hdr::before{content:'';width:3px;height:12px;background:#7dc8e8;border-radius:2px}
+#flowsvg{width:100%;flex:1;display:block;min-height:340px}
+
+/* ── LEGEND ── */
+.legend{
+  display:flex;gap:12px;padding:7px 14px;flex-wrap:wrap;
+  background:rgba(195,228,248,0.6);border-top:1px solid var(--border);
+  font-size:10px;color:var(--text2);backdrop-filter:blur(4px);
+}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-line{width:18px;height:2px;border-radius:1px}
+
+/* ── RIGHT PANELS ── */
+.right{display:flex;flex-direction:column;gap:9px}
+
+.gauge-card{
+  background:linear-gradient(135deg,rgba(8,42,65,0.95) 0%,rgba(10,85,120,0.95) 100%);
+  border-radius:14px;padding:15px;
+  border:1px solid rgba(100,180,220,0.3);
+  backdrop-filter:blur(10px);
+  box-shadow:0 4px 16px rgba(8,50,90,0.25);
+}
+.fx-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.fx-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7dc8e8}
+.fx-val{font-size:30px;font-weight:700;font-family:monospace;transition:color .3s;color:#fff}
+.fx-bar-track{height:7px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden;margin-bottom:7px}
+.fx-bar-fill{height:100%;border-radius:4px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.fx-zone{font-size:10px;color:#90c8e4}
+
+.metrics-card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;backdrop-filter:blur(12px);
+  box-shadow:0 4px 16px rgba(8,50,90,0.1),inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.mt-hdr{
+  font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);padding:9px 14px;
+  border-bottom:1px solid var(--border);
+  background:rgba(190,228,248,0.5);
+  display:flex;align-items:center;gap:6px;
+}
+.mt-hdr::before{content:'';width:3px;height:12px;background:linear-gradient(180deg,var(--accent),#0a9bd4);border-radius:2px}
+table.mt{width:100%;border-collapse:collapse;font-size:11.5px}
+table.mt tr{transition:background .15s}
+table.mt tr:hover{background:rgba(180,220,245,0.4)}
+table.mt td{padding:6px 14px;border-bottom:1px solid var(--border)}
+table.mt tr:last-child td{border-bottom:none}
+table.mt td:first-child{color:var(--text2);font-size:11px}
+table.mt td:last-child{font-weight:700;font-family:monospace;text-align:right}
+.td-up{color:var(--green)}.td-dn{color:var(--red)}.td-mid{color:var(--amber)}
+
+.comp-card,.bk-card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;padding:12px 14px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 16px rgba(8,50,90,0.08),inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.sub-hdr{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.sub-hdr::before{content:'';width:3px;height:12px;background:linear-gradient(180deg,var(--accent),#0a9bd4);border-radius:2px}
+
+.comp-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.comp-row:last-child{margin-bottom:0}
+.comp-lbl{font-size:10px;color:var(--text2);width:68px;flex-shrink:0;font-family:monospace;font-weight:600}
+.comp-bar{flex:1;height:5px;background:rgba(150,200,230,0.3);border-radius:3px;overflow:hidden}
+.comp-fill{height:100%;border-radius:3px;transition:width .35s}
+.comp-num{font-size:10px;font-family:monospace;font-weight:700;min-width:34px;text-align:right}
+
+.bk-row{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.bk-row:last-child{margin-bottom:0}
+.bk-name{font-size:10px;color:var(--text2);width:54px;flex-shrink:0;font-weight:600}
+.bk-bar{flex:1;height:5px;background:rgba(150,200,230,0.3);border-radius:3px;overflow:hidden}
+.bk-fill{height:100%;border-radius:3px;transition:width .35s}
+.bk-num{font-size:10px;font-family:monospace;font-weight:700;min-width:36px;text-align:right;color:var(--text2)}
+
+.viol-card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;padding:11px 13px;max-height:165px;overflow-y:auto;
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 16px rgba(8,50,90,0.08),inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.viol-card::-webkit-scrollbar{width:4px}
+.viol-card::-webkit-scrollbar-track{background:rgba(180,220,245,0.3)}
+.viol-card::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.viol-item{font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);line-height:1.4;display:flex;gap:6px;align-items:flex-start}
+.viol-item:last-child{border-bottom:none}
+.v-hi .viol-ico,.v-hi .viol-txt{color:var(--red)}
+.v-med .viol-ico,.v-med .viol-txt{color:var(--amber)}
+.v-ok .viol-ico,.v-ok .viol-txt{color:var(--green)}
+</style>
+</head>
+<body>
+
+<!-- GEOGRAPHIC BACKGROUND -->
+<div class="geo-bg"></div>
+
+<!-- SVG MAP BACKGROUND — прибрежная зона КДИ -->
+<svg class="geo-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a6090" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0a4070" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="landGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a7a20" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#2a6010" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="blur2"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="blur4"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+
+  <!-- ГВИНЕЙСКИЙ ЗАЛИВ — океан -->
+  <rect x="0" y="520" width="1600" height="380" fill="url(#seaGrad)"/>
+  <!-- Прибрежная линия КДИ — упрощённый контур -->
+  <path d="M0,580 C80,560 160,545 250,530 C300,522 340,518 380,516
+           C420,514 450,516 490,518 C540,521 570,525 610,527
+           C650,529 680,530 720,528 C760,526 790,522 830,518
+           C870,514 910,510 950,508 C990,506 1040,505 1090,506
+           C1140,507 1180,510 1220,514 C1270,518 1310,524 1360,528
+           C1410,532 1460,536 1520,540 C1560,543 1590,546 1600,548
+           L1600,900 L0,900 Z" fill="url(#seaGrad)" opacity="0.7"/>
+
+  <!-- СУША — Кот-д'Ивуар -->
+  <path d="M0,0 L1600,0 L1600,548 C1590,546 1560,543 1520,540
+           C1460,536 1410,532 1360,528 C1310,524 1270,518 1220,514
+           C1180,510 1140,507 1090,506 C1040,505 990,506 950,508
+           C910,510 870,514 830,518 C790,522 760,526 720,528
+           C680,530 650,529 610,527 C570,525 540,521 490,518
+           C450,516 420,514 380,516 C340,518 300,522 250,530
+           C160,545 80,560 0,580 Z" fill="url(#landGrad)"/>
+
+  <!-- РЕКИ -->
+  <path d="M120,0 C125,80 128,160 130,240 C132,320 128,400 125,480 C123,510 120,540 118,570" stroke="#2080a0" stroke-width="1.5" fill="none" opacity="0.5" filter="url(#blur2)"/>
+  <path d="M350,0 C345,100 340,200 338,300 C336,380 338,450 340,500 C342,530 344,555 342,575" stroke="#2080a0" stroke-width="1.2" fill="none" opacity="0.4" filter="url(#blur2)"/>
+  <path d="M620,0 C618,80 615,160 614,250 C612,340 614,420 616,490 C617,520 618,545 617,570" stroke="#2080a0" stroke-width="1.4" fill="none" opacity="0.45" filter="url(#blur2)"/>
+  <path d="M900,0 C898,90 895,180 894,270 C892,360 893,440 895,510 C897,540 898,560 896,580" stroke="#2080a0" stroke-width="1.3" fill="none" opacity="0.4" filter="url(#blur2)"/>
+  <path d="M1180,0 C1178,100 1175,200 1174,300 C1172,390 1173,460 1175,520 C1177,548 1178,562 1176,578" stroke="#2080a0" stroke-width="1.2" fill="none" opacity="0.35" filter="url(#blur2)"/>
+  <path d="M1450,0 C1448,80 1445,160 1444,240 C1442,320 1443,400 1445,470 C1447,510 1448,540 1446,565" stroke="#2080a0" stroke-width="1.1" fill="none" opacity="0.3" filter="url(#blur2)"/>
+
+  <!-- ТОПОГРАФИЧЕСКИЕ ЛИНИИ (горы на севере) -->
+  <path d="M200,40 C280,35 360,38 440,42 C520,46 600,50 680,48 C760,46 840,40 920,38 C1000,36 1080,40 1160,44 C1240,48 1320,50 1400,46" stroke="#4a8a30" stroke-width="0.8" fill="none" opacity="0.3"/>
+  <path d="M180,90 C270,83 360,87 450,92 C540,97 620,100 710,97 C800,94 880,88 970,86 C1060,84 1140,88 1230,93 C1320,98 1400,100 1480,95" stroke="#4a8a30" stroke-width="0.7" fill="none" opacity="0.25"/>
+  <path d="M160,140 C260,132 360,136 460,142 C560,148 640,150 740,147 C840,144 920,138 1020,135 C1120,132 1200,136 1300,142 C1380,147 1460,150 1540,145" stroke="#4a8a30" stroke-width="0.6" fill="none" opacity="0.2"/>
+
+  <!-- ДОРОГИ/ТРАССЫ -->
+  <path d="M0,490 C100,482 200,476 320,472 C440,468 540,466 660,465 C780,464 900,465 1020,468 C1140,471 1240,475 1360,480 C1460,484 1540,488 1600,492" stroke="#8a6020" stroke-width="1" fill="none" opacity="0.25" stroke-dasharray="8,4"/>
+  <path d="M490,466 C500,400 508,320 512,240 C516,160 514,80 512,0" stroke="#8a6020" stroke-width="0.8" fill="none" opacity="0.2" stroke-dasharray="6,4"/>
+  <path d="M760,465 C768,380 772,290 774,200 C776,120 774,50 772,0" stroke="#8a6020" stroke-width="0.8" fill="none" opacity="0.18" stroke-dasharray="6,4"/>
+
+  <!-- ПОРТ АБИДЖАНА — иконка -->
+  <g opacity="0.35" transform="translate(780,485)">
+    <rect x="-20" y="-8" width="40" height="16" rx="3" fill="#0a5080" stroke="#0a7ab0" stroke-width="1"/>
+    <rect x="-14" y="-14" width="6" height="8" rx="1" fill="#0a5080" stroke="#0a7ab0" stroke-width="0.8"/>
+    <rect x="2" y="-12" width="6" height="6" rx="1" fill="#0a5080" stroke="#0a7ab0" stroke-width="0.8"/>
+    <line x1="-8" y1="-20" x2="-8" y2="-14" stroke="#0a7ab0" stroke-width="1"/>
+    <line x1="5" y1="-18" x2="5" y2="-12" stroke="#0a7ab0" stroke-width="1"/>
+    <text x="0" y="28" text-anchor="middle" font-size="9" fill="#0a5080" font-weight="600" font-family="sans-serif">Абиджан</text>
+  </g>
+
+  <!-- САН-ПЕДРО -->
+  <g opacity="0.3" transform="translate(160,508)">
+    <circle cx="0" cy="0" r="6" fill="#0a5080" stroke="#0a7ab0" stroke-width="1"/>
+    <text x="0" y="18" text-anchor="middle" font-size="8" fill="#0a5080" font-weight="600" font-family="sans-serif">Сан-Педро</text>
+  </g>
+
+  <!-- ГРАН-БАСАМ -->
+  <g opacity="0.28" transform="translate(1050,514)">
+    <circle cx="0" cy="0" r="4" fill="#0a5080" stroke="#0a7ab0" stroke-width="1"/>
+    <text x="0" y="16" text-anchor="middle" font-size="8" fill="#0a5080" font-weight="600" font-family="sans-serif">Гран-Басам</text>
+  </g>
+
+  <!-- ПАРАЛЛЕЛИ/МЕРИДИАНЫ (координатная сетка) -->
+  <line x1="0" y1="180" x2="1600" y2="180" stroke="#2060a0" stroke-width="0.5" opacity="0.15"/>
+  <line x1="0" y1="360" x2="1600" y2="360" stroke="#2060a0" stroke-width="0.5" opacity="0.15"/>
+  <line x1="0" y1="540" x2="1600" y2="540" stroke="#2060a0" stroke-width="0.5" opacity="0.15"/>
+  <line x1="266" y1="0" x2="266" y2="900" stroke="#2060a0" stroke-width="0.5" opacity="0.12"/>
+  <line x1="533" y1="0" x2="533" y2="900" stroke="#2060a0" stroke-width="0.5" opacity="0.12"/>
+  <line x1="800" y1="0" x2="800" y2="900" stroke="#2060a0" stroke-width="0.5" opacity="0.12"/>
+  <line x1="1066" y1="0" x2="1066" y2="900" stroke="#2060a0" stroke-width="0.5" opacity="0.12"/>
+  <line x1="1333" y1="0" x2="1333" y2="900" stroke="#2060a0" stroke-width="0.5" opacity="0.12"/>
+
+  <!-- МОРСКИЕ ВОЛНЫ (имитация) -->
+  <path d="M0,650 C80,645 160,655 240,648 C320,641 400,650 480,644 C560,638 640,648 720,642 C800,636 880,646 960,640 C1040,634 1120,644 1200,638 C1280,632 1360,642 1440,636 C1520,630 1580,638 1600,635" stroke="#1a70a8" stroke-width="0.8" fill="none" opacity="0.3"/>
+  <path d="M0,700 C100,694 200,704 300,697 C400,690 500,700 600,693 C700,686 800,696 900,689 C1000,682 1100,692 1200,685 C1300,678 1400,688 1500,681 C1560,677 1590,682 1600,680" stroke="#1a70a8" stroke-width="0.7" fill="none" opacity="0.25"/>
+  <path d="M0,750 C120,744 240,754 360,747 C480,740 600,750 720,743 C840,736 960,746 1080,739 C1200,732 1320,742 1440,735 C1520,730 1580,735 1600,733" stroke="#1a70a8" stroke-width="0.6" fill="none" opacity="0.2"/>
+
+  <!-- Подпись ГВИНЕЙСКИЙ ЗАЛИВ -->
+  <text x="800" y="780" text-anchor="middle" font-size="16" fill="#0a5080" opacity="0.2" font-family="serif" font-style="italic" letter-spacing="3">Гвинейский залив</text>
+
+  <!-- Шкала север -->
+  <g transform="translate(60,840)" opacity="0.25">
+    <line x1="0" y1="0" x2="0" y2="-28" stroke="#0a4060" stroke-width="1.5"/>
+    <polygon points="0,-28 -5,-18 5,-18" fill="#0a4060"/>
+    <text x="0" y="10" text-anchor="middle" font-size="10" fill="#0a4060" font-family="sans-serif" font-weight="700">N</text>
+  </g>
+  <!-- Шкала масштаба -->
+  <g transform="translate(100,855)" opacity="0.22">
+    <line x1="0" y1="0" x2="80" y2="0" stroke="#0a4060" stroke-width="1.5"/>
+    <line x1="0" y1="-4" x2="0" y2="4" stroke="#0a4060" stroke-width="1.5"/>
+    <line x1="80" y1="-4" x2="80" y2="4" stroke="#0a4060" stroke-width="1.5"/>
+    <text x="40" y="14" text-anchor="middle" font-size="9" fill="#0a4060" font-family="sans-serif">100 km</text>
+  </g>
+</svg>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>⬡ Симулятор потоков · Платформа «Берег Восхода»</h1>
+    <p>ПСВЯ · Полиструктурное сценарно-симуляционное вычислительное ядро · Республика Кот-д'Ивуар</p>
+  </div>
+  <div class="header-meta">
+    <div>9 кластеров · 2025–2035 · ЗАЭВС</div>
+    <div>F(X) = wY·fY + wL·fL + wS·fS − wE·fE − wR·fR</div>
+    <div class="header-badge" id="ts">—</div>
+  </div>
+</div>
+
+<div class="sim">
+
+<!-- LEFT -->
+<div class="panel">
+  <div class="panel-hdr">Управление кластерами</div>
+  <div class="scen-row" id="scen-row"></div>
+  <div id="sliders"></div>
+</div>
+
+<!-- CENTER -->
+<div class="center-wrap">
+  <div class="center-hdr">Карта межкластерных потоков платформы</div>
+  <svg id="flowsvg" viewBox="0 0 520 360"></svg>
+  <div class="legend" id="legend"></div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+  <div class="gauge-card">
+    <div class="fx-top">
+      <span class="fx-label">Интегральный индекс F(X)</span>
+      <span class="fx-val" id="fx-val">0.000</span>
+    </div>
+    <div class="fx-bar-track"><div class="fx-bar-fill" id="fx-bar" style="width:0%"></div></div>
+    <div class="fx-zone" id="fx-zone">—</div>
+  </div>
+
+  <div class="metrics-card">
+    <div class="mt-hdr">Сводная таблица результатов сценария</div>
+    <table class="mt">
+      <tr><td>ΔY совокупный, млрд USD/год</td><td id="r-dy">—</td></tr>
+      <tr><td>Синергия Ω, млрд USD/год</td><td id="r-syn">—</td></tr>
+      <tr><td>ΔL рабочих мест, тыс.</td><td id="r-dl">—</td></tr>
+      <tr><td>Бюджет Σxᵢ·Iᵢ, млрд USD</td><td id="r-bud">—</td></tr>
+      <tr><td>NPV оценочный (r=12%)</td><td id="r-npv">—</td></tr>
+      <tr><td>ROI оценочный, %</td><td id="r-roi">—</td></tr>
+      <tr><td>Экол. нагрузка fE</td><td id="r-de">—</td></tr>
+      <tr><td>Нарушений / предупреждений</td><td id="r-viol">—</td></tr>
+    </table>
+  </div>
+
+  <div class="comp-card">
+    <div class="sub-hdr">Компоненты F(X)</div>
+    <div class="comp-row"><span class="comp-lbl">fY +0.35</span><div class="comp-bar"><div class="comp-fill" id="cf-y" style="background:#1a7a44;width:0%"></div></div><span class="comp-num td-up" id="cn-y">0.00</span></div>
+    <div class="comp-row"><span class="comp-lbl">fL +0.20</span><div class="comp-bar"><div class="comp-fill" id="cf-l" style="background:#0e5f82;width:0%"></div></div><span class="comp-num td-up" id="cn-l">0.00</span></div>
+    <div class="comp-row"><span class="comp-lbl">fS +0.15</span><div class="comp-bar"><div class="comp-fill" id="cf-s" style="background:#5a4e9a;width:0%"></div></div><span class="comp-num td-up" id="cn-s">0.00</span></div>
+    <div class="comp-row"><span class="comp-lbl">fE −0.15</span><div class="comp-bar"><div class="comp-fill" id="cf-e" style="background:#9a6a00;width:0%"></div></div><span class="comp-num td-mid" id="cn-e">0.00</span></div>
+    <div class="comp-row"><span class="comp-lbl">fR −0.15</span><div class="comp-bar"><div class="comp-fill" id="cf-r" style="background:#b02020;width:0%"></div></div><span class="comp-num td-dn" id="cn-r">0.00</span></div>
+  </div>
+
+  <div class="bk-card">
+    <div class="sub-hdr">ΔY разбивка по кластерам</div>
+    <div id="breakdown"></div>
+  </div>
+
+  <div class="viol-card" id="viol-list"></div>
+</div>
+</div>
+
+<script>
+const CLUSTERS=[
+  {id:1,name:'I · Агропереработка',  short:'Агро',  capex:2.75,dyMax:3.5,lMax:35,ki:1.80,critical:false,xMin:0.0, color:'#1a7a44'},
+  {id:2,name:'II · Порт-Логистика', short:'Порт',  capex:2.20,dyMax:2.5,lMax:22,ki:1.78,critical:false,xMin:0.0, color:'#1a7a44'},
+  {id:3,name:'III · Индустрия/СЭЗ', short:'СЭЗ',   capex:3.50,dyMax:4.5,lMax:50,ki:1.90,critical:false,xMin:0.0, color:'#1a7a44'},
+  {id:4,name:'IV · Цифровая платф.',short:'Цифра', capex:1.25,dyMax:2.5,lMax:15,ki:2.05,critical:true, xMin:0.30,color:'#0e5f82'},
+  {id:5,name:'V · Образование/R&D', short:'Образ.',capex:0.90,dyMax:1.2,lMax:12,ki:1.55,critical:true, xMin:0.25,color:'#0e5f82'},
+  {id:6,name:'VI · Энергетика/ESG', short:'Энерг.',capex:2.50,dyMax:1.8,lMax:18,ki:1.70,critical:true, xMin:0.35,color:'#0e5f82'},
+  {id:7,name:'VII · Финансовый',    short:'Фин.',  capex:0.80,dyMax:1.8,lMax:10,ki:1.65,critical:false,xMin:0.0, color:'#5a4e9a'},
+  {id:8,name:'VIII · Соц.-урбан.', short:'Соц.',  capex:1.20,dyMax:1.4,lMax:20,ki:1.45,critical:false,xMin:0.0, color:'#9a6a00'},
+  {id:9,name:'IX · Экологический',  short:'Эко.',  capex:0.50,dyMax:0.8,lMax:8, ki:1.40,critical:false,xMin:0.0, color:'#0e7a5a'},
+];
+const SYNERGY=[[0,1,.18],[0,3,.22],[0,5,.14],[0,4,.08],[1,2,.16],[1,3,.19],[1,5,.12],[2,5,.17],[2,3,.20],[2,7,.10],[3,4,.15],[3,5,.13],[3,6,.18],[3,7,.12],[3,8,.09],[4,5,.11],[4,3,.14],[5,6,.16]];
+const PREC=[[0,1,'x₁≤x₂'],[0,3,'x₁≤x₄'],[0,5,'x₁≤x₆'],[1,3,'x₂≤x₄'],[1,5,'x₂≤x₆'],[2,1,'x₃≤x₂'],[2,5,'x₃≤x₆']];
+const W={Y:.35,L:.20,S:.15,E:.15,R:.15};
+const I_BUDGET=12.5;
+const SCENARIOS={
+  'Инерционный': [.40,.35,.30,.25,.20,.30,.20,.25,.20],
+  'Сбалансир.':  [.70,.70,.65,.75,.65,.75,.60,.55,.50],
+  'Цифровой':    [.55,.60,.50,.95,.80,.70,.75,.45,.40],
+  'Индустр.':    [.85,.90,.95,.50,.40,.90,.45,.70,.35],
+  'Оптимальный': [.82,.85,.80,.88,.78,.90,.72,.68,.62],
+};
+let X=[.70,.70,.65,.75,.65,.75,.60,.55,.50];
+
+// Node positions 520×360
+const NX=[72,72,72,260,260,260,448,448,448];
+const NY=[50,180,310,50,180,310,50,180,310];
+
+const TYPE_COLOR={'value':'#1a7a44','data':'#0e5f82','labor':'#5a4e9a','resource':'#9a6a00','finance':'#7a6000'};
+const EDGES=[
+  [0,1,'value'],[0,3,'data'],[0,5,'resource'],
+  [1,2,'value'],[1,3,'data'],[1,5,'resource'],
+  [2,5,'resource'],[2,7,'labor'],
+  [3,0,'data'],[3,1,'data'],[3,2,'data'],[3,4,'data'],
+  [3,5,'data'],[3,6,'finance'],[3,7,'data'],[3,8,'data'],
+  [4,0,'labor'],[4,2,'labor'],
+  [5,0,'resource'],[5,1,'resource'],[5,2,'resource'],
+  [6,0,'finance'],[6,1,'finance'],[6,2,'finance'],
+  [5,6,'finance'],[7,6,'value'],[8,6,'value'],
+];
+
+function compute(){
+  const x=X;
+  const dy=CLUSTERS.map((c,i)=>x[i]*c.dyMax);
+  let syn=0; SYNERGY.forEach(([k,j,g])=>syn+=g*x[k]*x[j]);
+  const dyTotal=dy.reduce((a,b)=>a+b,0)+syn;
+  const dl=CLUSTERS.reduce((s,c,i)=>s+x[i]*c.lMax,0);
+  const ds=x[7]*.8+x[6]*.3+x[4]*.2;
+  const de=x[0]*.15+x[1]*.12+x[2]*.20+x[7]*.10;
+  let risk=CLUSTERS.reduce((s,c,i)=>s+x[i]*(1-c.ki/2.1),0);
+  SYNERGY.forEach(([k,j])=>risk+=.02*x[k]*x[j]);
+  risk=Math.max(0,risk);
+  const budget=CLUSTERS.reduce((s,c,i)=>s+x[i]*c.capex,0);
+  const Y0=17.6,L0=133,S0=1.3,E0=.57,R0=3.5;
+  const fY=Math.min(dyTotal/Y0,1),fL=Math.min(dl/L0,1);
+  const fS=Math.min(ds/S0,1),fE=Math.min(de/E0,1),fR=Math.min(risk/R0,1);
+  const fx=W.Y*fY+W.L*fL+W.S*fS-W.E*fE-W.R*fR;
+  const npv=(dyTotal*6.5-budget)*.72;
+  const roi=budget>0?(npv/budget)*100:0;
+  const viols=[],warns=[];
+  CLUSTERS.forEach((c,i)=>{
+    if(c.critical&&x[i]<c.xMin)
+      viols.push({sev:'hi',text:`x${c.id}=${x[i].toFixed(2)} < min=${c.xMin} — ${c.short}: критический порог нарушен`});
+  });
+  PREC.forEach(([dep,req,lbl])=>{
+    const d=x[dep]-x[req];
+    if(d>.001) viols.push({sev:'hi',text:`${lbl} нарушено: ${CLUSTERS[dep].short}(${x[dep].toFixed(2)})>${CLUSTERS[req].short}(${x[req].toFixed(2)})`});
+    else if(d>-.05) warns.push({sev:'med',text:`${lbl} на пределе — малый запас устойчивости`});
+  });
+  const x8max=(x[0]+x[1]+x[2])/3;
+  if(x[7]>x8max+.001) viols.push({sev:'hi',text:`x₈=${x[7].toFixed(2)}>(x₁+x₂+x₃)/3=${x8max.toFixed(2)} — соц. опережает экон. базу`});
+  const x9min=.1*(x[0]+x[1]+x[2]+x[7]);
+  if(x[8]<x9min) warns.push({sev:'med',text:`x₉=${x[8].toFixed(2)}<x₉ᵐⁱⁿ=${x9min.toFixed(2)} — эколог. недостаточен`});
+  if(budget>I_BUDGET) viols.push({sev:'hi',text:`Бюджет ${budget.toFixed(2)}>${I_BUDGET} млрд — превышен лимит`});
+  else if(budget>I_BUDGET*.9) warns.push({sev:'med',text:`Бюджет ${budget.toFixed(2)}/${I_BUDGET} млрд — малый резерв`});
+  return{x,dy,dyTotal,syn,dl,ds,de,risk,budget,fY,fL,fS,fE,fR,fx,npv,roi,viols,warns};
+}
+
+function update(){
+  const m=compute();
+  // timestamp
+  document.getElementById('ts').textContent=new Date().toLocaleTimeString('ru-RU');
+  // F(X)
+  const fxPct=Math.max(0,Math.min(1,(m.fx+.3)/.8))*100;
+  const fxEl=document.getElementById('fx-val');
+  fxEl.textContent=m.fx.toFixed(3);
+  const bar=document.getElementById('fx-bar');
+  bar.style.width=fxPct+'%';
+  let zoneT,barC;
+  if(m.fx<.20){barC='#b02020';fxEl.style.color='#f87171';zoneT='🔴 Критическая зона (F < 0.20) — система нежизнеспособна';}
+  else if(m.fx<.35){barC='#d4900a';fxEl.style.color='#fbbf24';zoneT='🟡 Зона риска (0.20 ≤ F < 0.35) — требуется корректировка';}
+  else{barC='#1a7a44';fxEl.style.color='#4ade80';zoneT='🟢 Целевая зона (F ≥ 0.35) — система эффективна';}
+  bar.style.background=barC;
+  document.getElementById('fx-zone').textContent=zoneT;
+  // metrics
+  const cl=(v,lo,hi)=>v>=hi*.75?'td-up':v<=lo?'td-dn':'td-mid';
+  document.getElementById('r-dy').innerHTML=`<span class="${cl(m.dyTotal,7,17)}">${m.dyTotal.toFixed(2)} млрд</span>`;
+  document.getElementById('r-syn').innerHTML=`<span class="${cl(m.syn,.5,4)}">${m.syn.toFixed(2)} млрд</span>`;
+  document.getElementById('r-dl').innerHTML=`<span class="${cl(m.dl,40,110)}">${Math.round(m.dl)} тыс.</span>`;
+  document.getElementById('r-bud').innerHTML=`<span class="${m.budget>I_BUDGET?'td-dn':m.budget>I_BUDGET*.9?'td-mid':'td-up'}">${m.budget.toFixed(2)} / ${I_BUDGET}</span>`;
+  document.getElementById('r-npv').innerHTML=`<span class="${m.npv>5?'td-up':m.npv>0?'td-mid':'td-dn'}">${m.npv>0?'+':''}${m.npv.toFixed(1)} млрд</span>`;
+  document.getElementById('r-roi').innerHTML=`<span class="${m.roi>60?'td-up':m.roi>20?'td-mid':'td-dn'}">${Math.round(m.roi)}%</span>`;
+  document.getElementById('r-de').innerHTML=`<span class="${m.fE<.5?'td-up':m.fE<.8?'td-mid':'td-dn'}">${(m.fE*100).toFixed(0)}%</span>`;
+  const vn=m.viols.length,wn=m.warns.length;
+  document.getElementById('r-viol').innerHTML=`<span class="${vn>0?'td-dn':'td-up'}">${vn}</span> / <span class="${wn>0?'td-mid':'td-up'}">${wn}</span>`;
+  // components
+  [['y',m.fY],['l',m.fL],['s',m.fS],['e',m.fE],['r',m.fR]].forEach(([k,v])=>{
+    document.getElementById('cf-'+k).style.width=(v*100)+'%';
+    document.getElementById('cn-'+k).textContent=v.toFixed(2);
+  });
+  // breakdown
+  const maxDY=Math.max(...m.dy,.01);
+  document.getElementById('breakdown').innerHTML=CLUSTERS.map((c,i)=>`
+    <div class="bk-row">
+      <span class="bk-name" style="color:${c.color}">${c.short}</span>
+      <div class="bk-bar"><div class="bk-fill" style="background:${c.color};width:${(m.dy[i]/maxDY*100).toFixed(0)}%;opacity:.8"></div></div>
+      <span class="bk-num">${m.dy[i].toFixed(2)}</span>
+    </div>`).join('');
+  // violations
+  const all=[...m.viols.map(v=>({cls:'v-hi',ico:'✗',t:v.text})),...m.warns.map(w=>({cls:w.sev==='med'?'v-med':'v-ok',ico:'⚠',t:w.text}))];
+  document.getElementById('viol-list').innerHTML=all.length===0
+    ?'<div class="viol-item v-ok"><span class="viol-ico">✓</span><span class="viol-txt">Все ограничения выполнены · Бюджет: '+m.budget.toFixed(2)+' млрд USD</span></div>'
+    :all.map(v=>`<div class="viol-item ${v.cls}"><span class="viol-ico">${v.ico}</span><span class="viol-txt">${v.t}</span></div>`).join('');
+  // sliders
+  CLUSTERS.forEach((c,i)=>{
+    const sl=document.getElementById('sl-'+i);
+    if(!sl)return;
+    const isViol=m.viols.some(v=>v.text.includes(c.short)||v.text.includes('x'+(i+1)));
+    const isWarn=m.warns.some(v=>v.text.includes(c.short)||v.text.includes('x'+(i+1)));
+    sl.className=isViol?'err':isWarn?'warn':'ok';
+  });
+  renderFlow(m);
+}
+
+function renderFlow(m){
+  const r=26;
+  // background gradient for SVG
+  let edgeSvg='';
+  EDGES.forEach(([a,b,type])=>{
+    const x1=NX[a],y1=NY[a],x2=NX[b],y2=NY[b];
+    const str=Math.min(m.x[a],m.x[b]);
+    const col=TYPE_COLOR[type]||'#808080';
+    const sw=.6+str*2.2;
+    const alpha=.08+str*.5;
+    const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+    const ux=dx/len,uy=dy/len;
+    const ex1=x1+ux*r,ey1=y1+uy*r,ex2=x2-ux*r,ey2=y2-uy*r;
+    const cx=(ex1+ex2)/2+uy*22,cy=(ey1+ey2)/2-ux*22;
+    edgeSvg+=`<path d="M${ex1.toFixed(1)} ${ey1.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${ex2.toFixed(1)} ${ey2.toFixed(1)}" fill="none" stroke="${col}" stroke-width="${sw.toFixed(1)}" stroke-opacity="${alpha.toFixed(2)}" marker-end="url(#arr-${type})"/>`;
+  });
+  let nodeSvg='';
+  CLUSTERS.forEach((c,i)=>{
+    const cx=NX[i],cy=NY[i];
+    const xi=m.x[i];
+    const isViol=m.viols.some(v=>v.text.includes(c.short)||v.text.includes('x'+(i+1)));
+    const isWarn=m.warns.some(v=>v.text.includes(c.short)||v.text.includes('x'+(i+1)));
+    const ringC=isViol?'#b02020':isWarn?'#9a6a00':c.color;
+    const circ=2*Math.PI*r;
+    const dash=(circ*xi).toFixed(1);
+    const gap=(circ*(1-xi)).toFixed(1);
+    nodeSvg+=`
+      <circle cx="${cx}" cy="${cy}" r="${r+4}" fill="rgba(200,235,252,0.45)" stroke="${ringC}" stroke-width="0.5" opacity="0.6"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(225,245,255,0.82)" stroke="${ringC}" stroke-width="1.2"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${ringC}" stroke-width="3.5"
+        stroke-dasharray="${dash} ${gap}"
+        stroke-dashoffset="${(circ*.25).toFixed(1)}"
+        stroke-linecap="round" opacity="0.65"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <text x="${cx}" y="${cy-7}" text-anchor="middle" dominant-baseline="central"
+        font-size="9" fill="${ringC}" font-weight="700" font-family="monospace">x${i+1}</text>
+      <text x="${cx}" y="${cy+5}" text-anchor="middle" dominant-baseline="central"
+        font-size="7.5" fill="#2a5a7a" font-family="sans-serif">${c.short}</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" dominant-baseline="central"
+        font-size="9" fill="${ringC}" font-weight="700" font-family="monospace">${xi.toFixed(2)}</text>`;
+  });
+  // Column labels
+  const colLabels=[
+    [72,340,'Производственные'],
+    [260,340,'Инфраструктурные'],
+    [448,340,'Поддерживающие'],
+  ];
+  const colSvg=colLabels.map(([x,y,lbl])=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="8" fill="#4a7a98" font-family="sans-serif" font-weight="600" opacity="0.7">${lbl}</text>`).join('');
+
+  document.getElementById('flowsvg').innerHTML=`
+    <defs>
+      <linearGradient id="svgbg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ddeef8" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#c8e4f4" stop-opacity="0.5"/>
+      </linearGradient>
+      ${Object.entries(TYPE_COLOR).map(([t,c])=>`
+        <marker id="arr-${t}" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+          <polygon points="0 0,6 2.5,0 5" fill="${c}" opacity="0.8"/>
+        </marker>`).join('')}
+    </defs>
+    <rect width="520" height="360" fill="url(#svgbg)" rx="0"/>
+    <line x1="166" y1="10" x2="166" y2="330" stroke="rgba(100,160,200,.15)" stroke-width="1" stroke-dasharray="4,4"/>
+    <line x1="354" y1="10" x2="354" y2="330" stroke="rgba(100,160,200,.15)" stroke-width="1" stroke-dasharray="4,4"/>
+    ${edgeSvg}${nodeSvg}${colSvg}`;
+}
+
+function buildSliders(){
+  document.getElementById('sliders').innerHTML=CLUSTERS.map((c,i)=>`
+    <div class="cl-row">
+      <div class="cl-top">
+        <span class="cl-name">
+          <span class="cl-dot" style="background:${c.color}"></span>
+          <span>${c.name}${c.critical?` <span class="cl-badge">CRIT</span>`:''}</span>
+        </span>
+        <span class="cl-val" id="lv-${i}">${X[i].toFixed(2)}</span>
+      </div>
+      <div class="sl-wrap">
+        <div style="position:relative">
+          ${c.xMin>0?`<div class="min-tick" style="left:calc(${c.xMin*100}% - 1px)" title="xMin=${c.xMin}"></div>`:''}
+          <input type="range" class="ok" id="sl-${i}" min="0" max="1" step="0.01" value="${X[i]}"
+            oninput="X[${i}]=+this.value;document.getElementById('lv-${i}').textContent=(+this.value).toFixed(2);update()">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function buildScenarios(){
+  document.getElementById('scen-row').innerHTML=Object.entries(SCENARIOS).map(([name,vals],idx)=>`
+    <button class="scen-btn${idx===1?' active':''}" onclick="applyScen(${JSON.stringify(vals)},this)">${name}</button>`).join('');
+}
+
+function applyScen(vals,btn){
+  X=[...vals];
+  CLUSTERS.forEach((_,i)=>{
+    const sl=document.getElementById('sl-'+i),lv=document.getElementById('lv-'+i);
+    if(sl){sl.value=X[i];lv.textContent=X[i].toFixed(2);}
+  });
+  document.querySelectorAll('.scen-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  update();
+}
+
+function buildLegend(){
+  const items=Object.entries(TYPE_COLOR).map(([t,c])=>{
+    const lbl={value:'ΔY-поток',data:'Данные/API',labor:'Кадры',resource:'Энергия',finance:'Капитал'}[t];
+    return`<div class="leg-item"><div class="leg-line" style="background:${c}"></div><span>${lbl}</span></div>`;
+  });
+  document.getElementById('legend').innerHTML=items.join('');
+}
+
+buildSliders();
+buildScenarios();
+buildLegend();
+update();
+setInterval(()=>{document.getElementById('ts').textContent=new Date().toLocaleTimeString('ru-RU');},1000);
+</script>
+</body>
+</html>

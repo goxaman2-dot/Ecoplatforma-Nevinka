@@ -1,0 +1,1132 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Двухконтурная экоплатформа</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=PT+Sans:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap">
+<style>
+/* Макет: левый дашборд (первый контур) | 3D-реактор | правый дашборд (второй контур и дестинация); на узком экране сцена сверху, панели под ней */
+:root{
+  --bg:#0a141d; --panel:#112130; --line:#22394d; --fg:#e4ecf1; --muted:#93a8ba;
+  --gold:#d6aa4c; --lemon:#fff176; --core:#ffad4d; --c1:#4fb08a; --c2:#5b95e6;
+  --ok:#3fb27f; --part:#e2b33b; --no:#e2594c;
+  --f-display:"Unbounded","PT Sans",system-ui,sans-serif;
+  --f-body:"PT Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px;box-sizing:border-box}
+*{box-sizing:border-box}
+header{margin-bottom:12px}
+h1{font:700 clamp(20px,2.5vw,30px)/1.15 var(--f-display);margin:0 0 6px;text-wrap:balance}
+h1 span{color:var(--core)}
+.sub{color:var(--muted);margin:0;max-width:110ch}
+.layout{display:grid;grid-template-columns:310px minmax(0,1fr) 310px;gap:14px;align-items:start}
+@media (max-width:1240px){.layout{grid-template-columns:1fr 1fr}.center{grid-column:1/-1;order:-1}}
+@media (max-width:720px){.layout{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:radial-gradient(120% 90% at 50% 40%,#10283a 0%,var(--bg) 70%);height:min(84vh,860px);min-height:460px}
+#c{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+#c:active{cursor:grabbing}
+.hint{position:absolute;left:12px;bottom:10px;font:13.5px var(--f-mono);color:var(--muted);pointer-events:none;background:rgba(10,20,29,.75);padding:4px 8px;border-radius:6px}
+.tip{position:absolute;pointer-events:none;font:14px var(--f-body);background:var(--panel);border:1px solid var(--line);padding:6px 9px;border-radius:6px;color:var(--fg);transform:translate(-50%,-115%);max-width:280px}
+.dash{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px}
+.card h2{font:600 12.5px var(--f-mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h2 i{display:inline-block;width:10px;height:10px;border-radius:50%}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{border:1px solid var(--line);border-radius:8px;padding:8px 9px;min-width:0}
+.tile.wide{grid-column:1/-1}
+.tile .l{font-size:12.5px;color:var(--muted);line-height:1.2}
+.tile .v{font:700 22px/1.15 var(--f-display);font-variant-numeric:tabular-nums;margin-top:3px}
+.tile.wide .v{font-size:30px}
+.tile .s{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.25}
+.badge{display:inline-block;font:600 11.5px var(--f-mono);padding:1px 7px;border-radius:999px;border:1px solid;margin-top:4px}
+.badge.ok{color:var(--ok);border-color:var(--ok)} .badge.no{color:var(--no);border-color:var(--no)} .badge.part{color:var(--part);border-color:var(--part)}
+.row{display:grid;grid-template-columns:112px minmax(0,1fr) 40px;gap:8px;align-items:center;margin:6px 0}
+.row label{font:600 13.5px var(--f-body);line-height:1.15}
+.row label small{display:block;font:12px var(--f-body);color:var(--muted);font-weight:400}
+.row output{font:14px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:14px;margin-top:6px}
+.chk input{width:17px;height:17px;accent-color:var(--lemon)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btns button{font:600 13.5px var(--f-body);padding:8px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;line-height:1.2;text-align:left}
+.btns button small{display:block;font-weight:400;font-size:11.5px;color:var(--muted)}
+.btns button:hover{border-color:var(--gold)}
+.btns button.wide{grid-column:1/-1;border-color:var(--core)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#chart{width:100%;height:auto;display:block}
+.yr{font:13px var(--f-mono);color:var(--muted);margin-top:6px;min-height:2.6em}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--muted);margin-top:12px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.l2{font:600 11.5px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+.chr{display:grid;grid-template-columns:118px minmax(0,1fr) 40px;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+.chr .bb{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.chr .bb i{display:block;height:100%}
+.chr output{font:13px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.qi{border-bottom:1px solid var(--line);padding:6px 0}
+.qi .t{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:700}
+.qi .t span{font:600 13.5px var(--f-mono);font-variant-numeric:tabular-nums}
+.qi .src{font-size:12px;color:var(--muted);line-height:1.25;margin:2px 0 4px}
+.qi .bb{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.qi .bb i{display:block;height:100%}
+.center{display:flex;flex-direction:column;gap:14px;min-width:0}
+.explain{min-height:220px}
+.explain .xt{font:700 19px/1.25 var(--f-display);margin:0 0 4px}
+.explain .xk{font:12.5px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.explain .fx{font:15px/1.7 var(--f-mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin:10px 0;overflow-x:auto}
+.explain .fx i{font-style:italic;color:#ffd68a}
+.explain .fx .eq{color:var(--muted)}
+.explain .res{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.explain .res b{font:700 30px var(--f-display);color:var(--gold);font-variant-numeric:tabular-nums}
+.explain p{margin:8px 0 0;max-width:80ch}
+.explain .where{font-size:13.5px;color:var(--muted)}
+[data-x]{cursor:help;transition:box-shadow .15s}
+[data-x].hl{box-shadow:0 0 0 1px var(--gold) inset;border-radius:8px}
+.sig{font-size:13.5px;line-height:1.35;padding:8px 10px;border-radius:8px;border:1px solid var(--line);margin-bottom:6px}
+.law{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:6px;align-items:start;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.law b{font:700 13px var(--f-mono)} .law span.a{font:11.5px var(--f-mono);color:var(--muted);white-space:nowrap}
+.gr{display:grid;grid-template-columns:minmax(0,1fr) 92px 52px;gap:6px;align-items:center;font-size:13px;padding:4px 0;border-bottom:1px solid var(--line)}
+.gr .g{font-size:11.5px;color:var(--muted);display:block}
+.gr .bb{position:relative;height:8px;background:var(--line);border-radius:4px}
+.gr .bb i{position:absolute;top:0;height:100%;border-radius:4px}
+.gr .bb:after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
+.gr output{font:13px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.gov{position:absolute;top:10px;right:10px;width:250px;background:rgba(10,20,29,.86);border:1px solid var(--gold);border-radius:10px;padding:9px 11px;pointer-events:none}
+.gov .h{font:700 14px var(--f-body)} .gov .h small{display:block;font:400 12px var(--f-body);color:var(--muted)}
+.gov .r{display:grid;grid-template-columns:minmax(0,1fr) 64px 44px;gap:5px;align-items:center;font-size:12px;line-height:1.15;margin-top:6px}
+.gov .r em{font-style:normal;display:block;font-size:10.5px;color:var(--muted)}
+.gov .bb{position:relative;height:7px;background:var(--line);border-radius:3px}
+.gov .bb i{position:absolute;top:0;height:100%;border-radius:3px}
+.gov .bb:after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
+.gov output{font:12px var(--f-mono);text-align:right}
+@media (max-width:720px){.gov{display:none}}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.tabs button{font:600 14.5px var(--f-body);padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;text-align:left}
+.tabs button small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.tabs button[aria-selected="true"]{border-color:var(--core);background:color-mix(in srgb,var(--core) 16%,var(--panel))}
+#t-p2[aria-selected="true"]{border-color:var(--c2);background:color-mix(in srgb,var(--c2) 18%,var(--panel))}
+#t-p1[aria-selected="true"]{border-color:var(--c1);background:color-mix(in srgb,var(--c1) 18%,var(--panel))}
+.pdesc{color:var(--muted);margin:0 0 12px;max-width:110ch;font-size:15px}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0;max-width:110ch}
+</style>
+
+<header>
+  <h1>Двухконтурная <span>экоплатформа</span>: реактор бизнес-доверия</h1>
+  <p class="sub">Экоплатформа как двухконтурный реактор: в первом контуре якорное предприятие и спутники обмениваются веществом, во втором цифровой оператор связывает продавцов, жителей и город. Бизнес-доверие задаёт долю захваченных потоков и коэффициент k; по высоте растут отдача участникам, отдача территории и общий слой качества жизни. Выберите страницу ниже.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Страницы симулятора">
+  <button id="t-p1" role="tab" aria-selected="true">1 · Первый контур<small>кластер, вещество</small></button>
+  <button id="t-p2" role="tab" aria-selected="false">2 · Второй контур<small>дестинация, данные</small></button>
+  <button id="t-all" role="tab" aria-selected="false">Вся экоплатформа<small>оба контура вместе</small></button>
+</nav>
+<p class="pdesc" id="pdesc"></p>
+<div class="layout">
+  <aside class="dash" aria-label="Первый контур">
+    <section class="card">
+      <h2><i style="background:var(--c1)"></i>Первый контур · кластер</h2>
+      <div class="kpi">
+        <div class="tile wide"><div class="l">Коэффициент размножения связей k</div><div class="v" id="kv"></div><div class="s" id="kmode"></div></div>
+        <div class="tile"><div class="l">Бизнес-доверие BT₁<br>спутник → якорь</div><div class="v" id="bt1"></div></div>
+        <div class="tile"><div class="l">Зависимость D₁<br>от якоря</div><div class="v" id="d1"></div><span class="badge" id="g1"></span></div>
+        <div class="tile"><div class="l">Захват потоков p</div><div class="v" id="pv"></div><div class="s">доля предложений, нашедших партнёра</div></div>
+        <div class="tile"><div class="l">Отдача участникам SD</div><div class="v" id="sdv"></div><div class="s">усл. ед. в год</div></div>
+        <div class="tile wide"><div class="l">CO₂ якоря как товар: продано</div><div class="v" id="co2sale" style="color:#6fd3e6"></div><div class="s" id="co2sales"></div></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Настройка первого контура</h2>
+      <div class="row"><label for="cap">Якорь<small>мощность потоков</small></label><input id="cap" type="range" min="0.1" max="1" step="0.01"><output id="ocap"></output></div>
+      <div class="row"><label for="n">Спутники<small>число МСП</small></label><input id="n" type="range" min="1" max="8" step="1"><output id="on"></output></div>
+      <div class="row"><label for="A">A<small>способность</small></label><input id="A" type="range" min="0" max="1" step="0.01"><output id="oA"></output></div>
+      <div class="row"><label for="I">I<small>добросовестность</small></label><input id="I" type="range" min="0" max="1" step="0.01"><output id="oI"></output></div>
+      <div class="row"><label for="C">C<small>совместимость целей</small></label><input id="C" type="range" min="0" max="1" step="0.01"><output id="oC"></output></div>
+      <div class="row"><label for="G1">G₁<small>гарантии, ГЧП</small></label><input id="G1" type="range" min="0" max="1" step="0.01"><output id="oG1"></output></div>
+      <div class="row"><label for="kap">κ<small>CO₂ на продажу</small></label><input id="kap" type="range" min="0" max="0.6" step="0.01"><output id="okap"></output></div>
+      <label class="chk"><input type="checkbox" id="cp"> Климатический проект: углеродные единицы</label>
+      <label class="chk"><input type="checkbox" id="anchor"> Якорь на месте</label>
+      <label class="chk"><input type="checkbox" id="backup"> Второй источник потоков</label>
+    </section>
+    <section class="card">
+      <h2>Рост показателей · все участники</h2>
+      <div class="l2" style="margin-top:0">% к сценарию без экоплатформы</div>
+      <div id="growth"></div>
+    </section>
+    <section class="card">
+      <h2>Сценарии</h2>
+      <div class="btns">
+        <button id="b-nev">Невинномысск<small>пример: химкластер + цифровой слой</small></button>
+        <button id="b-sub">Снять субсидии<small>s = 0</small></button>
+        <button id="b-anc">Уход якоря<small>активная зона гаснет</small></button>
+        <button id="b-mix">Смешать контуры<small>оператор = якорь</small></button>
+        <button id="b-big">Крупная экосистема<small>500 тыс. в сутки, оператор = якорь</small></button>
+        <button id="b-vol">Регламент по 289-ФЗ<small>добровольно, для оператора экоплатформы</small></button>
+        <button id="b-run" class="wide">Прогнать 10 лет<small>текущие субсидии действуют 4 года, затем снимаются (как в Эко-Таунах); при s = 0 — без поддержки с самого начала</small></button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Траектория</h2>
+      <svg id="chart" viewBox="0 0 280 130" role="img" aria-label="Траектория k и отдачи территории по годам"></svg>
+      <div style="display:flex;flex-wrap:wrap;gap:4px 12px;font:12px var(--f-mono);color:var(--muted)"><span style="color:#ffad4d">— k</span><span style="color:#5b95e6">▮ отдача территории</span><span style="color:#9be7a8">- - качество жизни, 0–100</span></div>
+      <div class="yr" id="yr">Нажмите «Прогнать 10 лет»: история исполнения накапливается, пока реактор критичен, и распадается, когда он гаснет.</div>
+    </section>
+  </aside>
+
+  <div class="center">
+  <div class="stage">
+    <canvas id="c" aria-label="Трёхмерная модель двухконтурной экоплатформы: активная зона, первый контур со спутниками, цифровой оператор, второй контур, отдача по высоте"></canvas>
+    <div class="tip" id="tip" hidden></div>
+    <div class="gov" id="gov" aria-label="Рост показателей участников"></div>
+    <div class="hint">вращать — перетаскивание · масштаб — колесо · наведите на показатель слева или справа — формула появится под платой</div>
+  </div>
+    <section class="card explain" id="explain" aria-live="polite">
+      <h2>Пояснение показателя</h2>
+      <div id="xbody"></div>
+    </section>
+  </div>
+
+  <aside class="dash" aria-label="Второй контур и дестинация">
+    <section class="card">
+      <h2><i style="background:var(--c2)"></i>Второй контур · дестинация</h2>
+      <div class="kpi">
+        <div class="tile wide"><div class="l">Отдача территории</div><div class="v" id="terr"></div><div class="s">налоги + экологический эффект − субсидии, усл. ед.</div></div>
+        <div class="tile"><div class="l">Доверие к цифровому оператору BT₂</div><div class="v" id="bt2"></div></div>
+        <div class="tile"><div class="l">Утечка зависимости D₂</div><div class="v" id="d2"></div><span class="badge" id="g2"></span></div>
+        <div class="tile"><div class="l">Налоги в бюджет</div><div class="v" id="tax"></div></div>
+        <div class="tile"><div class="l">Рабочие места</div><div class="v" id="jobs"></div></div>
+        <div class="tile"><div class="l">Отходы не на полигон</div><div class="v" id="waste"></div><div class="s">усл. тыс. т</div></div>
+        <div class="tile"><div class="l">Субсидии</div><div class="v" id="subs"></div></div>
+        <div class="tile"><div class="l">CO₂-экв к базе</div><div class="v" id="co2"></div><div class="s" id="co2s"></div></div>
+        <div class="tile"><div class="l">Масштаб</div><div class="v" id="scale" style="font-size:17px"></div><div class="s" id="scales"></div></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Настройка второго контура</h2>
+      <div class="row"><label for="phi">φ<small>цифровизация</small></label><input id="phi" type="range" min="0" max="1" step="0.01"><output id="ophi"></output></div>
+      <div class="row"><label for="mu">μ<small>смешение контуров</small></label><input id="mu" type="range" min="0" max="1" step="0.01"><output id="omu"></output></div>
+      <div class="row"><label for="s">s<small>субсидии</small></label><input id="s" type="range" min="0" max="1" step="0.01"><output id="os"></output></div>
+      <div class="row"><label for="lg">N₂<small>пользователей в сутки</small></label><input id="lg" type="range" min="0" max="3" step="0.01"><output id="olg" style="font-size:12.5px"></output></div>
+    </section>
+    <section class="card">
+      <h2><i style="background:#c9d2da"></i>289-ФЗ · корни стабильности</h2>
+      <div class="sig" id="sig"></div>
+      <div class="row"><label for="rho">ρ<small>сила применения</small></label><input id="rho" type="range" min="0" max="1" step="0.01"><output id="orho"></output></div>
+      <label class="chk"><input type="checkbox" id="vol"> Нормы в регламенте оператора добровольно</label>
+      <div id="law"></div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">Номера статей — по комментариям к закону; перед цитированием сверить с официальной публикацией.</p>
+    </section>
+    <section class="card">
+      <h2><i style="background:#9be7a8"></i>Качество жизни · дестинация</h2>
+      <div class="kpi">
+        <div class="tile wide"><div class="l">Индекс качества жизни, 0–100</div><div class="v" id="qol"></div><span class="badge" id="licb"></span></div>
+      </div>
+      <div class="l2">Каналы влияния экоплатформы</div>
+      <div id="chans"></div>
+      <div class="l2">Показатели</div>
+      <div id="qtab"></div>
+      <div class="row"><label for="eta">η<small>бюджет → услуги</small></label><input id="eta" type="range" min="0" max="1" step="0.01"><output id="oeta"></output></div>
+      <div class="row"><label for="e">e<small>экомодернизация якоря</small></label><input id="e" type="range" min="0" max="1" step="0.01"><output id="oe"></output></div>
+    </section>
+  </aside>
+</div>
+
+<div class="legend">
+  <span><b style="background:var(--core)"></b>активная зона, якорь</span>
+  <span><b style="background:var(--c1)"></b>первый контур: вещество</span>
+  <span><b style="background:var(--c2)"></b>второй контур: данные</span>
+  <span><b style="background:var(--no)"></b>утечка зависимости</span>
+  <span><b style="background:var(--gold)"></b>субсидии, налоги, деньги на услуги</span>
+  <span><b style="background:#9be7a8"></b>качество жизни, прямой канал</span>
+  <span><b style="background:#8a949c"></b>выбросы якоря</span>
+  <span><b style="background:#6fd3e6"></b>CO₂ якоря на продажу</span>
+  <span>частицы из активной зоны — предложения потоков; захваченные гаснут у спутника, остальные уходят на полигон</span>
+</div>
+<div id="parking" hidden></div>
+<p class="note">Все величины — условные единицы иллюстративной модели. Коэффициенты заданы логикой модели (k = ν·p, p = f(BT₁, D₁, φ), отдача = f(SD, k)) и не оценены эмпирически; модель показывает направления эффектов и подлежит калибровке на данных.</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const f2 = v => v.toFixed(2).replace('.', ',');
+const f1 = v => v.toFixed(1).replace('.', ',');
+const GATE = 0.6;
+const PRESET = {cap:.8, n:5, A:.62, I:.48, C:.70, G1:.55, anchor:true, backup:false, phi:.5, mu:.1, s:.5, eta:.6, e:.3, lg:1.48, rho:.6, vol:false, kap:.15, cp:false};
+const S = Object.assign({}, PRESET);
+const SL = ['cap','n','A','I','C','G1','phi','mu','s','eta','e','lg','rho','kap'];
+let PAGE = 'p1';
+const P1G = ['gAnc','gAncRev','gSatRaw','gSatP','gCO2'], P2G = ['gDig','gTax','gJobs','dQol','gCO2'];
+const outTxt = k => k==='n' ? S.n : k==='lg' ? Math.round(Math.pow(10,S.lg)) + ' тыс.' : f2(S[k]);
+
+function calcCore(st, lic){
+  const fb = lic - 0.5;                      // обратная связь: социальная лицензия питает гарантии
+  const N2 = Math.pow(10, st.lg), sig = N2 >= 100, eff = sig ? st.rho : 0, vol = st.vol ? 1 : 0;   // 289-ФЗ: порог значимости и сила стержней
+  const Tc1 = (st.A + st.I + Math.min(1, st.C + (st.anchor ? 0.1*st.kap : 0)))/3;   // проданный CO₂ — ещё один общий поток
+  const lam1 = 0.35 + 0.4*st.mu;
+  const G1e = clamp(st.G1 + 0.2*st.s + 0.15*fb + 0.1*vol, 0, 1);
+  const BT1 = lam1*G1e + (1-lam1)*Tc1;
+  let D1 = 0.75/(1 + 0.15*(st.n-1)) + 0.25*st.mu - (st.backup ? 0.2 : 0);
+  if (!st.anchor) D1 = 0.2;
+  D1 = clamp(D1, 0.02, 0.98);
+  const open1 = D1 < GATE, N = 1 - st.mu*(1 - 0.4*Math.max(eff, 0.6*vol));
+  const p = Math.min(0.98, BT1*(1 + 0.4*st.phi*N)*(open1 ? 1 : 0.35));
+  const nu = st.anchor ? 0.6 + 1.0*st.cap : 0.25;
+  const k = nu*p;
+  const capE = st.anchor ? st.cap : 0.15;
+  const SD = 100*capE*p*Math.sqrt(st.n/5)*clamp(k, 0, 1.3);
+  const BT2 = st.phi < 0.05 ? null : clamp(0.245 + 0.4*N + 0.25*Tc1 + 0.1*fb + 0.15*eff + 0.05*vol, 0, 1);
+  const D2 = clamp(0.15 + 0.6*st.mu*st.phi + 0.5*st.mu*D1 + 0.06*Math.log10(N2/10 + 1)*st.mu - 0.25*eff*st.mu, 0, 1);
+  const open2 = D2 < GATE;
+  const waste = 80*capE*p*Math.min(1,k);
+  // CO2-экв: процесс якоря, уловленный и проданный CO2, полигон, первичное сырьё спутников, логистика
+  const co2Base = (st.anchor ? 140*st.cap : 15) + 15*st.n;
+  const proc = st.anchor ? 100*st.cap*(1 - 0.35*st.e) : 15;
+  const capt = st.anchor ? st.kap*proc : 0;                     // уловлено и продано как товар
+  const co2 = Math.max(0, proc - 0.5*capt + (st.anchor ? 0.5*Math.max(0, 80*st.cap - waste) : 0)
+            + 15*st.n*(1 - 0.4*p*Math.min(1,k)) - 2*st.phi*N*st.lg);
+  const co2Rev = 0.6*capt;
+  const units = st.cp ? Math.max(0, co2Base - co2)*0.5 : 0, unitsRev = 0.3*units;
+  const tax = 0.22*SD + 4*st.phi*N*(1 + st.lg) + 0.2*(co2Rev + unitsRev);
+  const jobs = Math.round(60*st.n*Math.min(1,k)*(0.5 + 0.5*capE) + 25*st.phi*N*(1 + st.lg));
+  const subsidy = 25*st.s;
+  const terr = tax + 0.3*waste - subsidy;
+  const mode = k < 0.97 ? 'подкритический: реактор гаснет без подпитки' : k <= 1.03 ? 'критический: самоподдержание' : 'надкритический: связи множатся';
+  // качество жизни: три канала
+  const emis = st.anchor ? 40*st.cap*(1-st.e) : 0;
+  const eco = clamp(50 + 0.6*waste - emis, 0, 100);
+  const jobsI = clamp(30 + jobs*0.18, 0, 100);
+  const serv = clamp(35 + st.eta*Math.max(0,tax)*2.2, 0, 100);
+  const shareA = st.anchor ? 0.6*st.cap/(0.6*st.cap + 0.1*st.n*Math.min(1,k) + 0.3*st.phi*N) : 0;
+  const resil = clamp(100 - 70*shareA, 0, 100);
+  const qol = 0.3*eco + 0.3*jobsI + 0.25*serv + 0.15*resil;
+  const chMoney = 0.25*st.eta*Math.max(0,tax)*2.2, chDirect = 0.3*0.6*waste + 0.3*jobs*0.18, chBurden = 0.3*emis;
+  const gCO2 = 100*(co2/co2Base - 1);
+  // рост к сценарию без экоплатформы, %
+  const gAnc = st.anchor ? -70*p*Math.min(1,k) : 0;
+  const gAncRev = st.anchor ? 100*(co2Rev + unitsRev)/(300*st.cap) : 0;
+  const gSatRaw = -40*p*Math.min(1,k);
+  const gSatP = 100*SD/(st.n*60);
+  const gDig = 30*st.phi*N*(0.5 + 0.25*st.lg) - 10*st.mu*(1 - 0.5*eff);
+  const gTax = 100*tax/60;
+  const gJobs = 100*jobs/4000;
+  const qol0 = 0.3*(50 - emis) + 0.3*30 + 0.25*35 + 0.15*(st.anchor ? 30 : 100);
+  const dQol = qol - qol0;
+  return {Tc1, BT1, D1, open1, p, nu, k, SD, BT2, D2, open2, tax, jobs, waste, subsidy, terr, mode,
+          emis, eco, jobsI, serv, shareA, resil, qol, chMoney, chDirect, chBurden,
+          N2, sig, eff, vol, Neff:N, co2, co2Base, gCO2, proc, capt, co2Rev, units, unitsRev, gAncRev, gAnc, gSatRaw, gSatP, gDig, gTax, gJobs, qol0, dQol};
+}
+function compute(st = S){
+  let r = calcCore(st, 0.5), lic = 0.5;
+  for (let i=0;i<3;i++){ lic = clamp((r.qol - 40)/30, 0, 1); r = calcCore(st, lic); }
+  r.lic = lic; return r;
+}
+
+// ---------- сцена ----------
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+const ANI = renderer.capabilities.getMaxAnisotropy();
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
+camera.position.set(0, 30, 34);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 10; controls.maxDistance = 120; controls.maxPolarAngle = Math.PI*0.62;
+controls.target.set(0,3,0);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.autoRotate = !reduce; controls.autoRotateSpeed = 0.25;
+canvas.addEventListener('pointerdown', () => controls.autoRotate = false);
+scene.add(new THREE.AmbientLight(0xbfd4e6, 0.5));
+const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(6, 22, 12); scene.add(key);
+const rim = new THREE.DirectionalLight(0x6fa8ff, 0.35); rim.position.set(-12, 8, -10); scene.add(rim);
+
+const C1 = new THREE.Vector3(-9,0,0), C2 = new THREE.Vector3(9,0,0), R = 5.2;
+const COL = {core:0xffad4d, c1:0x4fb08a, c2:0x5b95e6, ok:0x3fb27f, no:0xe2594c, gold:0xd6aa4c, dim:0x3a4652};
+const BX = 36.4, BZ = 24.4;
+function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+const hoverables = [];
+
+// плата
+const bc = document.createElement('canvas'); bc.width = 2048; bc.height = Math.round(2048*BZ/BX);
+(function(){
+  const g = bc.getContext('2d'), K = 2048/BX, P = (x,z) => [(x+BX/2)*K, (z+BZ/2)*K];
+  g.fillStyle = '#0d1f2c'; g.fillRect(0,0,bc.width,bc.height);
+  g.fillStyle = 'rgba(214,170,76,0.08)';
+  for (let x=24; x<bc.width; x+=36) for (let y=24; y<bc.height; y+=36){ g.beginPath(); g.arc(x,y,2,0,7); g.fill(); }
+  [[C1,'#4fb08a'],[C2,'#5b95e6']].forEach(([c,col]) => {
+    const [x,y] = P(c.x,c.z);
+    const gr = g.createRadialGradient(x,y,10,x,y,(R+2)*K);
+    gr.addColorStop(0, col+'33'); gr.addColorStop(1, col+'00');
+    g.fillStyle = gr; g.beginPath(); g.arc(x,y,(R+2)*K,0,7); g.fill();
+  });
+  g.font = '700 30px "IBM Plex Mono", monospace'; g.fillStyle = 'rgba(228,236,241,0.55)'; g.textAlign = 'center';
+  g.fillText('ПЕРВЫЙ КОНТУР', ...P(C1.x, R+1.3));
+  g.fillText('ВТОРОЙ КОНТУР', ...P(C2.x, R+1.3));
+  g.fillText('ПАРОГЕНЕРАТОР', ...P(0, 3.2));
+})();
+const boardTex = new THREE.CanvasTexture(bc); boardTex.anisotropy = ANI;
+const board = new THREE.Mesh(new THREE.PlaneGeometry(BX,BZ), new THREE.MeshStandardMaterial({map:boardTex, roughness:0.85, metalness:0.1}));
+board.rotation.x = -Math.PI/2; scene.add(board);
+const edge = new THREE.Mesh(new THREE.BoxGeometry(BX,0.3,BZ), new THREE.MeshStandardMaterial({color:0x0a1822, roughness:0.9}));
+edge.position.y = -0.16; scene.add(edge);
+
+// металлические таблички по краям
+const shineMats = [];
+const shineVS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
+const shineFS = 'uniform sampler2D mask; uniform float t; varying vec2 vUv; void main(){ float a = texture2D(mask, vUv).a; float d = (vUv.x - t)*7.0; float s = exp(-d*d); gl_FragColor = vec4(vec3(1.0,0.98,0.86)*s*a*0.95, 1.0); }';
+function makePlate(text, L, Wd, x, z, ry){
+  const cw = 2048, ch = Math.round(2048*(Wd-0.12)/(L-0.3));
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const m = document.createElement('canvas'); m.width = cw; m.height = ch;
+  const g = c.getContext('2d'), gm = m.getContext('2d');
+  const bg = g.createLinearGradient(0,0,0,ch); bg.addColorStop(0,'#2e3843'); bg.addColorStop(.5,'#141c24'); bg.addColorStop(1,'#2e3843');
+  g.fillStyle = bg; g.fillRect(0,0,cw,ch);
+  g.strokeStyle = '#8a7a3c'; g.lineWidth = 6; g.strokeRect(5,5,cw-10,ch-10);
+  let fs = Math.round(ch*0.68);
+  const setF = ctx => ctx.font = `900 ${fs}px "Unbounded","PT Sans",sans-serif`;
+  setF(g); while (g.measureText(text).width > cw-120 && fs > 20){ fs -= 2; setF(g); }
+  setF(gm); [g,gm].forEach(ctx => { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; });
+  const y = ch/2 + fs*0.05;
+  g.fillStyle = 'rgba(0,0,0,0.75)'; g.fillText(text, cw/2+3, y+4);
+  const gr = g.createLinearGradient(0, y-fs/2, 0, y+fs/2);
+  gr.addColorStop(0,'#fffde7'); gr.addColorStop(.28,'#fff176'); gr.addColorStop(.5,'#c9a227'); gr.addColorStop(.62,'#fff59d'); gr.addColorStop(1,'#a88400');
+  g.fillStyle = gr; g.fillText(text, cw/2, y);
+  g.lineWidth = Math.max(1.5, fs/60); g.strokeStyle = 'rgba(40,30,0,0.9)'; g.strokeText(text, cw/2, y);
+  gm.fillStyle = '#fff'; gm.fillText(text, cw/2, y);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = ANI;
+  const grp = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(L,0.32,Wd), new THREE.MeshStandardMaterial({color:0x3a434c, metalness:0.9, roughness:0.28}));
+  base.position.y = 0.16; grp.add(base);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(L-0.3,Wd-0.12), new THREE.MeshBasicMaterial({map:tex}));
+  face.rotation.x = -Math.PI/2; face.position.y = 0.325; grp.add(face);
+  const sm = new THREE.ShaderMaterial({uniforms:{mask:{value:new THREE.CanvasTexture(m)}, t:{value:Math.random()*1.6-0.3}}, vertexShader:shineVS, fragmentShader:shineFS, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false});
+  const sh = new THREE.Mesh(new THREE.PlaneGeometry(L-0.3,Wd-0.12), sm); sh.rotation.x = -Math.PI/2; sh.position.y = 0.33; grp.add(sh);
+  shineMats.push(sm);
+  grp.rotation.y = ry; grp.position.set(x,0,z); scene.add(grp);
+}
+
+// подписи-спрайты
+function label(text, color, h=1.05){
+  const c = document.createElement('canvas'); const g = c.getContext('2d');
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), depthTest:false, transparent:true}));
+  s.renderOrder = 8; s.userData = {c, h};
+  setLabel(s, text, color); return s;
+}
+function setLabel(s, text, color){
+  const c = s.userData.c, g = c.getContext('2d');
+  g.font = '700 56px "PT Sans", sans-serif';
+  const tw = Math.ceil(g.measureText(text).width) + 64;
+  c.width = tw; c.height = 110;
+  g.fillStyle = 'rgba(10,20,29,0.88)'; roundRect(g,4,4,tw-8,102,22); g.fill();
+  g.strokeStyle = color; g.lineWidth = 4; roundRect(g,4,4,tw-8,102,22); g.stroke();
+  g.fillStyle = '#fff'; g.font = '700 56px "PT Sans", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, tw/2, 58);
+  s.material.map.dispose(); s.material.map = new THREE.CanvasTexture(c); s.material.needsUpdate = true;
+  const h = s.userData.h; s.scale.set(h*tw/110, h, 1);
+}
+
+// активная зона
+const coreMat = new THREE.MeshStandardMaterial({color:COL.core, emissive:COL.core, emissiveIntensity:0.9, roughness:0.3, metalness:0.3});
+const core = new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,1.4,48), coreMat);
+core.position.set(C1.x,0.7,C1.z); core.userData.tip = 'Активная зона — якорное предприятие: источник пара, газов и отходов. Материальная причина экоплатформы, её эдификатор.'; scene.add(core); hoverables.push(core);
+const coreShell = new THREE.Mesh(new THREE.CylinderGeometry(1.85,1.85,1.5,48,1,true), new THREE.MeshStandardMaterial({color:0x9aa6ae, metalness:0.9, roughness:0.3, transparent:true, opacity:0.35, side:THREE.DoubleSide}));
+coreShell.position.copy(core.position); scene.add(coreShell);
+const coreLight = new THREE.PointLight(COL.core, 2, 16); coreLight.position.set(C1.x, 2, 0); scene.add(coreLight);
+const coreLabel = label('Активная зона · якорное предприятие', '#ffad4d'); coreLabel.position.set(C1.x, 3.4, -1.8); scene.add(coreLabel);
+
+// кольца контуров
+const ring1 = new THREE.Mesh(new THREE.TorusGeometry(R, 0.14, 12, 96), new THREE.MeshStandardMaterial({color:COL.c1, emissive:COL.c1, emissiveIntensity:0.35}));
+ring1.rotation.x = Math.PI/2; ring1.position.set(C1.x,0.3,0); scene.add(ring1);
+const ring2Mat = new THREE.MeshStandardMaterial({color:COL.c2, emissive:COL.c2, emissiveIntensity:0.35, transparent:true});
+const ring2 = new THREE.Mesh(new THREE.TorusGeometry(R, 0.14, 12, 96), ring2Mat);
+ring2.rotation.x = Math.PI/2; ring2.position.set(C2.x,0.3,0); scene.add(ring2);
+
+// парогенератор (цифровой оператор) и трубы
+const sgMat = new THREE.MeshStandardMaterial({color:COL.c2, emissive:COL.c2, emissiveIntensity:0.25, metalness:0.6, roughness:0.35});
+const sg = new THREE.Mesh(new THREE.BoxGeometry(2.4,2.0,1.8), sgMat); sg.position.set(0,1.0,0);
+sg.userData.tip = 'Цифровой оператор — парогенератор: передаёт информацию о потоках и платежи между контурами, но не владеет потоками якоря.'; scene.add(sg); hoverables.push(sg);
+const sgLabel = label('Цифровой оператор · парогенератор', '#5b95e6'); scene.add(sgLabel);
+const pipeMat1 = new THREE.MeshStandardMaterial({color:COL.c1, metalness:0.6, roughness:0.4});
+const pipeMat2 = new THREE.MeshStandardMaterial({color:COL.c2, metalness:0.6, roughness:0.4});
+const pipes = [];
+function rebuildPipes(sx){
+  pipes.forEach(p => { scene.remove(p); p.geometry.dispose(); }); pipes.length = 0;
+  [[-0.55],[0.55]].forEach(([z]) => {
+    const a = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,Math.max(0.1, (sx-1.2)-(C1.x+R)),10), pipeMat1);
+    a.rotation.z = Math.PI/2; a.position.set(((C1.x+R)+(sx-1.2))/2, 0.5, z); scene.add(a); pipes.push(a);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,Math.max(0.1,(C2.x-R)-(sx+1.2)),10), pipeMat2);
+    b.rotation.z = Math.PI/2; b.position.set(((sx+1.2)+(C2.x-R))/2, 0.5, z); scene.add(b); pipes.push(b);
+  });
+}
+
+// турбина города
+const turbine = new THREE.Group(); turbine.position.set(C2.x, 0.9, 0);
+const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.6,24), new THREE.MeshStandardMaterial({color:0xc7d3dc, metalness:0.9, roughness:0.25}));
+turbine.add(hub);
+for (let i=0;i<6;i++){
+  const b = new THREE.Mesh(new THREE.BoxGeometry(2.2,0.08,0.45), new THREE.MeshStandardMaterial({color:0xaab8c4, metalness:0.9, roughness:0.3}));
+  b.position.set(Math.cos(i*Math.PI/3)*1.3, 0, Math.sin(i*Math.PI/3)*1.3); b.rotation.y = -i*Math.PI/3; b.rotation.x = 0.35; turbine.add(b);
+}
+hub.userData.tip = 'Турбина второго контура — город: налоги, рабочие места, экологический эффект. Скорость вращения пропорциональна отдаче территории.';
+scene.add(turbine); hoverables.push(hub);
+const turbLabel = label('Турбина · отдача городу', '#5b95e6'); turbLabel.position.set(C2.x, 2.6, 0); scene.add(turbLabel);
+
+// узлы второго контура
+const NODES2 = [
+  ['Продавцы', -120, 'Продавцы и местный бизнес на цифровой площадке: история исполнения, рейтинги.'],
+  ['Домохозяйства', -40, 'Жители как покупатели и вкладчики: спрос и НДФЛ.'],
+  ['Банк, платежи', 40, 'Расчёты, кредит, факторинг для участников обоих контуров.'],
+  ['Городские службы', 120, 'Управление отходами, ЖКХ, данные о городской среде.'],
+].map(([name, deg, tip]) => {
+  const a = deg*Math.PI/180;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 16), new THREE.MeshStandardMaterial({color:COL.c2, emissive:COL.c2, emissiveIntensity:0.4, transparent:true}));
+  m.position.set(C2.x + R*Math.cos(a), 0.8, R*Math.sin(a)); m.userData.tip = name + ': ' + tip; scene.add(m); hoverables.push(m);
+  const l = label(name, '#5b95e6', 0.85); l.position.set(m.position.x, 1.9, m.position.z); scene.add(l);
+  return {m, l};
+});
+
+// бюджет и государство (общая шина)
+const budget = new THREE.Mesh(new THREE.SphereGeometry(0.9, 28, 18), new THREE.MeshStandardMaterial({color:COL.gold, emissive:COL.gold, emissiveIntensity:0.4}));
+budget.position.set(0, 6.5, 19.5); budget.userData.tip = 'Общая шина: региональный бюджет и государство. Подаёт субсидии и гарантии, забирает налоги.'; scene.add(budget); hoverables.push(budget);
+const budLabel = label('Бюджет и государство', '#d6aa4c'); budLabel.position.set(0, 8.1, 19.5); scene.add(budLabel);
+
+// спутники, колонны отдачи
+const sats = [];
+const colMat = new THREE.MeshStandardMaterial({color:COL.c1, emissive:COL.c1, emissiveIntensity:0.45, transparent:true, opacity:0.55});
+for (let i=0;i<8;i++){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.55, 24, 16), new THREE.MeshStandardMaterial({color:COL.c1, emissive:COL.c1, emissiveIntensity:0.4}));
+  m.userData.tip = `Спутник ${i+1} — малое предприятие: принимает побочные потоки якоря. Колонна над ним — его доля отдачи.`;
+  const gate = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.07, 8, 32), new THREE.MeshBasicMaterial({color:COL.ok}));
+  gate.rotation.x = Math.PI/2;
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,1,24), colMat);
+  scene.add(m, gate, col); hoverables.push(m);
+  sats.push({m, gate, col, h:0, ang:0});
+}
+const sdLabel = label('Отдача участникам', '#4fb08a', 0.9); scene.add(sdLabel);
+// терраса отдачи территории
+const terrMat = new THREE.MeshStandardMaterial({color:COL.c2, emissive:COL.c2, emissiveIntensity:0.35, transparent:true, opacity:0.11, side:THREE.DoubleSide, depthWrite:false});
+const terrace = new THREE.Group();
+const terrDisc = new THREE.Mesh(new THREE.PlaneGeometry(BX-4, BZ-4), terrMat);
+terrDisc.rotation.x = -Math.PI/2;
+const terrGroup = new THREE.Group(); terrGroup.add(terrace, terrDisc); scene.add(terrGroup);
+const terrEdge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(BX-4, 0.01, BZ-4)), new THREE.LineBasicMaterial({color:COL.c2}));
+terrGroup.add(terrEdge);
+const terrLabel = label('Отдача территории', '#5b95e6'); scene.add(terrLabel);
+
+
+// таблички
+function buildPlates(){
+  makePlate('ДВУХКОНТУРНАЯ ЭКОПЛАТФОРМА', 33, 1.6, 0, -11.3, Math.PI);
+  makePlate('ГРАНИЦА ДЕСТИНАЦИИ · ГОРОД', 33, 1.6, 0, 11.3, 0);
+  makePlate('ПЕРВЫЙ КОНТУР · ВЕЩЕСТВО', 20.6, 1.6, -17.3, 0, -Math.PI/2);
+  makePlate('ВТОРОЙ КОНТУР · ДАННЫЕ', 20.6, 1.6, 17.3, 0, Math.PI/2);
+}
+
+// частицы
+const neutrons = [], NMAX = 80;
+const nGeo = new THREE.SphereGeometry(0.13, 8, 8);
+for (let i=0;i<NMAX;i++){ const m = new THREE.Mesh(nGeo, new THREE.MeshBasicMaterial({color:COL.core, transparent:true})); m.visible = false; scene.add(m); neutrons.push({m, alive:false}); }
+function mkPool(n, color, r=0.15){ const a=[]; for (let i=0;i<n;i++){ const m = new THREE.Mesh(new THREE.SphereGeometry(r,8,8), new THREE.MeshBasicMaterial({color})); m.visible=false; scene.add(m); a.push({m, t:i/n}); } return a; }
+const v3 = (x,y,z) => new THREE.Vector3(x,y,z);
+const arc = (a,b,lift) => { const m = a.clone().add(b).multiplyScalar(0.5); m.y += lift; return new THREE.QuadraticBezierCurve3(a, m, b); };
+const subsPool = mkPool(6, COL.gold, 0.18), taxPool = mkPool(6, COL.gold, 0.18), leakPool = mkPool(8, COL.no, 0.17), loopPool = mkPool(12, COL.c2, 0.14);
+const subsCurve = arc(budget.position.clone(), v3(C1.x,1.6,0), 4);
+const taxCurve = arc(v3(C2.x,1.2,0), budget.position.clone(), 4);
+let leakCurve = arc(v3(C1.x,1.4,0), v3(C2.x-R,0.6,0), 5);
+// третий слой «пирога»: качество жизни над всей платой
+const domeMat = new THREE.MeshStandardMaterial({color:0x9be7a8, emissive:0x9be7a8, emissiveIntensity:0.4, transparent:true, opacity:0.32, roughness:0.25, side:THREE.DoubleSide, depthWrite:false});
+const dome = new THREE.Mesh(new THREE.BoxGeometry(BX-3, 1, BZ-3), domeMat);
+dome.userData.tip = 'Третий слой — качество жизни: накрывает оба контура, всех участников и горожан. Толщина растёт с индексом; питается тремя каналами и обратно поддерживает гарантии через социальную лицензию.';
+scene.add(dome); hoverables.push(dome);
+const domeRing = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(BX-3, 1, BZ-3)), new THREE.LineBasicMaterial({color:0x9be7a8}));
+scene.add(domeRing);
+const qolLabel = label('Качество жизни', '#9be7a8'); scene.add(qolLabel);
+const moneyCurve = new THREE.QuadraticBezierCurve3(v3(C2.x,1.4,0), v3(C2.x,4,0), v3(C2.x,8,0));
+const directCurve = new THREE.QuadraticBezierCurve3(v3(C1.x+2,1.2,4), v3(0,9,4), v3(C2.x,8,0));
+const smokeCurve = new THREE.QuadraticBezierCurve3(v3(C1.x,1.6,0), v3(C1.x+2,10,-2), v3(C2.x,8,0));
+const fbCurve = new THREE.QuadraticBezierCurve3(v3(C2.x,8,0), v3(6,12,10), budget.position.clone());
+const moneyPool = mkPool(10, COL.gold, 0.15), directPool = mkPool(8, 0x9be7a8, 0.16), smokePool = mkPool(10, 0x8a949c, 0.22);
+const fbLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(fbCurve.getPoints(40)), new THREE.LineDashedMaterial({color:0x9be7a8, dashSize:0.4, gapSize:0.3}));
+scene.add(fbLine);
+const fbLabel = label('социальная лицензия → шина → гарантии G', '#9be7a8', 0.8); scene.add(fbLabel);
+
+// правовые корни стабильности под платой: 289-ФЗ под вторым контуром и оператором, 224-ФЗ и 296-ФЗ под первым
+const roots = [];
+const ROOTTIP = {
+  '289':'Корень 289-ФЗ (платформенная экономика): договор, мотивированные блокировки, жалобы, ранжирование. Прорастает на глубину ρ у значимой платформы (от 100 тыс. пользователей в сутки); под оператором — и добровольным регламентом.',
+  '224':'Корень 224-ФЗ (государственно-частное и муниципально-частное партнёрство): правовая основа софинансирования и гарантий первого контура. Длина — гарантии G₁ и субсидии s.',
+  '296':'Корень 296-ФЗ (ограничение выбросов парниковых газов): отчётность о выбросах и климатические проекты. Глубоко прорастает, когда оформлен климатический проект.'
+};
+function makeRoot(color, seed, sx, sz){
+  const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({color, metalness:0.7, roughness:0.35, emissive:color, emissiveIntensity:0.15});
+  let rnd = seed; const rr = () => { rnd = (rnd*9301 + 49297) % 233280; return rnd/233280; };
+  const pts = [v3(0,-0.3,0)];
+  for (let i=1;i<=5;i++) pts.push(v3(sx*i/5 + (rr()-0.5)*0.9, -0.3 - i*1.05, sz*i/5 + (rr()-0.5)*0.9));
+  const mc = new THREE.CatmullRomCurve3(pts);
+  const main = new THREE.Mesh(new THREE.TubeGeometry(mc, 48, 0.19, 8), mat); g.add(main);
+  for (let b=0;b<4;b++){
+    const o = mc.getPoint(0.2 + b*0.2), d = v3((rr()-0.5)*4.5, -1.4 - rr()*1.4, (rr()-0.5)*4.5);
+    const bc = new THREE.CatmullRomCurve3([o, o.clone().add(d.clone().multiplyScalar(0.5)).add(v3(rr()-0.5, 0, rr()-0.5)), o.clone().add(d)]);
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(bc, 16, 0.09, 6), mat));
+  }
+  const tp = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 8), mat); tp.position.copy(mc.getPoint(1)); g.add(tp);
+  g.userData.mat = mat; return g;
+}
+const ROOTDEF = [
+  {law:'289', x:0, z:0, op:true, sx:0.5, sz:4},
+  {law:'289', x:C2.x-2.6, z:-2.6, sx:-1.5, sz:-5.5},
+  {law:'289', x:C2.x+2.6, z:-2.6, sx:6, sz:-4.5},
+  {law:'289', x:C2.x-2.6, z:2.6, sx:-1, sz:5.5},
+  {law:'289', x:C2.x+2.6, z:2.6, sx:6.5, sz:4.5},
+  {law:'224', x:C1.x-2.5, z:-2, sx:-6.5, sz:-4.5},
+  {law:'224', x:C1.x+1, z:-3, sx:1, sz:-6.5},
+  {law:'296', x:C1.x-2.5, z:2.5, sx:-6.5, sz:5},
+  {law:'296', x:C1.x+1.5, z:3, sx:1.5, sz:6.5},
+];
+const ROOTCOL = {'289':0x4a525c, '224':0x9a7a3e, '296':0x3f9a78};
+ROOTDEF.forEach((d,i) => {
+  const g = makeRoot(ROOTCOL[d.law], 17 + i*31, d.sx, d.sz);
+  g.position.set(d.x, 0, d.z); g.userData.def = d; g.userData.L = 0.3; scene.add(g); roots.push(g);
+  g.children[0].userData.tip = ROOTTIP[d.law]; hoverables.push(g.children[0]);
+});
+const rootLabel2 = label('289-ФЗ · корни второго контура', '#c9d2da', 0.85); rootLabel2.position.set(C2.x + 3, -4.6, BZ/2 + 3); scene.add(rootLabel2);
+const rootLabel1 = label('224-ФЗ (ГЧП) · 296-ФЗ (климат) · корни первого контура', '#9a7a3e', 0.85); rootLabel1.position.set(C1.x - 3, -4.6, BZ/2 + 3); scene.add(rootLabel1);
+// масштаб: облако пользователей второго контура
+const CLOUDMAX = 220, cpos = new Float32Array(CLOUDMAX*3);
+for (let i=0;i<CLOUDMAX;i++){ const a = Math.random()*Math.PI*2, rr = R + (Math.random()-0.5)*2.8; cpos[i*3] = C2.x + rr*Math.cos(a); cpos[i*3+1] = 0.35 + Math.random()*0.6; cpos[i*3+2] = rr*Math.sin(a); }
+const cgeo = new THREE.BufferGeometry(); cgeo.setAttribute('position', new THREE.BufferAttribute(cpos, 3));
+const cloud = new THREE.Points(cgeo, new THREE.PointsMaterial({color:0x8fb3ff, size:0.2, transparent:true, opacity:0.85}));
+scene.add(cloud);
+const scale1 = label('Первый контур: 5 предприятий', '#4fb08a', 0.85); scale1.position.set(C1.x, 1.4, R + 2.3); scene.add(scale1);
+const scale2 = label('Второй контур', '#5b95e6', 0.85); scale2.position.set(C2.x, 1.4, R + 2.3); scene.add(scale2);
+// CO2: облако над «пирогом»
+const co2Group = new THREE.Group(); scene.add(co2Group);
+const co2Mat = new THREE.MeshStandardMaterial({color:0x4a525a, transparent:true, opacity:0.55, roughness:1, depthWrite:false});
+[[0,0,0,1],[1.1,0.2,0.4,0.75],[-1,0.1,-0.3,0.8],[0.3,0.55,-0.6,0.7],[-0.4,0.5,0.7,0.65]].forEach(([x,y,z,r]) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), co2Mat); m.position.set(x,y,z); co2Group.add(m);
+});
+co2Group.children[0].userData.tip = 'CO₂-эквивалент всех участников: процесс якоря, полигон, первичное сырьё спутников, логистика. Размер облака — доля от базы без экоплатформы.';
+hoverables.push(co2Group.children[0]);
+const co2Label = label('CO₂-экв', '#9aa6ae', 0.9); scene.add(co2Label);
+// CO₂ как товар: поток от активной зоны к покупателям
+const buyer = new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,1.6,24), new THREE.MeshStandardMaterial({color:0x6fd3e6, emissive:0x6fd3e6, emissiveIntensity:0.35, metalness:0.5, roughness:0.3}));
+buyer.position.set(C1.x, 0.8, -15.5);
+buyer.userData.tip = 'Покупатели CO₂ якоря: напитки, теплицы, сухой лёд, пожаротушение. Пример: «Невинномысский Азот» (ЕвроХим) выпускает пищевую жидкую углекислоту с декабря 2018 г., мощность 32 тыс. т в год.';
+scene.add(buyer); hoverables.push(buyer);
+const buyerLabel = label('Покупатели CO₂: напитки, теплицы, сухой лёд', '#6fd3e6', 0.85); buyerLabel.position.set(C1.x, 2.5, -15.5); scene.add(buyerLabel);
+const saleCurve = arc(v3(C1.x,1.4,-1.2), v3(C1.x,1.4,-14.6), 3.5);
+const salePool = mkPool(10, 0x6fd3e6, 0.17);
+const saleLine = new THREE.Mesh(new THREE.TubeGeometry(saleCurve, 40, 0.06, 8), new THREE.MeshBasicMaterial({color:0x6fd3e6, transparent:true, opacity:0.45}));
+scene.add(saleLine);
+function growthRows(r){
+  return [
+    {key:'gAnc', who:'Якорное предприятие', what:'затраты на утилизацию', v:r.gAnc, low:true},
+    {key:'gAncRev', who:'Якорное предприятие', what:'выручка от продажи CO₂' + (S.cp ? ' и единиц' : ''), v:r.gAncRev},
+    {key:'gSatRaw', who:'Спутники (МСП)', what:'затраты на сырьё', v:r.gSatRaw, low:true},
+    {key:'gSatP', who:'Спутники (МСП)', what:'прибыль', v:r.gSatP},
+    {key:'gDig', who:'Продавцы второго контура', what:'оборот', v:r.gDig},
+    {key:'gTax', who:'Бюджет города', what:'налоги от экоплатформы', v:r.gTax},
+    {key:'gJobs', who:'Домохозяйства', what:'занятость', v:r.gJobs},
+    {key:'dQol', who:'Домохозяйства', what:'качество жизни', v:r.dQol, pts:true},
+    {key:'gCO2', who:'Все участники', what:'выбросы CO₂-экв', v:r.gCO2, low:true},
+  ];
+}
+function drawGrowth(r, G){
+  $('gov').innerHTML = '<div class="h">Рост показателей участников<small>% к сценарию без экоплатформы</small></div>' + G.map(g => {
+    const v = clamp(g.v, -100, 100), good = g.low ? g.v <= 0 : g.v >= 0, w = Math.abs(v)/2;
+    const txt = g.pts ? (g.v>=0?'+':'−')+f1(Math.abs(g.v))+' п.' : (g.v>=0?'+':'−')+Math.round(Math.abs(g.v))+' %';
+    return `<div class="r"><span>${g.what}<em>${g.who}</em></span><div class="bb"><i style="${v>=0?'left:50%':'right:50%'};width:${w}%;background:${good?'#3fb27f':'#e2594c'}"></i></div><output>${txt}</output></div>`;
+  }).join('');
+}
+
+
+// ---------- состояние сцены ----------
+let R_ = compute();
+function layoutSats(){
+  const n = S.n;
+  for (let i=0;i<8;i++){
+    const s = sats[i], on = i < n;
+    const a = Math.PI*(0.22 + 1.56*(i+0.5)/n);   // по кольцу, восточный сектор оставлен трубам
+    s.ang = a; s.on = on;
+    const x = C1.x + R*Math.cos(a), z = R*Math.sin(a);
+    s.pos = v3(x, 0.7, z);
+    [s.m, s.gate, s.col].forEach(o => o.visible = on);
+    s.m.position.copy(s.pos); s.gate.position.set(x, 0.35, z);
+  }
+}
+function applyScene(){
+  const r = R_ = compute();
+  // активная зона
+  if (S.anchor){ coreMat.color.set(COL.core); coreMat.emissive.set(COL.core); coreMat.emissiveIntensity = 0.4 + 0.8*S.cap; coreLight.intensity = 0.6 + 1.8*S.cap; setLabel(coreLabel, 'Активная зона · якорное предприятие', '#ffad4d'); }
+  else { coreMat.color.set(COL.dim); coreMat.emissive.set(0x000000); coreLight.intensity = 0; setLabel(coreLabel, 'Якорь ушёл · активная зона погасла', '#e2594c'); }
+  sats.forEach(s => { if (s.on){ s.gate.material.color.set(r.open1 ? COL.ok : COL.no); } });
+  // смешение контуров: оператор сдвигается к активной зоне
+  const sx = -6.2*S.mu;
+  sg.position.x = sx; rebuildPipes(sx);
+  const mix = new THREE.Color(COL.c2).lerp(new THREE.Color(COL.core), S.mu);
+  sgMat.color.copy(mix); sgMat.emissive.copy(mix);
+  setLabel(sgLabel, S.mu > 0.6 ? 'Оператор = якорь · контуры смешаны' : 'Цифровой оператор · парогенератор', S.mu > 0.6 ? '#e2594c' : '#5b95e6');
+  sgLabel.position.set(sx, 2.9, 2.4);
+  leakCurve = arc(v3(C1.x,1.4,0), v3(C2.x-R,0.6,0), 5);
+  // второй контур
+  ring2Mat.opacity = 0.25 + 0.75*S.phi; ring2Mat.emissiveIntensity = 0.1 + 0.5*S.phi;
+  NODES2.forEach(o => { o.m.material.opacity = 0.25 + 0.75*S.phi; o.l.visible = S.phi > 0.08; });
+  cgeo.setDrawRange(0, Math.round(20 + 66*S.lg));
+  setLabel(scale1, 'Первый контур: ' + S.n + ' предприятий', '#4fb08a');
+  setLabel(scale2, 'Второй контур: ' + Math.round(r.N2) + ' тыс. в сутки' + (r.sig ? ' · значимая' : ''), r.sig ? '#c9d2da' : '#5b95e6');
+  render2D(r);
+}
+
+// ---------- дашборды ----------
+function badge(el, open, txtOk, txtNo){ el.className = 'badge ' + (open ? 'ok' : 'no'); el.textContent = open ? txtOk : txtNo; }
+function render2D(r){
+  $('kv').textContent = f2(r.k); $('kv').style.color = r.k < 0.97 ? 'var(--no)' : r.k <= 1.03 ? 'var(--part)' : 'var(--ok)';
+  $('kmode').textContent = r.mode;
+  $('bt1').textContent = f2(r.BT1);
+  $('d1').textContent = f2(r.D1); badge($('g1'), r.open1, 'затвор открыт', 'затвор закрыт');
+  $('pv').textContent = Math.round(r.p*100) + ' %';
+  $('sdv').textContent = f1(r.SD);
+  $('terr').textContent = (r.terr >= 0 ? '' : '−') + f1(Math.abs(r.terr)); $('terr').style.color = r.terr >= 0 ? 'var(--ok)' : 'var(--no)';
+  $('bt2').textContent = r.BT2 === null ? '—' : f2(r.BT2);
+  $('d2').textContent = f2(r.D2); badge($('g2'), r.open2, 'контуры разделены', 'зависимость протекла');
+  const qc = r.qol >= 60 ? 'var(--ok)' : r.qol >= 45 ? 'var(--part)' : 'var(--no)';
+  $('qol').textContent = Math.round(r.qol); $('qol').style.color = qc;
+  const lb = $('licb'); lb.className = 'badge ' + (r.lic >= 0.5 ? 'ok' : r.lic >= 0.25 ? 'part' : 'no');
+  lb.textContent = 'социальная лицензия ' + Math.round(r.lic*100) + ' %' + (r.lic < 0.25 ? ' · гарантии слабеют' : '');
+  const chs = [['через бюджет (η)', r.chMoney, '#d6aa4c'], ['напрямую: среда, работа', r.chDirect, '#9be7a8'], ['нагрузка якоря (−)', r.chBurden, '#9aa6ae']];
+  const cm = Math.max(10, ...chs.map(c => c[1]));
+  const chk = ['chMoney','chDirect','chBurden'];
+  $('chans').innerHTML = chs.map((c,ci) => `<div class="chr" data-x="${chk[ci]}"><span>${c[0]}</span><div class="bb"><i style="width:${100*c[1]/cm}%;background:${c[2]}"></i></div><output>${f1(c[1])}</output></div>`).join('');
+  const QK = ['eco','jobsI','serv','resil','lic'];
+  const QI = [
+    ['Экология: воздух и отходы', r.eco, 'выбросы от стационарных источников и размещение отходов (формы 2-ТП (воздух), 2-ТП (отходы); Росприроднадзор)'],
+    ['Занятость и доходы', r.jobsI, 'численность занятых, средняя заработная плата по городскому округу (Росстат)'],
+    ['Городская среда и услуги', r.serv, 'индекс качества городской среды (Минстрой России, ДОМ.РФ)'],
+    ['Устойчивость к уходу якоря', r.resil, 'доля занятых на градообразующем предприятии (Росстат; перечень моногородов)'],
+    ['Социальная лицензия', r.lic*100, 'опросы жителей о доверии к экоплатформе и якорному предприятию'],
+  ];
+  $('qtab').innerHTML = QI.map((q,qi) => `<div class="qi" data-x="${QK[qi]}"><div class="t">${q[0]}<span>${Math.round(q[1])}</span></div><div class="src">${q[2]}</div><div class="bb"><i style="width:${clamp(q[1],0,100)}%;background:${q[1]>=60?'#3fb27f':q[1]>=45?'#e2b33b':'#e2594c'}"></i></div></div>`).join('');
+
+  // рост, CO2, масштаб, 289-ФЗ
+  $('co2').textContent = (r.gCO2 > 0 ? '+' : '−') + Math.abs(Math.round(r.gCO2)) + ' %'; $('co2').style.color = r.gCO2 <= 0 ? 'var(--ok)' : 'var(--no)';
+  $('co2s').textContent = f1(r.co2) + ' из ' + f1(r.co2Base) + ' усл. тыс. т';
+  $('co2sale').textContent = f1(r.capt) + ' усл. тыс. т';
+  $('co2sales').textContent = 'выручка ' + f1(r.co2Rev) + (S.cp ? ' + углеродные единицы ' + f1(r.unitsRev) : '') + ' усл. ед.; в климат засчитана половина';
+  $('scale').textContent = S.n + ' пред. · ' + Math.round(r.N2) + ' тыс.';
+  $('scales').textContent = 'первый контур · второй контур, пользователей в сутки';
+  $('sig').innerHTML = r.sig ? `<b style="color:var(--ok)">Платформа значимая</b>: N₂ = ${Math.round(r.N2)} тыс. в сутки ≥ 100 тыс. — закон применяется, корни проросли на глубину ρ = ${f2(S.rho)}.`
+    : `<b style="color:var(--part)">Ниже порога значимости</b>: N₂ = ${Math.round(r.N2)} тыс. &lt; 100 тыс. в сутки — закон не применяется. ${S.vol ? 'Нормы введены регламентом оператора добровольно.' : 'Нормы можно ввести регламентом оператора добровольно.'}`;
+  const lawOn = r.sig && S.rho >= 0.3, opOn = lawOn || S.vol;
+  const LAW = [
+    ['Уведомление о росте вознаграждения за 45 дней', 'ст. 12', opOn],
+    ['Блокировка: мотивировка за 3 дня, восстановление за 48 ч', 'ст. 13', opOn],
+    ['Жалоба партнёра: ответ за 15 дней', 'ст. 14', opOn],
+    ['Скидка за счёт продавца только с согласия', 'ст. 9', opOn],
+    ['Раскрытие правил ранжирования', 'ст. 8', opOn],
+    ['Реестр, обмен данными с ФНС', 'ст. 4, 20', lawOn],
+    ['Штрафы КоАП до 500 тыс. руб.', 'проект № 959258-8', null],
+  ];
+  $('law').innerHTML = LAW.map(l => `<div class="law" data-x="law"><b style="color:${l[2]===null?'var(--muted)':l[2]?'var(--ok)':'#55697b'}">${l[2]===null?'…':l[2]?'✓':'·'}</b><span>${l[0]}</span><span class="a">${l[1]}</span></div>`).join('');
+  const G = growthRows(r).filter(g => PAGE === 'all' || (PAGE === 'p1' ? P1G : P2G).includes(g.key));
+  $('growth').innerHTML = G.map(g => {
+    const v = clamp(g.v, -100, 100), good = g.low ? g.v <= 0 : g.v >= 0, w = Math.abs(v)/2;
+    return `<div class="gr" data-x="${g.key}"><span>${g.what}<span class="g">${g.who}</span></span><div class="bb"><i style="${v>=0?'left:50%':'right:50%'};width:${w}%;background:${good?'#3fb27f':'#e2594c'}"></i></div><output>${g.pts ? (g.v>=0?'+':'−')+f1(Math.abs(g.v))+' п.' : (g.v>=0?'+':'−')+Math.round(Math.abs(g.v))+' %'}</output></div>`;
+  }).join('');
+  drawGrowth(r, G);
+  $('tax').textContent = f1(r.tax); $('jobs').textContent = r.jobs; $('waste').textContent = f1(r.waste); $('subs').textContent = f1(r.subsidy);
+  if (typeof xKey !== 'undefined' && xKey) showX(xKey);
+}
+function syncInputs(){
+  SL.forEach(k => { $(k).value = S[k]; $('o'+k).textContent = outTxt(k); });
+  $('anchor').checked = S.anchor; $('backup').checked = S.backup; $('vol').checked = S.vol; $('cp').checked = S.cp;
+}
+function changed(rel){ if (rel) layoutSats(); applyScene(); }
+SL.forEach(k => $(k).addEventListener('input', e => { S[k] = k==='n' ? parseInt(e.target.value,10) : +e.target.value; $('o'+k).textContent = outTxt(k); changed(k==='n'); }));
+$('anchor').addEventListener('change', e => { S.anchor = e.target.checked; changed(); });
+$('backup').addEventListener('change', e => { S.backup = e.target.checked; changed(); });
+$('vol').addEventListener('change', e => { S.vol = e.target.checked; changed(); });
+$('cp').addEventListener('change', e => { S.cp = e.target.checked; changed(); });
+$('b-big').addEventListener('click', () => { stopRun(); Object.assign(S, PRESET, {lg:2.7, phi:.9, mu:.8, rho:.6}); syncInputs(); changed(true); });
+$('b-vol').addEventListener('click', () => { S.vol = !S.vol; syncInputs(); changed(); });
+$('b-nev').addEventListener('click', () => { stopRun(); Object.assign(S, PRESET); syncInputs(); changed(true); });
+$('b-sub').addEventListener('click', () => { S.s = 0; syncInputs(); changed(); });
+$('b-anc').addEventListener('click', () => { S.anchor = !S.anchor; syncInputs(); changed(); });
+$('b-mix').addEventListener('click', () => { S.mu = S.mu > 0.5 ? 0.1 : 0.9; syncInputs(); changed(); });
+
+
+// ---------- пояснения к показателям ----------
+const it_ = v => `<i>${v}</i>`;
+function X(){
+  const r = R_, lam1 = 0.35 + 0.4*S.mu, fb = r.lic - 0.5, G1e = clamp(S.G1 + 0.2*S.s + 0.15*fb, 0, 1), N = 1 - S.mu;
+  const capE = S.anchor ? S.cap : 0.15;
+  const sl = (t, role, where) => ({t, k:'управляющий параметр', f:`${role}`, s:'', v:'', n:where});
+  return {
+    k:{t:'Коэффициент размножения связей k', k:'первый контур · результат',
+       f:`${it_('k')} = ${it_('ν')} · ${it_('p')},   ${it_('ν')} = 0,6 + 1,0 · ${it_('cap')}`,
+       s:`${it_('ν')} = ${S.anchor ? '0,6 + 1,0 · '+f2(S.cap) : '0,25 (якоря нет)'} = ${f2(r.nu)};   ${it_('k')} = ${f2(r.nu)} · ${f2(r.p)}`,
+       v:f2(r.k), n:'Сколько новых симбиотических связей порождает одна действующая связь за период. При k < 1 реактор гаснет без внешней подпитки, при k ≈ 1 держится сам, при k > 1 связи множатся. ν задаёт мощность якоря (технология), p — бизнес-доверие с поправкой на зависимость.'},
+    bt1:{t:'Бизнес-доверие спутника к якорю BT₁', k:'первый контур',
+       f:`${it_('BT')}₁ = ${it_('λ')}₁ · ${it_('G')}₁ₑ + (1 − ${it_('λ')}₁) · ${it_('T')}c,<br>${it_('T')}c = (${it_('A')} + ${it_('I')} + ${it_('C')}) / 3,   ${it_('λ')}₁ = 0,35 + 0,4${it_('μ')},<br>${it_('G')}₁ₑ = ${it_('G')}₁ + 0,2${it_('s')} + 0,15(${it_('L')} − 0,5)`,
+       s:`${it_('T')}c = (${f2(S.A)} + ${f2(S.I)} + ${f2(S.C)}) / 3 = ${f2(r.Tc1)};   ${it_('λ')}₁ = ${f2(lam1)};   ${it_('G')}₁ₑ = ${f2(G1e)}<br>${it_('BT')}₁ = ${f2(lam1)} · ${f2(G1e)} + ${f2(1-lam1)} · ${f2(r.Tc1)}`,
+       v:f2(r.BT1), n:'Гарантии оператора, субсидии и социальная лицензия входят через G₁ₑ; способность, добросовестность и совместимость целей — через Tc. Чем сильнее смешаны контуры (μ), тем больше доверие держится на операторе, а не на партнёрах.'},
+    d1:{t:'Зависимость спутника от якоря D₁', k:'первый контур · затвор',
+       f:`${it_('D')}₁ = 0,75 / (1 + 0,15(${it_('n')} − 1)) + 0,25${it_('μ')} − 0,2 · [второй источник];   затвор открыт при ${it_('D')}₁ &lt; 0,6`,
+       s:`${it_('D')}₁ = 0,75 / (1 + 0,15 · ${S.n-1}) + 0,25 · ${f2(S.mu)}${S.backup ? ' − 0,2' : ''}${S.anchor ? '' : ' → якоря нет, 0,20'}`,
+       v:f2(r.D1) + (r.open1 ? ' · открыт' : ' · закрыт'), n:'Чем больше спутников и чем надёжнее второй источник потоков, тем больше у спутника альтернатив и тем ниже зависимость. Когда затвор закрыт, удержание спутника объясняется зависимостью, а не доверием, и захват потоков падает втрое.'},
+    p:{t:'Захват потоков p', k:'первый контур',
+       f:`${it_('p')} = min(0,98; ${it_('BT')}₁ · (1 + 0,4${it_('φ')}(1 − ${it_('μ')})) · ${it_('g')}),   ${it_('g')} = 1 при открытом затворе, иначе 0,35`,
+       s:`${it_('p')} = ${f2(r.BT1)} · (1 + 0,4 · ${f2(S.phi)} · ${f2(N)}) · ${r.open1 ? '1' : '0,35'}`,
+       v:Math.round(r.p*100)+' %', n:'Доля предложений побочных потоков, которые нашли партнёра. Цифровой контур помогает подбирать пары (замедлитель), но только пока оператор нейтрален.'},
+    sd:{t:'Отдача участникам SD', k:'первый контур · нижний ярус высоты',
+       f:`${it_('SD')} = 100 · ${it_('cap')} · ${it_('p')} · √(${it_('n')}/5) · min(${it_('k')}; 1,3)`,
+       s:`${it_('SD')} = 100 · ${f2(capE)} · ${f2(r.p)} · √(${S.n}/5) · ${f2(clamp(r.k,0,1.3))}`,
+       v:f1(r.SD)+' усл. ед.', n:'Симбиотический дивиденд: сэкономленные затраты на утилизацию и сырьё плюс новая выручка. На плате — колонны над спутниками.'},
+    terr:{t:'Отдача территории', k:'дестинация · верхний ярус высоты',
+       f:`${it_('T')} = налоги + 0,3 · отходы − субсидии`,
+       s:`${it_('T')} = ${f1(r.tax)} + 0,3 · ${f1(r.waste)} − ${f1(r.subsidy)}`,
+       v:f1(r.terr), n:'Что получает город сверх участников. Терраса над платой поднимается с этой величиной и краснеет, если субсидии больше отдачи.'},
+    bt2:{t:'Доверие к цифровому оператору BT₂', k:'второй контур',
+       f:`${it_('BT')}₂ = 0,245 + 0,4(1 − ${it_('μ')}) + 0,25${it_('T')}c + 0,1(${it_('L')} − 0,5)`,
+       s:`${it_('BT')}₂ = 0,245 + 0,4 · ${f2(N)} + 0,25 · ${f2(r.Tc1)} + 0,1 · ${f2(fb)}`,
+       v:r.BT2 === null ? '—' : f2(r.BT2), n:'0,245 — вклад правовой базы (0,35 × 0,7 по 289-ФЗ). Нейтральность оператора весит больше всего: оператор, ставший якорем, теряет доверие второго контура.'},
+    d2:{t:'Утечка зависимости D₂', k:'второй контур · затвор',
+       f:`${it_('D')}₂ = 0,15 + 0,6${it_('μ')}${it_('φ')} + 0,5${it_('μ')}${it_('D')}₁`,
+       s:`${it_('D')}₂ = 0,15 + 0,6 · ${f2(S.mu)} · ${f2(S.phi)} + 0,5 · ${f2(S.mu)} · ${f2(r.D1)}`,
+       v:f2(r.D2) + (r.open2 ? ' · контуры разделены' : ' · протекла'), n:'Сколько зависимости от якоря переходит во второй контур. При μ = 0 утечки нет: парогенератор передаёт тепло, но не вещество.'},
+    tax:{t:'Налоги в бюджет', k:'дестинация', f:`Налоги = 0,22 · ${it_('SD')} + 6${it_('φ')}(1 − ${it_('μ')})`,
+       s:`= 0,22 · ${f1(r.SD)} + 6 · ${f2(S.phi)} · ${f2(N)}`, v:f1(r.tax), n:'Налог с симбиотического дивиденда и с оборота цифрового контура, если он остаётся в городе (нейтральный оператор).'},
+    jobs:{t:'Рабочие места', k:'дестинация', f:`Места = 60 · ${it_('n')} · min(1; ${it_('k')}) · (0,5 + 0,5${it_('cap')}) + 40${it_('φ')}(1 − ${it_('μ')})`,
+       s:`= 60 · ${S.n} · ${f2(Math.min(1,r.k))} · ${f2(0.5+0.5*capE)} + 40 · ${f2(S.phi)} · ${f2(N)}`, v:String(r.jobs), n:'Места у спутников (если реактор не гаснет) плюс места в цифровом контуре.'},
+    waste:{t:'Отходы не на полигон', k:'дестинация', f:`Отходы = 80 · ${it_('cap')} · ${it_('p')} · min(1; ${it_('k')})`,
+       s:`= 80 · ${f2(capE)} · ${f2(r.p)} · ${f2(Math.min(1,r.k))}`, v:f1(r.waste)+' усл. тыс. т', n:'Побочные потоки, которые стали чужим сырьём. Это и экологический, и денежный эффект.'},
+    subs:{t:'Субсидии', k:'общая шина', f:`Субсидии = 25 · ${it_('s')}`, s:`= 25 · ${f2(S.s)}`, v:f1(r.subsidy),
+       n:'Затравка извне. Поднимают G₁ₑ, но вычитаются из отдачи территории. Вопрос — сформируется ли за время субсидий история исполнения.'},
+    qol:{t:'Индекс качества жизни', k:'вся экоплатформа · третий слой',
+       f:`КЖ = 0,30 · ${it_('Э')} + 0,30 · ${it_('З')} + 0,25 · ${it_('У')} + 0,15 · ${it_('Ус')}`,
+       s:`КЖ = 0,30 · ${Math.round(r.eco)} + 0,30 · ${Math.round(r.jobsI)} + 0,25 · ${Math.round(r.serv)} + 0,15 · ${Math.round(r.resil)}`,
+       v:String(Math.round(r.qol)), n:'Э — экология, З — занятость и доходы, У — городская среда и услуги, Ус — устойчивость к уходу якоря. Веса заданы условно; для статьи их нужно обосновать или оценить.'},
+    lic:{t:'Социальная лицензия L', k:'обратная связь',
+       f:`${it_('L')} = (КЖ − 40) / 30, в пределах [0; 1];   ${it_('L')} → ${it_('G')}₁ₑ (+0,15(${it_('L')} − 0,5)) и ${it_('BT')}₂ (+0,1(${it_('L')} − 0,5))`,
+       s:`${it_('L')} = (${Math.round(r.qol)} − 40) / 30`, v:Math.round(r.lic*100)+' %',
+       n:'Одобрение жителей. Петля решается итерациями: качество жизни → лицензия → гарантии → доверие → потоки → качество жизни.'},
+    eco:{t:'Экология: воздух и отходы Э', k:'показатель качества жизни', f:`${it_('Э')} = 50 + 0,6 · отходы − 40 · ${it_('cap')} · (1 − ${it_('e')})`,
+       s:`= 50 + 0,6 · ${f1(r.waste)} − ${f1(r.emis)}`, v:String(Math.round(r.eco)), n:'Источники: формы 2-ТП (воздух) и 2-ТП (отходы), Росприроднадзор. Якорь одновременно даёт отходы-сырьё (+) и выбросы (−); экомодернизация e снимает минус.'},
+    jobsI:{t:'Занятость и доходы З', k:'показатель качества жизни', f:`${it_('З')} = 30 + 0,18 · места`, s:`= 30 + 0,18 · ${r.jobs}`, v:String(Math.round(r.jobsI)), n:'Источник: Росстат, численность занятых и средняя заработная плата по городскому округу.'},
+    serv:{t:'Городская среда и услуги У', k:'показатель качества жизни', f:`${it_('У')} = 35 + 2,2 · ${it_('η')} · налоги`, s:`= 35 + 2,2 · ${f2(S.eta)} · ${f1(r.tax)}`, v:String(Math.round(r.serv)), n:'Источник: индекс качества городской среды (Минстрой России, ДОМ.РФ). η — доля налоговых денег, дошедшая до жителя услугами.'},
+    resil:{t:'Устойчивость к уходу якоря Ус', k:'показатель качества жизни',
+       f:`${it_('Ус')} = 100 − 70 · ${it_('h')},   ${it_('h')} = 0,6${it_('cap')} / (0,6${it_('cap')} + 0,1${it_('n')} · min(1; ${it_('k')}) + 0,3${it_('φ')}(1 − ${it_('μ')}))`,
+       s:`${it_('h')} = ${f2(r.shareA)};   ${it_('Ус')} = 100 − 70 · ${f2(r.shareA)}`, v:String(Math.round(r.resil)), n:'h — доля экономики города, завязанная на якорь. Источник: доля занятых на градообразующем предприятии (Росстат, перечень моногородов).'},
+    chMoney:{t:'Канал «через бюджет»', k:'канал качества жизни', f:`0,25 · 2,2 · ${it_('η')} · налоги`, s:`= 0,55 · ${f2(S.eta)} · ${f1(r.tax)}`, v:f1(r.chMoney), n:'Золотые частицы от турбины к слою качества жизни; доля 1 − η теряется по пути.'},
+    chDirect:{t:'Прямой канал: среда и работа', k:'канал качества жизни', f:`0,3 · 0,6 · отходы + 0,3 · 0,18 · места`, s:`= 0,18 · ${f1(r.waste)} + 0,054 · ${r.jobs}`, v:f1(r.chDirect), n:'Зелёные частицы: эффект минует бюджет — меньше полигона, больше рабочих мест.'},
+    chBurden:{t:'Нагрузка якоря (−)', k:'канал качества жизни', f:`0,3 · 40 · ${it_('cap')} · (1 − ${it_('e')})`, s:`= 0,3 · ${f1(r.emis)}`, v:f1(r.chBurden), n:'Серый дым из активной зоны. Отрицательный канал: основа экоплатформы одновременно нагружает город.'},
+    cap:sl('Мощность якоря cap', `входит в ${it_('ν')} = 0,6 + 1,0${it_('cap')}, в SD, отходы, места и выбросы`, 'Сколько побочных потоков даёт активная зона. Текущее значение: '+f2(S.cap)+'.'),
+    n:sl('Число спутников n', `входит в ${it_('D')}₁, SD, места и долю якоря ${it_('h')}`, 'Больше спутников — больше альтернатив у каждого и ниже зависимость. Сейчас: '+S.n+'.'),
+    A:sl('Способность партнёра A', `${it_('T')}c = (${it_('A')} + ${it_('I')} + ${it_('C')}) / 3`, 'Ликвидность, устойчивость рентабельности, долговая нагрузка. Сейчас: '+f2(S.A)+'.'),
+    I:sl('Добросовестность I', `${it_('T')}c = (${it_('A')} + ${it_('I')} + ${it_('C')}) / 3`, 'История исполнения: просрочки, споры, повторные сделки. При прогоне по годам растёт на 0,05 в год, пока реактор критичен. Сейчас: '+f2(S.I)+'.'),
+    C:sl('Совместимость целей C', `${it_('T')}c = (${it_('A')} + ${it_('I')} + ${it_('C')}) / 3`, 'Корреляция маржи, комплементарность потоков, доля в дивиденде. Сейчас: '+f2(S.C)+'.'),
+    G1:sl('Гарантии G₁', `${it_('G')}₁ₑ = ${it_('G')}₁ + 0,2${it_('s')} + 0,15(${it_('L')} − 0,5)`, 'Гарантии нейтрального оператора, ГЧП, правовой режим. Сейчас: '+f2(S.G1)+'.'),
+    phi:sl('Цифровизация φ', `в ${it_('p')} (подбор пар), налоги, места, ${it_('D')}₂`, 'Насколько развит второй контур. Сейчас: '+f2(S.phi)+'.'),
+    mu:sl('Смешение контуров μ', `${it_('λ')}₁ = 0,35 + 0,4${it_('μ')};  ${it_('D')}₁ += 0,25${it_('μ')};  ${it_('D')}₂ = 0,15 + 0,6${it_('μ')}${it_('φ')} + 0,5${it_('μ')}${it_('D')}₁`, 'μ = 0 — оператор нейтрален, μ = 1 — оператор и есть якорь. Сейчас: '+f2(S.mu)+'.'),
+    s:sl('Субсидии s', `${it_('G')}₁ₑ += 0,2${it_('s')};  отдача территории −= 25${it_('s')}`, 'Сейчас: '+f2(S.s)+'.'),
+    eta:sl('Эффективность бюджета η', `${it_('У')} = 35 + 2,2${it_('η')} · налоги`, 'Доля налоговых денег, превращённая в услуги жителям. Сейчас: '+f2(S.eta)+'.'),
+    e:sl('Экомодернизация якоря e', `выбросы = 40 · ${it_('cap')} · (1 − ${it_('e')})`, 'Сейчас: '+f2(S.e)+'.'),
+    anchor:sl('Якорь на месте', `без якоря: ${it_('ν')} = 0,25, ${it_('cap')} → 0,15, ${it_('D')}₁ = 0,2`, 'Снимите флажок, чтобы увидеть, сколько в «доверии» спутников было зависимости от якоря.'),
+    backup:sl('Второй источник потоков', `${it_('D')}₁ −= 0,2`, 'Резервная переработка или второй якорь снижают зависимость спутников.'),
+    p:{t:'Захват потоков p', k:'первый контур',
+       f:`${it_('p')} = min(0,98; ${it_('BT')}₁ · (1 + 0,4${it_('φ')}${it_('N')}ₑ) · ${it_('g')}),   ${it_('N')}ₑ = 1 − ${it_('μ')}(1 − 0,4·max(${it_('ρ')}ₑ; 0,6·рег)),   ${it_('g')} = 1 при открытом затворе, иначе 0,35`,
+       s:`${it_('N')}ₑ = ${f2(r.Neff)};   ${it_('p')} = ${f2(r.BT1)} · (1 + 0,4 · ${f2(S.phi)} · ${f2(r.Neff)}) · ${r.open1 ? '1' : '0,35'}`,
+       v:Math.round(r.p*100)+' %', n:'Nₑ — фактическая нейтральность оператора: смешение контуров μ частично гасится нормами 289-ФЗ о ранжировании (ρₑ — сила закона для значимой платформы) или добровольным регламентом.'},
+    bt2:{t:'Доверие к цифровому оператору BT₂', k:'второй контур',
+       f:`${it_('BT')}₂ = 0,245 + 0,4${it_('N')}ₑ + 0,25${it_('T')}c + 0,1(${it_('L')} − 0,5) + 0,15${it_('ρ')}ₑ + 0,05·рег`,
+       s:`= 0,245 + 0,4 · ${f2(r.Neff)} + 0,25 · ${f2(r.Tc1)} + 0,1 · ${f2(r.lic-0.5)} + 0,15 · ${f2(r.eff)} + 0,05 · ${r.vol}`,
+       v:r.BT2 === null ? '—' : f2(r.BT2), n:'Процедуры 289-ФЗ (уведомления, мотивированные блокировки, жалобы) делают поведение оператора предсказуемым и поднимают доверие к нему.'},
+    d2:{t:'Утечка зависимости D₂', k:'второй контур · затвор',
+       f:`${it_('D')}₂ = 0,15 + 0,6${it_('μ')}${it_('φ')} + 0,5${it_('μ')}${it_('D')}₁ + 0,06·lg(${it_('N')}₂/10 + 1)·${it_('μ')} − 0,25${it_('ρ')}ₑ${it_('μ')}`,
+       s:`= 0,15 + 0,6 · ${f2(S.mu)} · ${f2(S.phi)} + 0,5 · ${f2(S.mu)} · ${f2(r.D1)} + 0,06 · ${f2(Math.log10(r.N2/10+1))} · ${f2(S.mu)} − 0,25 · ${f2(r.eff)} · ${f2(S.mu)}`,
+       v:f2(r.D2) + (r.open2 ? ' · контуры разделены' : ' · протекла'), n:'Масштаб усиливает зависимость, когда оператор и есть якорь (сетевой эффект); корни 289-ФЗ её снижают. Закон гасит последствия смешения, но не разделяет якорь и оператора.'},
+    tax:{t:'Налоги в бюджет', k:'дестинация', f:`Налоги = 0,22 · ${it_('SD')} + 4${it_('φ')}${it_('N')}ₑ(1 + lg ${it_('N')}₂)`,
+       s:`= 0,22 · ${f1(r.SD)} + 4 · ${f2(S.phi)} · ${f2(r.Neff)} · ${f2(1+S.lg)}`, v:f1(r.tax), n:'Налог с симбиотического дивиденда и с оборота второго контура; оборот растёт с логарифмом масштаба.'},
+    jobs:{t:'Рабочие места', k:'дестинация', f:`Места = 60${it_('n')} · min(1; ${it_('k')}) · (0,5 + 0,5${it_('cap')}) + 25${it_('φ')}${it_('N')}ₑ(1 + lg ${it_('N')}₂)`,
+       s:`= 60 · ${S.n} · ${f2(Math.min(1,r.k))} · ${f2(0.5+0.5*capE)} + 25 · ${f2(S.phi)} · ${f2(r.Neff)} · ${f2(1+S.lg)}`, v:String(r.jobs), n:'Места у спутников, пока реактор не гаснет, плюс места во втором контуре.'},
+    co2:{t:'CO₂-эквивалент всех участников', k:'климат · облако над «пирогом»',
+       f:`CO₂ = 100${it_('cap')}(1 − 0,35${it_('e')}) + 0,5(80${it_('cap')} − отходы) + 15${it_('n')}(1 − 0,4${it_('p')}·min(1; ${it_('k')})) − 2${it_('φ')}${it_('N')}ₑ·lg ${it_('N')}₂<br>база = 140${it_('cap')} + 15${it_('n')}  (без обмена, без модернизации)`,
+       s:`CO₂ = ${f1(r.co2)};   база = ${f1(r.co2Base)};   изменение = ${f1(r.co2)} / ${f1(r.co2Base)} − 1`, v:(r.gCO2>0?'+':'−')+Math.abs(Math.round(r.gCO2))+' %',
+       n:'Четыре источника: процесс якоря (снижает экомодернизация e), полигон (отходы, не ставшие сырьём, дают метан), первичное сырьё спутников (его вытесняют потоки якоря), логистика (оптимизирует цифровой контур). Отличается от «Экологии» в качестве жизни: там местные выбросы в воздух города, здесь климатический эффект. Реальные данные — отчётность по выбросам парниковых газов (296-ФЗ «Об ограничении выбросов парниковых газов»).'},
+    scale:{t:'Масштаб экоплатформы', k:'участники', f:`первый контур: ${it_('n')} предприятий;   второй контур: ${it_('N')}₂ тыс. пользователей в сутки`, s:`${it_('n')} = ${S.n};   ${it_('N')}₂ = ${Math.round(r.N2)} тыс.`, v:r.sig ? 'значимая платформа' : 'ниже порога',
+       n:'Порог значимости по 289-ФЗ — 100 тыс. пользователей в сутки и 10 тыс. партнёров со сделками либо 50 млрд руб. сделок в год (Постановление Правительства № 54 от 28.01.2026); в модели учтён первый критерий. На плате масштаб второго контура — облако точек вокруг кольца.'},
+    law:{t:'Нормы 289-ФЗ', k:'корни стабильности', f:`действуют при ${it_('N')}₂ ≥ 100 тыс. и ${it_('ρ')} ≥ 0,3, либо (кроме реестра и ФНС) добровольно в регламенте оператора`, s:`значимая: ${r.sig ? 'да' : 'нет'};   ${it_('ρ')} = ${f2(S.rho)};   регламент: ${S.vol ? 'да' : 'нет'}`, v:'',
+       n:'Закон регулирует поведение оператора (договор, блокировки, жалобы, скидки, ранжирование), но не разделяет оператора и якорь. Первый контур (вещество) закон не затрагивает; цифровой слой городской экоплатформы ниже порога значимости, поэтому нормы туда можно перенести только регламентом.'},
+    gAnc:{t:'Затраты якоря на утилизацию', k:'рост показателей', f:`Δ = −70% · ${it_('p')} · min(1; ${it_('k')})`, s:`= −70 · ${f2(r.p)} · ${f2(Math.min(1,r.k))}`, v:Math.round(r.gAnc)+' %', n:'Побочные потоки, принятые спутниками, не нужно везти на полигон.'},
+    gSatRaw:{t:'Затраты спутников на сырьё', k:'рост показателей', f:`Δ = −40% · ${it_('p')} · min(1; ${it_('k')})`, s:`= −40 · ${f2(r.p)} · ${f2(Math.min(1,r.k))}`, v:Math.round(r.gSatRaw)+' %', n:'Вторичное сырьё от якоря дешевле первичного.'},
+    gSatP:{t:'Прибыль спутников', k:'рост показателей', f:`Δ = 100% · ${it_('SD')} / (60${it_('n')})`, s:`= 100 · ${f1(r.SD)} / (60 · ${S.n})`, v:'+'+Math.round(r.gSatP)+' %', n:'Симбиотический дивиденд на одного спутника против базовой прибыли 60 усл. ед.'},
+    gDig:{t:'Оборот продавцов второго контура', k:'рост показателей', f:`Δ = 30% · ${it_('φ')}${it_('N')}ₑ(0,5 + 0,25 lg ${it_('N')}₂) − 10% · ${it_('μ')}(1 − 0,5${it_('ρ')}ₑ)`, s:`= 30 · ${f2(S.phi)} · ${f2(r.Neff)} · ${f2(0.5+0.25*S.lg)} − 10 · ${f2(S.mu)} · ${f2(1-0.5*r.eff)}`, v:Math.round(r.gDig)+' %', n:'Доступ к покупателю растёт с масштабом; комиссия и самопредпочтение оператора-якоря отнимают часть роста, 289-ФЗ возвращает половину.'},
+    gTax:{t:'Налоги от экоплатформы', k:'рост показателей', f:`Δ = 100% · налоги / 60`, s:`= 100 · ${f1(r.tax)} / 60`, v:'+'+Math.round(r.gTax)+' %', n:'Против базовых налоговых поступлений от этих же участников, 60 усл. ед.'},
+    gJobs:{t:'Занятость', k:'рост показателей', f:`Δ = 100% · места / 4000`, s:`= 100 · ${r.jobs} / 4000`, v:'+'+f1(r.gJobs)+' %', n:'Против базовой занятости у участников, 4000 мест.'},
+    dQol:{t:'Качество жизни', k:'рост показателей, пункты', f:`Δ = КЖ − КЖ₀,   КЖ₀ = 0,3(50 − выбросы) + 0,3·30 + 0,25·35 + 0,15·Ус₀`, s:`= ${Math.round(r.qol)} − ${f1(r.qol0)}`, v:(r.dQol>=0?'+':'−')+f1(Math.abs(r.dQol))+' п.', n:'КЖ₀ — индекс без экоплатформы: нет обмена, нет второго контура, город целиком зависит от якоря.'},
+    gCO2:{t:'Выбросы CO₂-экв', k:'рост показателей', f:`Δ = 100% · (CO₂ / база − 1)`, s:`= 100 · (${f1(r.co2)} / ${f1(r.co2Base)} − 1)`, v:Math.round(r.gCO2)+' %', n:'Снижение — хорошо (зелёная полоса).'},
+    lg:sl('Масштаб второго контура N₂', `${it_('N')}₂ = 10^ползунок тыс. пользователей в сутки; значимая платформа при ${it_('N')}₂ ≥ 100 тыс.`, 'Сейчас: ' + Math.round(Math.pow(10,S.lg)) + ' тыс. Городской цифровой слой — десятки тысяч, крупные экосистемы — сотни тысяч и миллионы.'),
+    rho:sl('Сила применения 289-ФЗ ρ', `${it_('ρ')}ₑ = ${it_('ρ')} для значимой платформы, иначе 0;   ${it_('D')}₂ −= 0,25${it_('ρ')}ₑ${it_('μ')};  ${it_('BT')}₂ += 0,15${it_('ρ')}ₑ`, 'Насколько нормы исполняются: 0 — на бумаге, 1 — с контролем ФАС и штрафами. Пока штрафы в проекте, разумно ниже 1. Сейчас: ' + f2(S.rho) + '.'),
+    vol:sl('Добровольный регламент по 289-ФЗ', `${it_('G')}₁ₑ += 0,1;   ${it_('BT')}₂ += 0,05;   нейтральность оператора + 0,24${it_('μ')}`, 'Практический вывод для экоплатформы Невинномысска: закон к ней не применим, но его процедуры можно сделать частью договора оператора с участниками.'),
+    co2:{t:'CO₂-эквивалент всех участников', k:'климат · облако над «пирогом»',
+       f:`CO₂ = ${it_('P')} − 0,5${it_('У')} + 0,5(80${it_('cap')} − отходы) + 15${it_('n')}(1 − 0,4${it_('p')}·min(1; ${it_('k')})) − 2${it_('φ')}${it_('N')}ₑ·lg ${it_('N')}₂<br>${it_('P')} = 100${it_('cap')}(1 − 0,35${it_('e')}),   ${it_('У')} = ${it_('κ')}${it_('P')},   база = 140${it_('cap')} + 15${it_('n')}`,
+       s:`${it_('P')} = ${f1(r.proc)};   ${it_('У')} = ${f1(r.capt)};   CO₂ = ${f1(r.co2)};   база = ${f1(r.co2Base)}`, v:(r.gCO2>0?'+':'−')+Math.abs(Math.round(r.gCO2))+' %',
+       n:'Проданный CO₂ засчитан в климат только наполовину (0,5 — допущение модели). В напитках и сухом льду он вскоре возвращается в атмосферу; реальный эффект — там, где он вытесняет CO₂, который покупатель иначе получил бы сжиганием газа (теплицы), или где связывается надолго. Источник реальных данных — отчётность о выбросах парниковых газов по 296-ФЗ.'},
+    co2sale:{t:'CO₂ якоря как товар', k:'первый контур · поток на продажу',
+       f:`${it_('У')} = ${it_('κ')} · ${it_('P')},   выручка = 0,6 · ${it_('У')},   ${it_('C')}ₑ = ${it_('C')} + 0,1${it_('κ')}`,
+       s:`${it_('У')} = ${f2(S.kap)} · ${f1(r.proc)} = ${f1(r.capt)};   выручка = ${f1(r.co2Rev)}`, v:f1(r.capt)+' усл. тыс. т',
+       n:'Углекислота из технологического процесса якоря улавливается, очищается и продаётся: напитки, теплицы, сухой лёд, пожаротушение. Реальный пример — «Невинномысский Азот» (ЕвроХим): пищевая жидкая углекислота с декабря 2018 г., 32 тыс. т в год, чистота 99,99 %. Если покупатели — спутники (теплицы), CO₂ становится ещё одним общим потоком и поднимает совместимость целей C.'},
+    kap:sl('Доля CO₂ на продажу κ', `${it_('У')} = ${it_('κ')} · ${it_('P')}`, 'Сколько CO₂ процесса якорь улавливает и продаёт как товар. Сейчас: ' + f2(S.kap) + '.'),
+    cp:sl('Климатический проект (296-ФЗ)', `углеродные единицы = 0,5 · max(0; база − CO₂);   выручка = 0,3 · единицы`, 'Сокращение против базового сценария оформляется как климатический проект и продаётся углеродными единицами через реестр. Одно и то же сокращение нельзя зачесть дважды: если проданный CO₂ уже учтён у покупателя-теплицы, якорь не может выпустить на него единицы.'),
+    gAncRev:{t:'Выручка якоря от продажи CO₂', k:'рост показателей', f:`Δ = 100% · (выручка CO₂ + выручка единиц) / (300${it_('cap')})`, s:`= 100 · (${f1(r.co2Rev)} + ${f1(r.unitsRev)}) / ${f1(300*S.cap)}`, v:'+'+f1(r.gAncRev)+' %', n:'Против базовой выручки якоря 300 · cap усл. ед.: продажа CO₂ — небольшая, но новая статья дохода из того, что раньше было выбросом.'},
+  };
+}
+let xKey = null;
+function showX(key){
+  const d = X()[key]; if (!d) return; xKey = key;
+  $('xbody').innerHTML = `<div class="xk">${d.k}</div><div class="xt">${d.t}</div>
+    <div class="fx">${d.f}${d.s ? `<br><span class="eq">${d.s}</span>` : ''}</div>
+    ${d.v ? `<div class="res"><span class="muted">значение</span><b>${d.v}</b></div>` : ''}
+    <p>${d.n}</p><p class="where">Коэффициенты модели сценарные: показывают направление и порядок эффекта, подлежат калибровке на данных.</p>`;
+}
+const TILEMAP = {co2sale:'co2sale', co2:'co2', scale:'scale', kv:'k', bt1:'bt1', d1:'d1', pv:'p', sdv:'sd', terr:'terr', bt2:'bt2', d2:'d2', tax:'tax', jobs:'jobs', waste:'waste', subs:'subs', qol:'qol'};
+Object.entries(TILEMAP).forEach(([id, key]) => { const t = $(id).closest('.tile'); if (t) t.dataset.x = key; });
+SL.forEach(k => { const r = $(k).closest('.row'); if (r) r.dataset.x = k; });
+$('vol').closest('label').dataset.x = 'vol'; $('cp').closest('label').dataset.x = 'cp'; $('sig').dataset.x = 'law';
+$('anchor').closest('label').dataset.x = 'anchor'; $('backup').closest('label').dataset.x = 'backup';
+let hlEl = null;
+function onHover(ev){
+  const el = ev.target.closest && ev.target.closest('[data-x]'); if (!el || el === hlEl) return;
+  if (hlEl) hlEl.classList.remove('hl'); hlEl = el; el.classList.add('hl'); showX(el.dataset.x);
+}
+document.addEventListener('mouseover', onHover);
+document.addEventListener('focusin', onHover);
+
+
+// ---------- страницы: первый контур, второй контур, целиком ----------
+function onLayer(o, n){ o.traverse(x => x.layers.set(n)); }
+function assignLayers(){
+  [core, coreShell, coreLabel, ring1, sdLabel, buyer, buyerLabel, saleLine, scale1, rootLabel1].forEach(o => onLayer(o, 1));
+  sats.forEach(t => [t.m, t.gate, t.col].forEach(o => onLayer(o, 1)));
+  neutrons.forEach(n => onLayer(n.m, 1));
+  [salePool, smokePool, subsPool, directPool].forEach(pl => pl.forEach(q => onLayer(q.m, 1)));
+  roots.forEach(g => { const d = g.userData.def; if (d.law !== '289') onLayer(g, 1); else if (!d.op) onLayer(g, 2); });
+  [ring2, turbine, turbLabel, cloud, scale2, rootLabel2, terrGroup, terrLabel].forEach(o => onLayer(o, 2));
+  NODES2.forEach(o => { onLayer(o.m, 2); onLayer(o.l, 2); });
+  [loopPool, taxPool, leakPool, moneyPool].forEach(pl => pl.forEach(q => onLayer(q.m, 2)));
+}
+const LEFT = document.querySelector('.dash[aria-label="Первый контур"]');
+const RIGHT = document.querySelector('.dash[aria-label="Второй контур и дестинация"]');
+const CARDS = {};
+const CARDKEY = [['Первый контур · кластер','k1'],['Настройка первого','set1'],['Рост показателей','growth'],['Сценарии','scen'],['Траектория','traj'],
+                 ['Второй контур · дестинация','k2'],['Настройка второго','set2'],['289-ФЗ','law'],['Качество жизни','qol']];
+document.querySelectorAll('.dash .card').forEach(c => { const t = c.querySelector('h2').textContent; const m = CARDKEY.find(x => t.includes(x[0])); if (m) CARDS[m[1]] = c; });
+const LAYOUT = {
+  p1:[['k1','set1'], ['growth','scen','traj']],
+  p2:[['k2','set2','law'], ['qol','growth','scen','traj']],
+  all:[['k1','set1','growth','scen','traj'], ['k2','set2','law','qol']],
+};
+const PDESC = {
+  p1:'Первый контур — кластер: якорное предприятие (активная зона), спутники, обмен веществом, CO₂ как товар, правовые корни 224-ФЗ и 296-ФЗ. Над спутниками — колонны отдачи участникам, сверху — общий слой качества жизни. Цифровой оператор виден как парогенератор на границе контура.',
+  p2:'Второй контур — дестинация: цифровой оператор, продавцы, домохозяйства, банк, городские службы и турбина города; облако точек — масштаб пользователей; под ним корни 289-ФЗ. Над ним — терраса отдачи территории и общий слой качества жизни.',
+  all:'Вся экоплатформа: оба контура, парогенератор между ними, общая шина бюджета и государства.',
+};
+function setPage(pg){
+  PAGE = pg; try { localStorage.setItem('ecoplatform-page', pg); } catch(e) {}
+  ['p1','p2','all'].forEach(k => $('t-'+k).setAttribute('aria-selected', String(k === pg)));
+  camera.layers.set(0); if (pg !== 'p2') camera.layers.enable(1); if (pg !== 'p1') camera.layers.enable(2);
+  const dir = camera.position.clone().sub(controls.target);
+  controls.target.set(pg === 'p1' ? C1.x : pg === 'p2' ? C2.x : 0, pg === 'all' ? 3 : 2, 0);
+  camera.position.copy(controls.target).add(dir);
+  const used = new Set(LAYOUT[pg][0].concat(LAYOUT[pg][1]));
+  LEFT.replaceChildren(...LAYOUT[pg][0].map(k => CARDS[k]));
+  RIGHT.replaceChildren(...LAYOUT[pg][1].map(k => CARDS[k]));
+  Object.entries(CARDS).forEach(([k,c]) => { if (!used.has(k)) $('parking').appendChild(c); });
+  $('pdesc').textContent = PDESC[pg];
+  resize(); applyScene();
+}
+['p1','p2','all'].forEach(k => $('t-'+k).addEventListener('click', () => setPage(k)));
+
+// ---------- 10 лет ----------
+let runTimer = null, hist = [];
+function stopRun(){ if (runTimer){ clearInterval(runTimer); runTimer = null; } }
+function drawChart(){
+  const svg = $('chart'), W = 280, H = 130, L = 30, B = 108, T = 10, Rr = 270;
+  const X = i => L + (Rr-L)*i/10, Yk = v => B - (B-T)*clamp(v,0,1.6)/1.6;
+  const tMax = Math.max(30, ...hist.map(h => Math.abs(h.terr)));
+  const Yt = v => B - (B-T)*0.5*clamp(v/tMax, -1, 1) - (B-T)*0.5 + (B-T)*0.5;
+  let s = `<line x1="${L}" x2="${Rr}" y1="${B}" y2="${B}" stroke="#22394d"/>`;
+  s += `<line x1="${L}" x2="${Rr}" y1="${Yk(1)}" y2="${Yk(1)}" stroke="#e2b33b" stroke-dasharray="4 3"/><text x="${L-4}" y="${Yk(1)+4}" fill="#93a8ba" font-size="10" text-anchor="end" font-family="IBM Plex Mono">k=1</text>`;
+  hist.forEach((h,i) => {
+    const bh = (B-T)*0.45*clamp(Math.abs(h.terr)/tMax,0,1);
+    s += `<rect x="${X(i)-6}" y="${B-bh}" width="12" height="${bh}" fill="${h.terr>=0?'#5b95e6':'#e2594c'}" opacity="0.55"/>`;
+  });
+  if (hist.length){
+    s += `<polyline fill="none" stroke="#ffad4d" stroke-width="2.4" points="${hist.map((h,i)=>X(i)+','+Yk(h.k)).join(' ')}"/>`;
+    hist.forEach((h,i) => s += `<circle cx="${X(i)}" cy="${Yk(h.k)}" r="3" fill="${h.k<0.97?'#e2594c':'#ffad4d'}"/>`);
+    s += `<polyline fill="none" stroke="#9be7a8" stroke-width="2" stroke-dasharray="5 3" points="${hist.map((h,i)=>X(i)+','+(B-(B-T)*h.qol/100)).join(' ')}"/>`;
+  }
+  for (let i=0;i<=10;i+=2) s += `<text x="${X(i)}" y="${B+14}" fill="#93a8ba" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${i}</text>`;
+
+  svg.innerHTML = s;
+}
+function runYears(){
+  stopRun(); hist = [];
+  const s0 = S.s;
+  let year = 0;
+  const step = () => {
+    S.s = year < 4 ? s0 : 0;
+    const r = compute();
+    hist.push({k:r.k, terr:r.terr, qol:r.qol});
+    $('yr').textContent = `Год ${year}: k = ${f2(r.k)}, ${r.mode.split(':')[0]}; качество жизни ${Math.round(r.qol)}; субсидии ${S.s>0?'есть':'сняты'}; I = ${f2(S.I)}, спутников ${S.n}.`;
+    syncInputs(); layoutSats(); applyScene(); drawChart();
+    // история исполнения: копится, пока реактор критичен и затвор открыт, распадается, когда гаснет
+    if (r.open1 && r.k >= 1){ S.I = clamp(S.I + 0.05, 0, 0.95); S.C = clamp(S.C + 0.02, 0, 0.95); }
+    else if (r.k < 1){ S.I = clamp(S.I - 0.04, 0.05, 1); if (r.k < 0.9 && S.n > 1) S.n -= 1; }
+    year++;
+    if (year > 10){ stopRun(); $('yr').textContent += r.k >= 0.97 ? ' Итог: реактор держится без субсидий — доверие сформировалось.' : ' Итог: после снятия субсидий реактор гаснет — держался на внешнем источнике.'; }
+  };
+  step(); runTimer = setInterval(step, reduce ? 300 : 900);
+}
+$('b-run').addEventListener('click', runYears);
+
+// ---------- подсказки ----------
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), tip = $('tip');
+canvas.addEventListener('pointermove', ev => {
+  const r = canvas.getBoundingClientRect();
+  mouse.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(mouse, camera); ray.layers.mask = camera.layers.mask;
+  const h = ray.intersectObjects(hoverables.filter(o => o.visible))[0];
+  if (h){ tip.hidden = false; tip.textContent = h.object.userData.tip; tip.style.left = (ev.clientX-r.left)+'px'; tip.style.top = (ev.clientY-r.top)+'px'; }
+  else tip.hidden = true;
+});
+canvas.addEventListener('pointerleave', () => tip.hidden = true);
+
+// ---------- размер и цикл ----------
+function resize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w/h;
+  const D = PAGE === 'all' ? (w < 560 ? 88 : w/h < 1.1 ? 70 : 58) : (w < 560 ? 70 : w/h < 1.1 ? 56 : 47);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  camera.position.copy(controls.target).add(dir.multiplyScalar(D));
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas);
+const clock = new THREE.Clock();
+let spawnAcc = 0;
+function tick(){
+  const dt = Math.min(clock.getDelta(), 0.05), sp = reduce ? 0.35 : 1, r = R_;
+  const run = (pool, curve, count, speed) => pool.forEach((p,i) => { p.m.visible = i < count; if (!p.m.visible) return; p.t = (p.t + dt*sp*speed) % 1; p.m.position.copy(curve.getPoint(p.t)); });
+  // нейтроны: предложения потоков из активной зоны к спутникам
+  spawnAcc += dt*sp*(S.anchor ? 10*r.nu : 2);
+  const active = sats.filter(s => s.on);
+  while (spawnAcc > 1 && active.length){
+    spawnAcc -= 1;
+    const n = neutrons.find(x => !x.alive); if (!n) break;
+    const tgt = active[Math.floor(Math.random()*active.length)];
+    const dir = tgt.pos.clone().sub(v3(C1.x,0.7,0)).setY(0).normalize();
+    dir.applyAxisAngle(v3(0,1,0), (Math.random()-0.5)*0.35);
+    n.alive = true; n.dir = dir; n.r = 1.7; n.cap = Math.random() < r.p; n.m.visible = true;
+    n.m.material.color.set(S.anchor ? COL.core : 0x8a99a6); n.m.material.opacity = 1;
+  }
+  neutrons.forEach(n => {
+    if (!n.alive) return;
+    n.r += dt*sp*4.5;
+    n.m.position.set(C1.x + n.dir.x*n.r, 0.7, n.dir.z*n.r);
+    if (n.cap && n.r >= R){ n.alive = false; n.m.visible = false; return; }
+    if (!n.cap && n.r > R){ n.m.material.color.set(0x7c8792); n.m.material.opacity = Math.max(0, 1 - (n.r-R)/4); }
+    if (n.r > R + 4){ n.alive = false; n.m.visible = false; }
+  });
+  // высоты отдачи
+  const per = r.SD / Math.max(1, S.n);
+  let maxH = 0;
+  sats.forEach(s => {
+    if (!s.on) return;
+    const target = Math.max(0.05, per*0.32);
+    s.h += (target - s.h)*Math.min(1, dt*3);
+    s.col.scale.y = s.h; s.col.position.set(s.pos.x, 0.7 + s.h/2, s.pos.z);
+    maxH = Math.max(maxH, s.h);
+  });
+  sdLabel.position.set(C1.x - 2, 1.6 + maxH + 0.6, -2);
+  const ty = 1.2 + maxH + 1.4 + Math.max(0, r.terr)*0.1;
+  terrGroup.position.y += (ty - terrGroup.position.y)*Math.min(1, dt*3);
+  terrMat.color.set(r.terr >= 0 ? COL.c2 : COL.no); terrMat.emissive.set(r.terr >= 0 ? COL.c2 : COL.no);
+  terrEdge.material.color.set(r.terr >= 0 ? COL.c2 : COL.no);
+  terrLabel.position.set(8, terrGroup.position.y + 0.9, -8.5);
+  if (!terrLabel.userData.last || terrLabel.userData.last !== Math.round(r.terr*10)){
+    terrLabel.userData.last = Math.round(r.terr*10);
+    setLabel(terrLabel, 'Отдача территории: ' + (r.terr<0?'−':'') + f1(Math.abs(r.terr)), r.terr >= 0 ? '#5b95e6' : '#e2594c');
+  }
+  // турбина
+  turbine.rotation.y += dt*sp*Math.max(0, r.terr)*0.08;
+  // третий слой: толщина пропорциональна качеству жизни
+  const th = 0.4 + r.qol/100*2.6, base = terrGroup.position.y + 1.2;
+  dome.scale.set(1, th, 1); dome.position.set(0, base + th/2, 0);
+  domeRing.scale.set(1, th, 1); domeRing.position.copy(dome.position);
+  const qcol = r.qol >= 60 ? 0x5fd27a : r.qol >= 45 ? 0xe2b33b : 0xe2594c;
+  domeMat.color.set(qcol); domeMat.emissive.set(qcol); domeRing.material.color.set(qcol);
+  qolLabel.position.set(-8, base + th + 0.8, -8.5);
+  if (qolLabel.userData.last !== Math.round(r.qol)){ qolLabel.userData.last = Math.round(r.qol); setLabel(qolLabel, 'Качество жизни: ' + Math.round(r.qol), '#' + new THREE.Color(qcol).getHexString()); }
+  moneyCurve.v0.set(C2.x, 1.4, 0); moneyCurve.v1.set(C2.x, (1.4+base)/2, 0); moneyCurve.v2.set(C2.x, base, 0);
+  directCurve.v0.set(C1.x+3, 1.2, 3.5); directCurve.v1.set(C1.x+3.5, (1.2+base)/2, 4.5); directCurve.v2.set(C1.x+4, base, 4);
+  smokeCurve.v0.set(C1.x, 1.6, 0); smokeCurve.v1.set(C1.x-1, (1.6+base)/2, -1.5); smokeCurve.v2.set(C1.x-1.5, base, -2);
+  fbCurve.v0.set(0, base + th, 7); fbCurve.v1.set(2, base + th + 3, 14);
+  // корни стабильности: длина и яркость — сила правовой опоры
+  roots.forEach(g => {
+    const d = g.userData.def;
+    const str = d.law === '289' ? (d.op ? Math.max(r.eff, 0.7*r.vol) : r.eff) : d.law === '224' ? clamp(0.5*S.G1 + 0.5*S.s, 0, 1) : (S.cp ? 0.9 : 0.25);
+    const L = 0.18 + 0.82*str;
+    g.userData.L += (L - g.userData.L)*Math.min(1, dt*2);
+    const k2 = g.userData.L; g.scale.set(0.45 + 0.55*k2, k2, 0.45 + 0.55*k2);
+    g.userData.mat.emissiveIntensity = 0.05 + 0.4*str;
+    if (d.op) g.position.x = sg.position.x;
+  });
+  // CO2 над «пирогом»
+  const cs = 0.6 + 2.0*clamp(r.co2/r.co2Base, 0, 1.5);
+  co2Group.scale.setScalar(cs); co2Group.position.set(C1.x - 1, base + th + 2.2 + cs*0.6, -3);
+  co2Mat.opacity = 0.35 + 0.35*clamp(r.co2/r.co2Base, 0, 1);
+  co2Label.position.set(C1.x - 1, base + th + 3.4 + cs*1.4, -3);
+  if (co2Label.userData.last !== Math.round(r.gCO2)){ co2Label.userData.last = Math.round(r.gCO2); setLabel(co2Label, 'CO₂-экв: ' + (r.gCO2>0?'+':'−') + Math.abs(Math.round(r.gCO2)) + ' % к базе', r.gCO2 <= 0 ? '#3fb27f' : '#e2594c'); }
+  fbLine.geometry.setFromPoints(fbCurve.getPoints(40)); fbLine.computeLineDistances();
+  fbLine.material.color.set(r.lic >= 0.5 ? 0x9be7a8 : r.lic >= 0.25 ? 0xe2b33b : 0xe2594c);
+  const fm = fbCurve.getPoint(0.78); fbLabel.position.set(fm.x, fm.y + 0.6, fm.z);
+  budget.material.emissiveIntensity = 0.15 + 0.6*r.lic;
+  // деньги: доля 1−η теряется по пути (частица гаснет и сереет)
+  moneyPool.forEach((p,i) => {
+    p.m.visible = i < Math.round(clamp(r.tax/2.5, 0, 10)); if (!p.m.visible) return;
+    p.t = (p.t + dt*sp*0.3) % 1; p.m.position.copy(moneyCurve.getPoint(p.t));
+    const lost = (i % 10) >= Math.round(S.eta*10);
+    p.m.material.color.set(lost && p.t > 0.45 ? 0x5a646c : COL.gold);
+    p.m.material.transparent = true; p.m.material.opacity = lost && p.t > 0.45 ? Math.max(0, 1 - (p.t-0.45)/0.3) : 1;
+  });
+  run(directPool, directCurve, Math.round(clamp(r.chDirect/4, 0, 8)), 0.2);
+  run(smokePool, smokeCurve, Math.round(clamp(r.emis/3, 0, 10)), 0.12);
+  run(salePool, saleCurve, Math.round(clamp(r.capt/1.5, 0, 10)), 0.25);
+  saleLine.visible = r.capt > 0.1; buyer.visible = S.anchor;
+  if (buyerLabel.userData.last !== Math.round(r.capt*10)){ buyerLabel.userData.last = Math.round(r.capt*10); setLabel(buyerLabel, 'Продажа CO₂: ' + f1(r.capt) + ' усл. тыс. т · напитки, теплицы, сухой лёд', '#6fd3e6'); }
+  // пулы
+  run(subsPool, subsCurve, Math.round(S.s*6), 0.25);
+  run(taxPool, taxCurve, Math.round(clamp(r.tax/6, 0, 6)), 0.25);
+  run(leakPool, leakCurve, Math.round(clamp(S.mu*S.phi*14, 0, 8)), 0.3);
+  loopPool.forEach((p,i) => { p.m.visible = i < Math.round(S.phi*12); if (!p.m.visible) return; p.t = (p.t + dt*sp*0.12) % 1; const a = p.t*Math.PI*2; p.m.position.set(C2.x + R*Math.cos(a), 0.3, R*Math.sin(a)); });
+  if (!reduce) shineMats.forEach(m => { m.uniforms.t.value += dt*0.22; if (m.uniforms.t.value > 1.4) m.uniforms.t.value = -0.4; });
+  coreShell.rotation.y += dt*0.3;
+  controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick);
+}
+function start(){
+  buildPlates();
+  if (reduce) shineMats.forEach(m => m.uniforms.t.value = -1);
+  syncInputs(); layoutSats(); applyScene(); drawChart(); showX('k');
+  assignLayers();
+  let pg = 'p1'; try { pg = localStorage.getItem('ecoplatform-page') || 'p1'; } catch(e) {}
+  setPage(['p1','p2','all'].includes(pg) ? pg : 'p1');
+  tick();
+}
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start, start);
+})();
+</script>
+
+</body></html>
